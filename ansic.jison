@@ -18,11 +18,11 @@
 
 primary_expression
 	: IDENTIFIER
-		{{ $$ = new yy.expressions.Identifier($1); }}
+		{{ $$ = new yy.Node('Ident', [$1]); }}
 	| CONSTANT
-		{{ $$ = new yy.expressions.Constant($1); }}
+		{{ $$ = new yy.Node('Const', [$1]); }}
 	| STRING_LITERAL
-		{{ $$ = new yy.expressions.StringLiteral($1); }}
+		{{ $$ = new yy.Node('String', [$1]); }}
 	| '(' expression ')'
 		{{ $$ = $2 }}
 	;
@@ -127,13 +127,13 @@ logical_or_expression
 conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression
-		{{ $$ = new yy.expressions.Conditional($1, $3, $5); }}
+		{{ $$ = new yy.Node('?:', [$1, $3, $5]); }}
 	;
 
 assignment_expression
 	: conditional_expression
 	| unary_expression assignment_operator assignment_expression
-		{{ $$ = new yy.expressions.Assignment($1, $2, $3); }}
+		{{ $$ = new yy.Node($2, [$1, $3]); }}
 	;
 
 assignment_operator
@@ -153,7 +153,7 @@ assignment_operator
 expression
 	: assignment_expression
 	| expression ',' assignment_expression
-		{{ $$ = new yy.expressions.Comma($1, $3); }}
+		{{ $$ = new yy.Node(',', [$1, $3]); }}
 	;
 
 constant_expression
@@ -162,9 +162,9 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-		{ $$ = new yy.UninitialisedDeclaration($1); }
+		{ $$ = new yy.Node('Declare', [$1]); }
 	| declaration_specifiers init_declarator_list ';'
-		{ $$ = new yy.InitialisedDeclaration($1, $2); }
+		{ $$ = new yy.Node('DeclareInit', [$1, $2]); }
 	;
 
 /* a list of types, 'static', 'const' etc */
@@ -377,13 +377,13 @@ labeled_statement
 
 compound_statement
 	: '{' '}'
-		{ $$ = new yy.statements.Compound([], []); }
+		{ $$ = new yy.Node('Block', [[], []]); }
 	| '{' statement_list '}'
-		{ $$ = new yy.statements.Compound([], $2); }
+		{ $$ = new yy.Node('Block', [[], $2]); }
 	| '{' declaration_list '}'
-		{ $$ = new yy.statements.Compound($2, []); }
+		{ $$ = new yy.Node('Block', [$2, []]); }
 	| '{' declaration_list statement_list '}'
-		{ $$ = new yy.statements.Compound($2, $3); }
+		{ $$ = new yy.Node('Block', [$2, $3]); }
 	;
 
 declaration_list
@@ -402,9 +402,9 @@ statement_list
 
 expression_statement
 	: ';'
-		{ $$ = new yy.statements.Empty(); }
+		{ $$ = new yy.Node('Nop', []); }
 	| expression ';'
-		{ $$ = new yy.statements.Expression($1); }
+		{ $$ = new yy.Node('Expr', [$1]); }
 	;
 
 selection_statement
@@ -425,9 +425,9 @@ jump_statement
 	| CONTINUE ';'
 	| BREAK ';'
 	| RETURN ';'
-		{{ $$ = new yy.statements.Return(null); }}
+		{{ $$ = new yy.Node('ReturnVoid', []); }}
 	| RETURN expression ';'
-		{{ $$ = new yy.statements.Return($2); }}
+		{{ $$ = new yy.Node('Return', [$2]); }}
 	;
 
 translation_unit
@@ -444,13 +444,13 @@ external_declaration
 
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
-		{ $$ = new yy.FunctionDefinition($1, $2, $3, $4); }
+		{ $$ = new yy.Node('Function', [$1, $2, $3, $4]); }
 	| declaration_specifiers declarator compound_statement
-		{ $$ = new yy.FunctionDefinition($1, $2, [], $3); }
+		{ $$ = new yy.Node('Function', [$1, $2, [], $3]); }
 	| declarator declaration_list compound_statement
-		{ $$ = new yy.FunctionDefinition('void', $1, $2, $3); }
+		{ $$ = new yy.Node('Function', ['void', $1, $2, $3]); }
 	| declarator compound_statement
-		{ $$ = new yy.FunctionDefinition('void', $1, [], $2); }
+		{ $$ = new yy.Node('Function', ['void', $1, [], $2]); }
 	;
 
 root
