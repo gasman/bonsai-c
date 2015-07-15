@@ -1,0 +1,16 @@
+bonsai-c
+========
+
+*** very early work-in-progress ***
+
+bonsai-c is a C-to-Javascript compiler, outputting asm.js-compatible code, operating on a fundamentally different model to Emscripten.
+
+It is designed for writing programs in, not porting them.
+
+It provides a subset of C tailored for the things you actually want to use asm.js for: namely, fast number-crunching. You can write a function for calculating fibonacci numbers in it, and you will get back an asm.js-compliant Javascript module with an obvious entry point, for calculating fibonacci numbers. You will not get a mountain of runtime code to implement file handling and malloc and a million other things you didn't ask for.
+
+It does not provide a complete POSIX C environment to allow you to throw any old C program at it and expect it to work unmodified. It doesn't even support strings (yet). But that's OK, because you can write your string handling functions in Javascript like a sensible person. Because bonsai-c generates code for the browser, not for some wacky virtual machine that happens to be implemented within a browser.
+
+Usage
+-----
+node bonsai-c.js infile.c
