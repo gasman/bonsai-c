@@ -123,12 +123,13 @@ logical_or_expression
 conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression
+		{{ $$ = new yy.expressions.Conditional($1, $3, $5); }}
 	;
 
 assignment_expression
 	: conditional_expression
 	| unary_expression assignment_operator assignment_expression
-		{{ $$ = new yy.AssignmentExpression($1, $2, $3); }}
+		{{ $$ = new yy.expressions.Assignment($1, $2, $3); }}
 	;
 
 assignment_operator
@@ -148,7 +149,7 @@ assignment_operator
 expression
 	: assignment_expression
 	| expression ',' assignment_expression
-		{{ $$ = new yy.CommaExpression($1, $3); }}
+		{{ $$ = new yy.expressions.Comma($1, $3); }}
 	;
 
 constant_expression
@@ -372,13 +373,13 @@ labeled_statement
 
 compound_statement
 	: '{' '}'
-		{ $$ = new yy.CompoundStatement([], []); }
+		{ $$ = new yy.statements.Compound([], []); }
 	| '{' statement_list '}'
-		{ $$ = new yy.CompoundStatement([], $2); }
+		{ $$ = new yy.statements.Compound([], $2); }
 	| '{' declaration_list '}'
-		{ $$ = new yy.CompoundStatement($2, []); }
+		{ $$ = new yy.statements.Compound($2, []); }
 	| '{' declaration_list statement_list '}'
-		{ $$ = new yy.CompoundStatement($2, $3); }
+		{ $$ = new yy.statements.Compound($2, $3); }
 	;
 
 declaration_list
@@ -397,9 +398,9 @@ statement_list
 
 expression_statement
 	: ';'
-		{ $$ = new yy.EmptyStatement(); }
+		{ $$ = new yy.statements.Empty(); }
 	| expression ';'
-		{ $$ = new yy.ExpressionStatement($1); }
+		{ $$ = new yy.statements.Expression($1); }
 	;
 
 selection_statement
@@ -420,9 +421,9 @@ jump_statement
 	| CONTINUE ';'
 	| BREAK ';'
 	| RETURN ';'
-		{{ $$ = new yy.ReturnStatement(null); }}
+		{{ $$ = new yy.statements.Return(null); }}
 	| RETURN expression ';'
-		{{ $$ = new yy.ReturnStatement($2); }}
+		{{ $$ = new yy.statements.Return($2); }}
 	;
 
 translation_unit

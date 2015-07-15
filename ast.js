@@ -1,29 +1,14 @@
 util = require('util');
 
+function repr(val, depth) {
+	return util.inspect(val, { depth: (depth === null ? null : depth - 1) })
+}
+
 exports.FunctionDefinition = function(returnType, declarator, declarations, body) {
 	this.returnType = returnType;
 	this.declarator = declarator;
 	this.declarations = declarations;
 	this.body = body;
-};
-
-exports.CompoundStatement = function(declarations, statements) {
-	this.declarations = declarations;
-	this.statements = statements;
-};
-
-exports.EmptyStatement = function() {
-};
-
-exports.ExpressionStatement = function(expr) {
-	this.expression = expr;
-};
-
-exports.ReturnStatement = function(returnValue) {
-	this.returnValue = returnValue;
-};
-exports.ReturnStatement.prototype.inspect = function(depth) {
-	return "Return(" + util.inspect(this.returnValue, { depth: depth - 1 }) + ")";
 };
 
 exports.UninitialisedDeclaration = function(specifiers) {
@@ -35,15 +20,57 @@ exports.InitialisedDeclaration = function(specifiers, initDeclarators) {
 	this.initDeclarators = initDeclarators;
 };
 
-exports.CommaExpression = function(l, r) {
-	this.l = l;
-	this.r = r;
+
+var statements = {};
+
+statements.Compound = function(declarations, statements) {
+	this.declarations = declarations;
+	this.statements = statements;
 };
-exports.AssignmentExpression = function(l, op, r) {
+
+statements.Empty = function() {
+};
+
+statements.Expression = function(expr) {
+	this.expression = expr;
+};
+
+statements.Return = function(returnValue) {
+	this.returnValue = returnValue;
+};
+statements.Return.prototype.inspect = function(depth) {
+	return "Return(" + repr(this.returnValue, depth) + ")";
+};
+
+exports.statements = statements;
+
+
+var expressions = {};
+
+expressions.Assignment = function(l, op, r) {
 	this.l = l;
 	this.op = op;
 	this.r = r;
 };
-exports.AssignmentExpression.prototype.inspect = function(depth) {
-	return '(' + util.inspect(this.l, {depth: depth - 1}) + ') ' + this.op + ' (' + util.inspect(this.r, {depth: depth - 1}) + ')';
+expressions.Assignment.prototype.inspect = function(depth) {
+	return '(' + repr(this.l, depth) + ') ' + this.op + ' (' + repr(this.r, depth) + ')';
 };
+
+expressions.Comma = function(l, r) {
+	this.l = l;
+	this.r = r;
+};
+expressions.Comma.prototype.inspect = function(depth) {
+	return '(' + repr(this.l, depth) + '), (' + repr(this.r, depth) + ')';
+};
+
+expressions.Conditional = function(test, ifTrue, ifFalse) {
+	this.test = test;
+	this.ifTrue = ifTrue;
+	this.ifFalse = ifFalse;
+};
+expressions.Conditional.prototype.inspect = function(depth) {
+	return '(' + repr(this.test, depth) + ') ? (' + repr(this.ifTrue, depth) + ') : (' + repr(this.ifFalse, depth) + ')';
+};
+
+exports.expressions = expressions;
