@@ -18,7 +18,7 @@
 
 primary_expression
 	: IDENTIFIER
-		{ $$ = new yy.Node('Ident', [$1]); }
+		{ $$ = new yy.Node('Var', [$1]); }
 	| CONSTANT
 		{ $$ = new yy.Node('Const', [$1]); }
 	| STRING_LITERAL
@@ -195,25 +195,24 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-		{ $$ = new yy.Node('Declare', [$1]); }
+		{ $$ = new yy.Node('Declare', [$1, []]); }
 	| declaration_specifiers init_declarator_list ';'
-		{ $$ = new yy.Node('DeclareInit', [$1, $2]); }
+		{ $$ = new yy.Node('Declare', [$1, $2]); }
 	;
 
-/* a list of types, 'static', 'const' etc */
 declaration_specifiers
 	: storage_class_specifier
-		{ $$ = [$1]; }
+		{ $$ = new yy.Node('TypeDeclaration', [[$1], [], []]); }
 	| storage_class_specifier declaration_specifiers
-		{ $$ = $2; $$.unshift($1); }
+		{ $$ = $2; $$.params[0].unshift($1); }
 	| type_specifier
-		{ $$ = [$1]; }
+		{ $$ = new yy.Node('TypeDeclaration', [[], [$1], []]); }
 	| type_specifier declaration_specifiers
-		{ $$ = $2; $$.unshift($1); }
+		{ $$ = $2; $$.params[1].unshift($1); }
 	| type_qualifier
-		{ $$ = [$1]; }
+		{ $$ = new yy.Node('TypeDeclaration', [[], [], [$1]]); }
 	| type_qualifier declaration_specifiers
-		{ $$ = $2; $$.unshift($1); }
+		{ $$ = $2; $$.params[2].unshift($1); }
 	;
 
 init_declarator_list
@@ -225,7 +224,9 @@ init_declarator_list
 
 init_declarator
 	: declarator
+		{ $$ = new yy.Node('UninitDeclarator', [$1]); }
 	| declarator '=' initializer
+		{ $$ = new yy.Node('InitDeclarator', [$1, $3]); }
 	;
 
 storage_class_specifier
@@ -238,14 +239,23 @@ storage_class_specifier
 
 type_specifier
 	: VOID
+		{ $$ = new yy.Node('Void', []); }
 	| CHAR
+		{ $$ = new yy.Node('Char', []); }
 	| SHORT
+		{ $$ = new yy.Node('Short', []); }
 	| INT
+		{ $$ = new yy.Node('Int', []); }
 	| LONG
+		{ $$ = new yy.Node('Long', []); }
 	| FLOAT
+		{ $$ = new yy.Node('Float', []); }
 	| DOUBLE
+		{ $$ = new yy.Node('Double', []); }
 	| SIGNED
+		{ $$ = new yy.Node('Signed', []); }
 	| UNSIGNED
+		{ $$ = new yy.Node('Unsigned', []); }
 	| struct_or_union_specifier
 	| enum_specifier
 	| TYPE_NAME
@@ -253,40 +263,57 @@ type_specifier
 
 struct_or_union_specifier
 	: struct_or_union IDENTIFIER '{' struct_declaration_list '}'
+		{ $$ = new yy.Node($1, [$2, $4]); }
 	| struct_or_union '{' struct_declaration_list '}'
+		{ $$ = new yy.Node($1, [null, $3]); }
 	| struct_or_union IDENTIFIER
+		{ $$ = new yy.Node($1, [$2, null]); }
 	;
 
 struct_or_union
 	: STRUCT
+		{ $$ = 'Struct'; }}
 	| UNION
+		{ $$ = 'Union'; }}
 	;
 
 struct_declaration_list
 	: struct_declaration
+		{ $$ = [$1]; }
 	| struct_declaration_list struct_declaration
+		{ $$ = $1; $$.push($2); }
 	;
 
 struct_declaration
 	: specifier_qualifier_list struct_declarator_list ';'
+		{ $$ = new yy.Node('StructDeclaration', [$1, $2]); }
 	;
 
 specifier_qualifier_list
 	: type_specifier specifier_qualifier_list
+		{ $$ = $2; $$.params[1].unshift($1); }
 	| type_specifier
+		{ $$ = new yy.Node('TypeDeclaration', [[], [$1], []]); }
 	| type_qualifier specifier_qualifier_list
+		{ $$ = $2; $$.params[2].unshift($1); }
 	| type_qualifier
+		{ $$ = new yy.Node('TypeDeclaration', [[], [], [$1]]); }
 	;
 
 struct_declarator_list
 	: struct_declarator
+		{ $$ = [$1]; }
 	| struct_declarator_list ',' struct_declarator
+		{ $$ = $1; $$.push($3); }
 	;
 
 struct_declarator
 	: declarator
+		{ $$ = new yy.Node('StructDeclarator', [$1, null]); }
 	| ':' constant_expression
+		{ $$ = new yy.Node('StructDeclarator', [null, $2]); }
 	| declarator ':' constant_expression
+		{ $$ = new yy.Node('StructDeclarator', [$1, $3]); }
 	;
 
 enum_specifier
