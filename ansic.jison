@@ -18,38 +18,52 @@
 
 primary_expression
 	: IDENTIFIER
-		{{ $$ = new yy.Node('Ident', [$1]); }}
+		{ $$ = new yy.Node('Ident', [$1]); }
 	| CONSTANT
-		{{ $$ = new yy.Node('Const', [$1]); }}
+		{ $$ = new yy.Node('Const', [$1]); }
 	| STRING_LITERAL
-		{{ $$ = new yy.Node('String', [$1]); }}
+		{ $$ = new yy.Node('String', [$1]); }
 	| '(' expression ')'
-		{{ $$ = $2 }}
+		{ $$ = $2 }
 	;
 
 postfix_expression
 	: primary_expression
 	| postfix_expression '[' expression ']'
+		{ $$ = new yy.Node('ArraySubscript', [$1, $3]); }
 	| postfix_expression '(' ')'
+		{ $$ = new yy.Node('Call', [$1, []]); }
 	| postfix_expression '(' argument_expression_list ')'
+		{ $$ = new yy.Node('Call', [$1, $3]); }
 	| postfix_expression '.' IDENTIFIER
+		{ $$ = new yy.Node('MemberAccess', [$1, $3]); }
 	| postfix_expression PTR_OP IDENTIFIER
+		{ $$ = new yy.Node('PtrAccess', [$1, $3]); }
 	| postfix_expression INC_OP
+		{ $$ = new yy.Node('Postincrement', [$1]); }
 	| postfix_expression DEC_OP
+		{ $$ = new yy.Node('Postdecrement', [$1]); }
 	;
 
 argument_expression_list
 	: assignment_expression
+		{ $$ = [$1]; }
 	| argument_expression_list ',' assignment_expression
+		{ $$ = $1; $$.push($3); }
 	;
 
 unary_expression
 	: postfix_expression
 	| INC_OP unary_expression
+		{ $$ = new yy.Node('Preincrement', [$2]); }
 	| DEC_OP unary_expression
+		{ $$ = new yy.Node('Postincrement', [$2]); }
 	| unary_operator cast_expression
+		{ $$ = new yy.Node('Unary', [$1, $2]); }
 	| SIZEOF unary_expression
+		{ $$ = new yy.Node('SizeofExpr', [$2]); }
 	| SIZEOF '(' type_name ')'
+		{ $$ = new yy.Node('SizeofType', [$3]); }
 	;
 
 unary_operator
@@ -64,76 +78,95 @@ unary_operator
 cast_expression
 	: unary_expression
 	| '(' type_name ')' cast_expression
+		{ $$ = new yy.Node('Cast', [$2, $4]); }
 	;
 
 multiplicative_expression
 	: cast_expression
 	| multiplicative_expression '*' cast_expression
+		{ $$ = new yy.Node('Mul', [$1, $3]); }
 	| multiplicative_expression '/' cast_expression
+		{ $$ = new yy.Node('Div', [$1, $3]); }
 	| multiplicative_expression '%' cast_expression
+		{ $$ = new yy.Node('Mod', [$1, $3]); }
 	;
 
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression
+		{ $$ = new yy.Node('Add', [$1, $3]); }
 	| additive_expression '-' multiplicative_expression
+		{ $$ = new yy.Node('Sub', [$1, $3]); }
 	;
 
 shift_expression
 	: additive_expression
 	| shift_expression LEFT_OP additive_expression
+		{ $$ = new yy.Node('Lshift', [$1, $3]); }
 	| shift_expression RIGHT_OP additive_expression
+		{ $$ = new yy.Node('Rshift', [$1, $3]); }
 	;
 
 relational_expression
 	: shift_expression
 	| relational_expression '<' shift_expression
+		{ $$ = new yy.Node('LT', [$1, $3]); }
 	| relational_expression '>' shift_expression
+		{ $$ = new yy.Node('GT', [$1, $3]); }
 	| relational_expression LE_OP shift_expression
+		{ $$ = new yy.Node('LTE', [$1, $3]); }
 	| relational_expression GE_OP shift_expression
+		{ $$ = new yy.Node('GTE', [$1, $3]); }
 	;
 
 equality_expression
 	: relational_expression
 	| equality_expression EQ_OP relational_expression
+		{ $$ = new yy.Node('EQ', [$1, $3]); }
 	| equality_expression NE_OP relational_expression
+		{ $$ = new yy.Node('NE', [$1, $3]); }
 	;
 
 and_expression
 	: equality_expression
 	| and_expression '&' equality_expression
+		{ $$ = new yy.Node('BinaryAnd', [$1, $3]); }
 	;
 
 exclusive_or_expression
 	: and_expression
 	| exclusive_or_expression '^' and_expression
+		{ $$ = new yy.Node('BinaryXor', [$1, $3]); }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
 	| inclusive_or_expression '|' exclusive_or_expression
+		{ $$ = new yy.Node('BinaryOr', [$1, $3]); }
 	;
 
 logical_and_expression
 	: inclusive_or_expression
 	| logical_and_expression AND_OP inclusive_or_expression
+		{ $$ = new yy.Node('LogicalAnd', [$1, $3]); }
 	;
 
 logical_or_expression
 	: logical_and_expression
 	| logical_or_expression OR_OP logical_and_expression
+		{ $$ = new yy.Node('LogicalOr', [$1, $3]); }
 	;
 
 conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression
-		{{ $$ = new yy.Node('?:', [$1, $3, $5]); }}
+		{ $$ = new yy.Node('Conditional', [$1, $3, $5]); }
 	;
 
 assignment_expression
 	: conditional_expression
 	| unary_expression assignment_operator assignment_expression
-		{{ $$ = new yy.Node($2, [$1, $3]); }}
+		{ $$ = new yy.Node('Assign', [$2, $1, $3]); }
 	;
 
 assignment_operator
@@ -153,7 +186,7 @@ assignment_operator
 expression
 	: assignment_expression
 	| expression ',' assignment_expression
-		{{ $$ = new yy.Node(',', [$1, $3]); }}
+		{{ $$ = new yy.Node('Comma', [$1, $3]); }}
 	;
 
 constant_expression
