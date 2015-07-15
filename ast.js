@@ -73,4 +73,25 @@ expressions.Conditional.prototype.inspect = function(depth) {
 	return '(' + repr(this.test, depth) + ') ? (' + repr(this.ifTrue, depth) + ') : (' + repr(this.ifFalse, depth) + ')';
 };
 
+expressions.Constant = function(value) {
+	this.value = value;
+};
+expressions.Constant.prototype.inspect = function(depth) {
+	return 'Const(' + this.value + ')';
+};
+
+expressions.Identifier = function(name) {
+	this.name = name;
+};
+expressions.Identifier.prototype.inspect = function(depth) {
+	return 'Ident(' + this.name + ')';
+};
+
+expressions.StringLiteral = function(str) {
+	this.str = str;
+};
+expressions.StringLiteral.prototype.inspect = function(depth) {
+	return 'String(' + this.str + ')';
+};
+
 exports.expressions = expressions;

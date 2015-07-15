@@ -18,9 +18,13 @@
 
 primary_expression
 	: IDENTIFIER
+		{{ $$ = new yy.expressions.Identifier($1); }}
 	| CONSTANT
+		{{ $$ = new yy.expressions.Constant($1); }}
 	| STRING_LITERAL
+		{{ $$ = new yy.expressions.StringLiteral($1); }}
 	| '(' expression ')'
+		{{ $$ = $2 }}
 	;
 
 postfix_expression
