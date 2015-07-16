@@ -20,7 +20,7 @@ primary_expression
 	: IDENTIFIER
 		{ throw("Unimplemented rule for primary_expression: " + yytext); }
 	| CONSTANT
-		{ throw("Unimplemented rule for primary_expression: " + yytext); }
+		{ $$ = new yy.Node('Const', [$1]); }
 	| STRING_LITERAL
 		{ throw("Unimplemented rule for primary_expression: " + yytext); }
 	| '(' expression ')'
@@ -29,7 +29,6 @@ primary_expression
 
 postfix_expression
 	: primary_expression
-		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression '[' expression ']'
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression '(' ')'
@@ -55,7 +54,6 @@ argument_expression_list
 
 unary_expression
 	: postfix_expression
-		{ throw("Unimplemented rule for unary_expression: " + yytext); }
 	| INC_OP unary_expression
 		{ throw("Unimplemented rule for unary_expression: " + yytext); }
 	| DEC_OP unary_expression
@@ -79,14 +77,12 @@ unary_operator
 
 cast_expression
 	: unary_expression
-		{ throw("Unimplemented rule for cast_expression: " + yytext); }
 	| '(' type_name ')' cast_expression
 		{ throw("Unimplemented rule for cast_expression: " + yytext); }
 	;
 
 multiplicative_expression
 	: cast_expression
-		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
 	| multiplicative_expression '*' cast_expression
 		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
 	| multiplicative_expression '/' cast_expression
@@ -97,7 +93,6 @@ multiplicative_expression
 
 additive_expression
 	: multiplicative_expression
-		{ throw("Unimplemented rule for additive_expression: " + yytext); }
 	| additive_expression '+' multiplicative_expression
 		{ throw("Unimplemented rule for additive_expression: " + yytext); }
 	| additive_expression '-' multiplicative_expression
@@ -106,7 +101,6 @@ additive_expression
 
 shift_expression
 	: additive_expression
-		{ throw("Unimplemented rule for shift_expression: " + yytext); }
 	| shift_expression LEFT_OP additive_expression
 		{ throw("Unimplemented rule for shift_expression: " + yytext); }
 	| shift_expression RIGHT_OP additive_expression
@@ -115,7 +109,6 @@ shift_expression
 
 relational_expression
 	: shift_expression
-		{ throw("Unimplemented rule for relational_expression: " + yytext); }
 	| relational_expression '<' shift_expression
 		{ throw("Unimplemented rule for relational_expression: " + yytext); }
 	| relational_expression '>' shift_expression
@@ -128,7 +121,6 @@ relational_expression
 
 equality_expression
 	: relational_expression
-		{ throw("Unimplemented rule for equality_expression: " + yytext); }
 	| equality_expression EQ_OP relational_expression
 		{ throw("Unimplemented rule for equality_expression: " + yytext); }
 	| equality_expression NE_OP relational_expression
@@ -137,49 +129,42 @@ equality_expression
 
 and_expression
 	: equality_expression
-		{ throw("Unimplemented rule for and_expression: " + yytext); }
 	| and_expression '&' equality_expression
 		{ throw("Unimplemented rule for and_expression: " + yytext); }
 	;
 
 exclusive_or_expression
 	: and_expression
-		{ throw("Unimplemented rule for exclusive_or_expression: " + yytext); }
 	| exclusive_or_expression '^' and_expression
 		{ throw("Unimplemented rule for exclusive_or_expression: " + yytext); }
 	;
 
 inclusive_or_expression
 	: exclusive_or_expression
-		{ throw("Unimplemented rule for inclusive_or_expression: " + yytext); }
 	| inclusive_or_expression '|' exclusive_or_expression
 		{ throw("Unimplemented rule for inclusive_or_expression: " + yytext); }
 	;
 
 logical_and_expression
 	: inclusive_or_expression
-		{ throw("Unimplemented rule for logical_and_expression: " + yytext); }
 	| logical_and_expression AND_OP inclusive_or_expression
 		{ throw("Unimplemented rule for logical_and_expression: " + yytext); }
 	;
 
 logical_or_expression
 	: logical_and_expression
-		{ throw("Unimplemented rule for logical_or_expression: " + yytext); }
 	| logical_or_expression OR_OP logical_and_expression
 		{ throw("Unimplemented rule for logical_or_expression: " + yytext); }
 	;
 
 conditional_expression
 	: logical_or_expression
-		{ throw("Unimplemented rule for conditional_expression: " + yytext); }
 	| logical_or_expression '?' expression ':' conditional_expression
 		{ throw("Unimplemented rule for conditional_expression: " + yytext); }
 	;
 
 assignment_expression
 	: conditional_expression
-		{ throw("Unimplemented rule for assignment_expression: " + yytext); }
 	| unary_expression assignment_operator assignment_expression
 		{ throw("Unimplemented rule for assignment_expression: " + yytext); }
 	;
@@ -200,7 +185,6 @@ assignment_operator
 
 expression
 	: assignment_expression
-		{ throw("Unimplemented rule for expression: " + yytext); }
 	| expression ',' assignment_expression
 		{ throw("Unimplemented rule for expression: " + yytext); }
 	;
@@ -223,7 +207,7 @@ declaration_specifiers
 	| storage_class_specifier declaration_specifiers
 		{ throw("Unimplemented rule for declaration_specifiers: " + yytext); }
 	| type_specifier
-		{ throw("Unimplemented rule for declaration_specifiers: " + yytext); }
+		{ $$ = [$1]; }
 	| type_specifier declaration_specifiers
 		{ throw("Unimplemented rule for declaration_specifiers: " + yytext); }
 	| type_qualifier
@@ -354,24 +338,23 @@ declarator
 	: pointer direct_declarator
 		{ throw("Unimplemented rule for declarator: " + yytext); }
 	| direct_declarator
-		{ throw("Unimplemented rule for declarator: " + yytext); }
 	;
 
 direct_declarator
 	: IDENTIFIER
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ $$ = new yy.Node('Identifier', [$1]); }
 	| '(' declarator ')'
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ throw("Unimplemented rule 1 for direct_declarator: " + yytext); }
 	| direct_declarator '[' constant_expression ']'
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ throw("Unimplemented rule 2 for direct_declarator: " + yytext); }
 	| direct_declarator '[' ']'
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ throw("Unimplemented rule 3 for direct_declarator: " + yytext); }
 	| direct_declarator '(' parameter_type_list ')'
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ $$ = new yy.Node('FunctionDeclarator', [$1, $3]); }
 	| direct_declarator '(' identifier_list ')'
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ throw("Unimplemented rule 5 for direct_declarator: " + yytext); }
 	| direct_declarator '(' ')'
-		{ throw("Unimplemented rule for direct_declarator: " + yytext); }
+		{ throw("Unimplemented rule 6 for direct_declarator: " + yytext); }
 	;
 
 pointer
@@ -395,14 +378,13 @@ type_qualifier_list
 
 parameter_type_list
 	: parameter_list
-		{ throw("Unimplemented rule for parameter_type_list: " + yytext); }
 	| parameter_list ',' ELLIPSIS
 		{ throw("Unimplemented rule for parameter_type_list: " + yytext); }
 	;
 
 parameter_list
 	: parameter_declaration
-		{ throw("Unimplemented rule for parameter_list: " + yytext); }
+		{ $$ = [$1]; }
 	| parameter_list ',' parameter_declaration
 		{ throw("Unimplemented rule for parameter_list: " + yytext); }
 	;
@@ -413,7 +395,6 @@ parameter_declaration
 	| declaration_specifiers abstract_declarator
 		{ throw("Unimplemented rule for parameter_declaration: " + yytext); }
 	| declaration_specifiers
-		{ throw("Unimplemented rule for parameter_declaration: " + yytext); }
 	;
 
 identifier_list
@@ -488,7 +469,6 @@ statement
 	| iteration_statement
 		{ throw("Unimplemented rule for statement: " + yytext); }
 	| jump_statement
-		{ throw("Unimplemented rule for statement: " + yytext); }
 	;
 
 labeled_statement
@@ -504,7 +484,7 @@ compound_statement
 	: '{' '}'
 		{ throw("Unimplemented rule for compound_statement: " + yytext); }
 	| '{' statement_list '}'
-		{ throw("Unimplemented rule for compound_statement: " + yytext); }
+		{ $$ = new yy.Node('Block', [[], $2]); }
 	| '{' declaration_list '}'
 		{ throw("Unimplemented rule for compound_statement: " + yytext); }
 	| '{' declaration_list statement_list '}'
@@ -520,7 +500,7 @@ declaration_list
 
 statement_list
 	: statement
-		{ throw("Unimplemented rule for statement_list: " + yytext); }
+		{ $$ = [$1]; }
 	| statement_list statement
 		{ throw("Unimplemented rule for statement_list: " + yytext); }
 	;
@@ -562,19 +542,17 @@ jump_statement
 	| RETURN ';'
 		{ throw("Unimplemented rule for jump_statement: " + yytext); }
 	| RETURN expression ';'
-		{ throw("Unimplemented rule for jump_statement: " + yytext); }
+		{ $$ = new yy.Node('Return', [$2]); }
 	;
 
 translation_unit
 	: external_declaration
-		{ throw("Unimplemented rule for translation_unit: " + yytext); }
 	| translation_unit external_declaration
 		{ throw("Unimplemented rule for translation_unit: " + yytext); }
 	;
 
 external_declaration
 	: function_definition
-		{ throw("Unimplemented rule for external_declaration: " + yytext); }
 	| declaration
 		{ throw("Unimplemented rule for external_declaration: " + yytext); }
 	;
@@ -583,7 +561,7 @@ function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
 		{ throw("Unimplemented rule for function_definition: " + yytext); }
 	| declaration_specifiers declarator compound_statement
-		{ throw("Unimplemented rule for function_definition: " + yytext); }
+		{ $$ = new yy.Node('FunctionDefinition', [$1, $2, [], $3]); }
 	| declarator declaration_list compound_statement
 		{ throw("Unimplemented rule for function_definition: " + yytext); }
 	| declarator compound_statement
