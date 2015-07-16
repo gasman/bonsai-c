@@ -224,7 +224,7 @@ init_declarator_list
 
 init_declarator
 	: declarator
-		{ $$ = new yy.Node('UninitDeclarator', [$1]); }
+		{ $$ = new yy.Node('InitDeclarator', [$1, null]); }
 	| declarator '=' initializer
 		{ $$ = new yy.Node('InitDeclarator', [$1, $3]); }
 	;
@@ -318,18 +318,25 @@ struct_declarator
 
 enum_specifier
 	: ENUM '{' enumerator_list '}'
+		{ $$ = new yy.Node('Enum', ['', $3]); }
 	| ENUM IDENTIFIER '{' enumerator_list '}'
+		{ $$ = new yy.Node('Enum', [$2, $4]); }
 	| ENUM IDENTIFIER
+		{ $$ = new yy.Node('Enum', [$2, null]); }
 	;
 
 enumerator_list
 	: enumerator
+		{ $$ = [$1]; }
 	| enumerator_list ',' enumerator
+		{ $$ = $1; $$.push($3); }
 	;
 
 enumerator
 	: IDENTIFIER
+		{ $$ = new yy.Node('Enumerator', [$1, null]); }
 	| IDENTIFIER '=' constant_expression
+		{ $$ = new yy.Node('Enumerator', [$1, $3]); }
 	;
 
 type_qualifier
@@ -339,14 +346,19 @@ type_qualifier
 
 declarator
 	: pointer direct_declarator
+		{ $$ = new yy.Node('Pointer', [$2]); }
 	| direct_declarator
 	;
 
 direct_declarator
 	: IDENTIFIER
+		{ $$ = new yy.Node('Ident', [$1]); }
 	| '(' declarator ')'
+		{ $$ = $2; }
 	| direct_declarator '[' constant_expression ']'
+		{ $$ = new yy.Node('Array', [$1, $3]); }
 	| direct_declarator '[' ']'
+		{ $$ = new yy.Node('Array', [$1, null]); }
 	| direct_declarator '(' parameter_type_list ')'
 	| direct_declarator '(' identifier_list ')'
 	| direct_declarator '(' ')'
@@ -361,7 +373,9 @@ pointer
 
 type_qualifier_list
 	: type_qualifier
+		{ $$ = [$1]; }
 	| type_qualifier_list type_qualifier
+		{ $$ = $1; $$.push($2); }
 	;
 
 
@@ -372,7 +386,9 @@ parameter_type_list
 
 parameter_list
 	: parameter_declaration
+		{ $$ = [$1]; }
 	| parameter_list ',' parameter_declaration
+		{ $$ = $1; $$.push($3); }
 	;
 
 parameter_declaration
@@ -383,7 +399,9 @@ parameter_declaration
 
 identifier_list
 	: IDENTIFIER
+		{ $$ = [$1]; }
 	| identifier_list ',' IDENTIFIER
+		{ $$ = $1; $$.push($3); }
 	;
 
 type_name
@@ -399,6 +417,7 @@ abstract_declarator
 
 direct_abstract_declarator
 	: '(' abstract_declarator ')'
+		{ $$ = $2; }
 	| '[' ']'
 	| '[' constant_expression ']'
 	| direct_abstract_declarator '[' ']'
@@ -504,13 +523,13 @@ external_declaration
 
 function_definition
 	: declaration_specifiers declarator declaration_list compound_statement
-		{ $$ = new yy.Node('Function', [$1, $2, $3, $4]); }
+		{ $$ = new yy.Node('FunctionDefinition', [$1, $2, $3, $4]); }
 	| declaration_specifiers declarator compound_statement
-		{ $$ = new yy.Node('Function', [$1, $2, [], $3]); }
+		{ $$ = new yy.Node('FunctionDefinition', [$1, $2, [], $3]); }
 	| declarator declaration_list compound_statement
-		{ $$ = new yy.Node('Function', ['void', $1, $2, $3]); }
+		{ $$ = new yy.Node('FunctionDefinition', ['void', $1, $2, $3]); }
 	| declarator compound_statement
-		{ $$ = new yy.Node('Function', ['void', $1, [], $2]); }
+		{ $$ = new yy.Node('FunctionDefinition', ['void', $1, [], $2]); }
 	;
 
 root
