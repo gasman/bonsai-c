@@ -42,17 +42,40 @@ function parameterListIsVoid(parameterList) {
 	return true;
 }
 
-function compileReturnExpression(returnValue, returnType) {
-	if (returnValue.type == 'Const') {
-		var numString = returnValue.params[0];
-		if (returnType == 'int' && numString.match(/^\d+$/)) {
-			/* numString validates as an int */
-			return numString;
-		} else {
-			throw("Cannot return " + numString + " as type " + returnType);
-		}
+function compileConstExpression(expr, expectedType) {
+	assert.equal('Const', expr.type);
+	var numString = expr.params[0];
+	if (expectedType == 'int' && numString.match(/^\d+$/)) {
+		return numString;
 	} else {
-		throw("Non-NumericLiteral return values are not yet supported");
+		throw("Cannot compile " + numString + " as type " + expectedType);
+	}
+}
+
+function compileExpression(expr, expectedType) {
+	switch (expr.type) {
+		case 'Add':
+			var l = compileExpression(expr.params[0], expectedType);
+			var r = compileExpression(expr.params[1], expectedType);
+			return '(' + l + ') + (' + r + ')';
+		case 'Const':
+			return compileConstExpression(expr, expectedType);
+		default:
+			throw("Unimplemented expression type: " + expr.type);
+	}
+}
+
+function compileReturnExpression(expr, returnType) {
+	if (expr.type == 'Const' && returnType == 'int') {
+		/* no type annotation necessary - just return the literal */
+		return compileConstExpression(expr, returnType);
+	} else {
+		switch (returnType) {
+			case 'int':
+				return '(' + compileExpression(expr, returnType) + ')|0';
+			default:
+				throw("Unimplemented return type: " + returnType);
+		}
 	}
 }
 

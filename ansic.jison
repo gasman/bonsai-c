@@ -94,7 +94,7 @@ multiplicative_expression
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression
-		{ throw("Unimplemented rule for additive_expression: " + yytext); }
+		{ $$ = new yy.Node('Add', [$1, $3]); }
 	| additive_expression '-' multiplicative_expression
 		{ throw("Unimplemented rule for additive_expression: " + yytext); }
 	;
