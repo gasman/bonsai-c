@@ -395,6 +395,7 @@ parameter_declaration
 	| declaration_specifiers abstract_declarator
 		{ throw("Unimplemented rule for parameter_declaration: " + yytext); }
 	| declaration_specifiers
+		{ $$ = new yy.Node('TypeOnlyDeclarationSpecifier', [$1]); }
 	;
 
 identifier_list
@@ -547,6 +548,7 @@ jump_statement
 
 translation_unit
 	: external_declaration
+		{ $$ = [$1]; }
 	| translation_unit external_declaration
 		{ throw("Unimplemented rule for translation_unit: " + yytext); }
 	;
