@@ -34,7 +34,7 @@ function Expression(node, context) {
 			this.type = left.type;
 			this.compile = function() {
 				return '(' + left.compile() + ') + (' + right.compile() + ')';
-			}
+			};
 			break;
 		case 'Assign':
 			left = new Expression(node.params[0], context);
@@ -52,7 +52,7 @@ function Expression(node, context) {
 
 			this.compile = function() {
 				return left.compile() + ' = (' + right.compile() + ')';
-			}
+			};
 			break;
 		case 'Const':
 			var numString = node.params[0];
@@ -61,10 +61,32 @@ function Expression(node, context) {
 				this.type = types.int;
 				this.compile = function() {
 					return numString;
-				}
+				};
 			} else {
 				throw("Unsupported numeric constant: " + numString);
 			}
+			break;
+		case 'FunctionCall':
+			var callee = new Expression(node.params[0], context);
+			assert.equal('function', callee.type.category);
+			this.type = callee.type.returnType;
+			var paramTypes = callee.type.paramTypes;
+
+			var argNodes = node.params[1];
+			assert(Array.isArray(argNodes));
+			var args = [];
+			for (var i = 0; i < argNodes.length; i++) {
+				args[i] = new Expression(argNodes[i], context);
+				assert(types.equal(paramTypes[i], args[i].type));
+			}
+
+			this.compile = function() {
+				var compiledArgs = [];
+				for (var i = 0; i < args.length; i++) {
+					compiledArgs[i] = args[i].compile();
+				}
+				return '(' + callee.compile() + ')(' + compiledArgs.join(', ') + ')';
+			};
 			break;
 		case 'Var':
 			var identifier = node.params[0];
@@ -74,7 +96,7 @@ function Expression(node, context) {
 			this.isAssignable = true;
 			this.compile = function() {
 				return identifier;
-			}
+			};
 			break;
 		default:
 			throw("Unimplemented expression type: " + node.type);
