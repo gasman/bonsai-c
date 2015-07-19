@@ -18,7 +18,7 @@
 
 primary_expression
 	: IDENTIFIER
-		{ throw("Unimplemented rule for primary_expression: " + yytext); }
+		{ $$ = new yy.Node('Var', [$1]); }
 	| CONSTANT
 		{ $$ = new yy.Node('Const', [$1]); }
 	| STRING_LITERAL
@@ -166,7 +166,7 @@ conditional_expression
 assignment_expression
 	: conditional_expression
 	| unary_expression assignment_operator assignment_expression
-		{ throw("Unimplemented rule for assignment_expression: " + yytext); }
+		{ $$ = new yy.Node('Assign', [$1, $2, $3]); }
 	;
 
 assignment_operator
@@ -198,7 +198,7 @@ declaration
 	: declaration_specifiers ';'
 		{ throw("Unimplemented rule for declaration: " + yytext); }
 	| declaration_specifiers init_declarator_list ';'
-		{ throw("Unimplemented rule for declaration: " + yytext); }
+		{ $$ = new yy.Node('Declaration', [$1, $2]); }
 	;
 
 declaration_specifiers
@@ -218,14 +218,14 @@ declaration_specifiers
 
 init_declarator_list
 	: init_declarator
-		{ throw("Unimplemented rule for init_declarator_list: " + yytext); }
+		{ $$ = [$1]; }
 	| init_declarator_list ',' init_declarator
 		{ throw("Unimplemented rule for init_declarator_list: " + yytext); }
 	;
 
 init_declarator
 	: declarator
-		{ throw("Unimplemented rule for init_declarator: " + yytext); }
+		{ $$ = new yy.Node('InitDeclarator', [$1, null]); }
 	| declarator '=' initializer
 		{ throw("Unimplemented rule for init_declarator: " + yytext); }
 	;
@@ -464,7 +464,6 @@ statement
 	| compound_statement
 		{ throw("Unimplemented rule for statement: " + yytext); }
 	| expression_statement
-		{ throw("Unimplemented rule for statement: " + yytext); }
 	| selection_statement
 		{ throw("Unimplemented rule for statement: " + yytext); }
 	| iteration_statement
@@ -489,12 +488,12 @@ compound_statement
 	| '{' declaration_list '}'
 		{ throw("Unimplemented rule for compound_statement: " + yytext); }
 	| '{' declaration_list statement_list '}'
-		{ throw("Unimplemented rule for compound_statement: " + yytext); }
+		{ $$ = new yy.Node('Block', [$2, $3]); }
 	;
 
 declaration_list
 	: declaration
-		{ throw("Unimplemented rule for declaration_list: " + yytext); }
+		{ $$ = [$1]; }
 	| declaration_list declaration
 		{ throw("Unimplemented rule for declaration_list: " + yytext); }
 	;
@@ -503,14 +502,14 @@ statement_list
 	: statement
 		{ $$ = [$1]; }
 	| statement_list statement
-		{ throw("Unimplemented rule for statement_list: " + yytext); }
+		{ $$ = $1; $$.push($2); }
 	;
 
 expression_statement
 	: ';'
 		{ throw("Unimplemented rule for expression_statement: " + yytext); }
 	| expression ';'
-		{ throw("Unimplemented rule for expression_statement: " + yytext); }
+		{ $$ = new yy.Node('ExpressionStatement', [$1]); }
 	;
 
 selection_statement

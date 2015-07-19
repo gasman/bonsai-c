@@ -11,4 +11,8 @@ js = BonsaiC.compile('tests/add.c');
 module = eval('(' + js + ')')();
 assert.equal(42, module.main());
 
+js = BonsaiC.compile('tests/var.c');
+module = eval('(' + js + ')')();
+assert.equal(42, module.main());
+
 console.log("All tests passed");
