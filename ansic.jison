@@ -34,7 +34,7 @@ postfix_expression
 	| postfix_expression '(' ')'
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression '(' argument_expression_list ')'
-		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
+		{ $$ = new yy.Node('FunctionCall', [$1, $3]); }
 	| postfix_expression '.' IDENTIFIER
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression PTR_OP IDENTIFIER
@@ -47,9 +47,9 @@ postfix_expression
 
 argument_expression_list
 	: assignment_expression
-		{ throw("Unimplemented rule for argument_expression_list: " + yytext); }
+		{ $$ = [$1]; }
 	| argument_expression_list ',' assignment_expression
-		{ throw("Unimplemented rule for argument_expression_list: " + yytext); }
+		{ $$ = $1; $$.push($3); }
 	;
 
 unary_expression
@@ -386,7 +386,7 @@ parameter_list
 	: parameter_declaration
 		{ $$ = [$1]; }
 	| parameter_list ',' parameter_declaration
-		{ throw("Unimplemented rule for parameter_list: " + yytext); }
+		{ $$ = $1; $$.push($3); }
 	;
 
 parameter_declaration
@@ -548,7 +548,7 @@ translation_unit
 	: external_declaration
 		{ $$ = [$1]; }
 	| translation_unit external_declaration
-		{ throw("Unimplemented rule for translation_unit: " + yytext); }
+		{ $$ = $1; $$.push($2); }
 	;
 
 external_declaration

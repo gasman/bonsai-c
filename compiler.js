@@ -1,5 +1,18 @@
 var assert = require('assert');
 var util = require('util');
+var types = require('./types');
+
+function Context(returnType, variableTypes) {
+	this.returnType = returnType;
+	this.variableTypes = variableTypes;
+}
+Context.prototype.copy = function() {
+	var variableTypes = {};
+	for (var prop in this.variableTypes) {
+		variableTypes[prop] = this.variableTypes[prop];
+	}
+	return new Context(this.returnType, variableTypes);
+}
 
 function indent(code) {
 	lines = code.split('\n');
@@ -11,31 +24,15 @@ function indent(code) {
 	return lines.join('\n');
 }
 
-function getTypeFromDeclarationSpecifiers(declarationSpecifiers) {
-	assert(Array.isArray(declarationSpecifiers),
-		util.format(
-			'getTypeFromDeclarationSpecifiers expected an array, got %s',
-			util.inspect(declarationSpecifiers)
-		)
-	);
-
-	if (declarationSpecifiers.length != 1) {
-		throw(util.format(
-			"Multi-token declaration specifiers are not yet supported - got %s",
-			util.inspect(declarationSpecifiers)
-		));
-	}
-
-	var token = declarationSpecifiers[0];
-	return token;
-}
-
 function parameterListIsVoid(parameterList) {
 	if (parameterList.length != 1) return false;
 	var parameter = parameterList[0];
 	if (parameter.type != 'TypeOnlyParameterDeclaration') return false;
 	var parameterTypeSpecifiers = parameter.params[0];
-	if (getTypeFromDeclarationSpecifiers(parameterTypeSpecifiers) != 'void') {
+	if (!types.equal(
+		types.getTypeFromDeclarationSpecifiers(parameterTypeSpecifiers),
+		types.void
+	)) {
 		return false;
 	}
 
@@ -45,10 +42,10 @@ function parameterListIsVoid(parameterList) {
 function compileConstExpression(expr, expectedType) {
 	assert.equal('Const', expr.type);
 	var numString = expr.params[0];
-	if (expectedType == 'int' && numString.match(/^\d+$/)) {
+	if (expectedType !== null && types.equal(expectedType, types.int) && numString.match(/^\d+$/)) {
 		return numString;
 	} else {
-		throw("Cannot compile " + numString + " as type " + expectedType);
+		throw("Cannot compile " + numString + " as type " + utils.inspect(expectedType));
 	}
 }
 
@@ -57,6 +54,7 @@ function compileExpression(expr, expectedType, context) {
 
 	switch (expr.type) {
 		case 'Add':
+			/* TODO: check that types match, when expectedType is null */
 			var l = compileExpression(expr.params[0], expectedType, context);
 			var r = compileExpression(expr.params[1], expectedType, context);
 			return '(' + l + ') + (' + r + ')';
@@ -76,7 +74,7 @@ function compileExpression(expr, expectedType, context) {
 			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
 			varType = context.variableTypes[identifier];
 			if (expectedType !== null) {
-				assert.equal(expectedType, varType);
+				assert(types.equal(expectedType, varType));
 			}
 			return identifier + ' = (' + compileExpression(rvalue, varType, context) + ')';
 		case 'Const':
@@ -86,7 +84,7 @@ function compileExpression(expr, expectedType, context) {
 			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
 			varType = context.variableTypes[identifier];
 			if (expectedType !== null) {
-				assert.equal(expectedType, varType);
+				assert(types.equal(expectedType, varType));
 			}
 			return identifier;
 		default:
@@ -95,15 +93,15 @@ function compileExpression(expr, expectedType, context) {
 }
 
 function compileReturnExpression(expr, context) {
-	if (expr.type == 'Const' && context.returnType == 'int') {
+	if (expr.type == 'Const' && types.equal(context.returnType, types.int)) {
 		/* no type annotation necessary - just return the literal */
 		return compileConstExpression(expr, context.returnType);
 	} else {
-		switch (context.returnType) {
+		switch (context.returnType.category) {
 			case 'int':
 				return '(' + compileExpression(expr, context.returnType, context) + ')|0';
 			default:
-				throw("Unimplemented return type: " + context.returnType);
+				throw("Unimplemented return type: " + utils.inspect(context.returnType));
 		}
 	}
 }
@@ -124,12 +122,7 @@ function compileBlock(block, parentContext, outputBraces) {
 	var i, j;
 	assert.equal('Block', block.type);
 
-	var context = {};
-	context.returnType = parentContext.returnType;
-	context.variableTypes = {};
-	for (var varName in parentContext.variableTypes) {
-		context.variableTypes[varName] = parentContext.variableTypes[varName];
-	}
+	var context = parentContext.copy();
 
 	var declarationList = block.params[0];
 	var statementList = block.params[1];
@@ -144,7 +137,7 @@ function compileBlock(block, parentContext, outputBraces) {
 		var declarationSpecifiers = declaration.params[0];
 		var initDeclaratorList = declaration.params[1];
 
-		var declarationType = getTypeFromDeclarationSpecifiers(declarationSpecifiers);
+		var declarationType = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
 
 		assert(Array.isArray(initDeclaratorList));
 		for (j = 0; j < initDeclaratorList.length; j++) {
@@ -159,14 +152,14 @@ function compileBlock(block, parentContext, outputBraces) {
 
 			context.variableTypes[identifier] = declarationType;
 
-			if (declarationType == 'int' && initialValue === null) {
+			if (types.equal(declarationType, types.int) && initialValue === null) {
 				out += 'var ' + identifier + ' = 0;\n';
-			} else if (declarationType == 'int' && initialValue.type == 'Const') {
+			} else if (types.equal(declarationType, types.int) && initialValue.type == 'Const') {
 				out += 'var ' + identifier + ' = ' + compileConstExpression(initialValue, declarationType) + ';\n';
 			} else {
 				throw(util.format(
 					"Unsupported declaration type: %s with initial value %s",
-					declarationType,
+					util.inspect(declarationType),
 					util.inspect(initialValue)
 				));
 			}
@@ -193,7 +186,7 @@ function FunctionDefinition(node) {
 	var declarationList = node.params[2];
 	this.body = node.params[3];
 
-	this.returnType = getTypeFromDeclarationSpecifiers(declarationSpecifiers);
+	this.returnType = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
 
 	assert.equal('FunctionDeclarator', declarator.type);
 	var nameDeclarator = declarator.params[0];
@@ -204,29 +197,34 @@ function FunctionDefinition(node) {
 
 	assert(Array.isArray(parameterList));
 	this.parameters = [];
+	var parameterTypes = [];
+
 	if (!parameterListIsVoid(parameterList)) {
 		for (var i = 0; i < parameterList.length; i++) {
 			var parameterDeclaration = parameterList[i];
 			assert.equal('ParameterDeclaration', parameterDeclaration.type);
-			var parameterType = getTypeFromDeclarationSpecifiers(parameterDeclaration.params[0]);
+
+			var parameterType = types.getTypeFromDeclarationSpecifiers(parameterDeclaration.params[0]);
+			parameterTypes.push(parameterType);
+
 			var parameterIdentifier = parameterDeclaration.params[1];
 			assert.equal('Identifier', parameterIdentifier.type);
 			var ident = parameterIdentifier.params[0];
+
 			this.parameters.push({
 				'identifier': ident,
 				'type': parameterType
 			});
 		}
 	}
+	this.type = types.func(this.returnType, parameterTypes);
 
 	assert(Array.isArray(declarationList));
 	assert.equal(0, declarationList.length);
 }
-FunctionDefinition.prototype.compile = function() {
-	var context = {
-		'returnType': this.returnType,
-		'variableTypes': {}
-	};
+FunctionDefinition.prototype.compile = function(parentContext) {
+	var context = parentContext.copy();
+	context.returnType = this.returnType;
 
 	var paramNames = [];
 	var paramAnnotations = [];
@@ -235,12 +233,12 @@ FunctionDefinition.prototype.compile = function() {
 		context.variableTypes[param.identifier] = param.type;
 		paramNames.push(param.identifier);
 
-		switch(param.type) {
+		switch(param.type.category) {
 			case 'int':
 				paramAnnotations.push(param.identifier + ' = ' + param.identifier + '|0;\n');
 				break;
 			default:
-				throw "Parameter type implementation not yet implemented: " + param.type;
+				throw "Parameter type annotation not yet implemented: " + util.inspect(param.type);
 		}
 	}
 
@@ -260,26 +258,32 @@ function compileModule(name, ast) {
 		util.format('compileModule expected an array, got %s', util.inspect(ast))
 	);
 
-	var i;
+	var i, fd;
 	var functionDefinitions = [];
+	var context = new Context(null, {});
 
 	var out = 'function ' + name + '() {\n\t"use asm";\n\n';
 
 	for (i = 0; i < ast.length; i++) {
 		switch (ast[i].type) {
 			case 'FunctionDefinition':
-				var functionDefinition = new FunctionDefinition(ast[i]);
-				functionDefinitions.push(functionDefinition);
-				out += indent(functionDefinition.compile()) + '\n';
+				fd = new FunctionDefinition(ast[i]);
+				functionDefinitions.push(fd);
+				context.variableTypes[fd.name] = fd.type;
 				break;
 			default:
 				throw "Unexpected node type: " + ast[i].type;
 		}
 	}
 
+	for (i = 0; i < functionDefinitions.length; i++) {
+		fd = functionDefinitions[i];
+		out += indent(fd.compile(context)) + '\n';
+	}
+
 	out += "\treturn {\n";
 	for (i = 0; i < functionDefinitions.length; i++) {
-		var fd = functionDefinitions[i];
+		fd = functionDefinitions[i];
 		out += "\t\t" + fd.name + ': ' + fd.name + (i < functionDefinitions.length - 1 ? ',\n' : '\n');
 	}
 	out += "\t};\n";
