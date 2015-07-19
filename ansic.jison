@@ -391,11 +391,11 @@ parameter_list
 
 parameter_declaration
 	: declaration_specifiers declarator
-		{ throw("Unimplemented rule for parameter_declaration: " + yytext); }
+		{ $$ = new yy.Node('ParameterDeclaration', [$1, $2]); }
 	| declaration_specifiers abstract_declarator
 		{ throw("Unimplemented rule for parameter_declaration: " + yytext); }
 	| declaration_specifiers
-		{ $$ = new yy.Node('TypeOnlyDeclarationSpecifier', [$1]); }
+		{ $$ = new yy.Node('TypeOnlyParameterDeclaration', [$1]); }
 	;
 
 identifier_list

@@ -33,7 +33,7 @@ function getTypeFromDeclarationSpecifiers(declarationSpecifiers) {
 function parameterListIsVoid(parameterList) {
 	if (parameterList.length != 1) return false;
 	var parameter = parameterList[0];
-	if (parameter.type != 'TypeOnlyDeclarationSpecifier') return false;
+	if (parameter.type != 'TypeOnlyParameterDeclaration') return false;
 	var parameterTypeSpecifiers = parameter.params[0];
 	if (getTypeFromDeclarationSpecifiers(parameterTypeSpecifiers) != 'void') {
 		return false;
@@ -73,6 +73,7 @@ function compileExpression(expr, expectedType, context) {
 				"Assignment operators other than '=' are not yet implemented"
 			);
 
+			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
 			varType = context.variableTypes[identifier];
 			if (expectedType !== null) {
 				assert.equal(expectedType, varType);
@@ -82,6 +83,7 @@ function compileExpression(expr, expectedType, context) {
 			return compileConstExpression(expr, expectedType);
 		case 'Var':
 			identifier = expr.params[0];
+			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
 			varType = context.variableTypes[identifier];
 			if (expectedType !== null) {
 				assert.equal(expectedType, varType);
@@ -118,7 +120,7 @@ function compileStatement(statement, context) {
 	}
 }
 
-function compileBlock(block, parentContext) {
+function compileBlock(block, parentContext, outputBraces) {
 	var i, j;
 	assert.equal('Block', block.type);
 
@@ -132,7 +134,7 @@ function compileBlock(block, parentContext) {
 	var declarationList = block.params[0];
 	var statementList = block.params[1];
 
-	var out = '{\n';
+	var out = '';
 
 	assert(Array.isArray(declarationList));
 	for (i = 0; i < declarationList.length; i++) {
@@ -158,9 +160,9 @@ function compileBlock(block, parentContext) {
 			context.variableTypes[identifier] = declarationType;
 
 			if (declarationType == 'int' && initialValue === null) {
-				out += '\tvar ' + identifier + ' = 0;\n';
+				out += 'var ' + identifier + ' = 0;\n';
 			} else if (declarationType == 'int' && initialValue.type == 'Const') {
-				out += '\tvar ' + identifier + ' = ' + compileConstExpression(initialValue, declarationType) + ';\n';
+				out += 'var ' + identifier + ' = ' + compileConstExpression(initialValue, declarationType) + ';\n';
 			} else {
 				throw(util.format(
 					"Unsupported declaration type: %s with initial value %s",
@@ -174,10 +176,14 @@ function compileBlock(block, parentContext) {
 	assert(Array.isArray(statementList));
 
 	for (i = 0; i < statementList.length; i++) {
-		out += indent(compileStatement(statementList[i], context));
+		out += compileStatement(statementList[i], context);
 	}
-	out += '}\n';
-	return out;
+
+	if (outputBraces) {
+		return '{\n' + indent(out) + '}\n';
+	} else {
+		return out;
+	}
 }
 
 function FunctionDefinition(node) {
@@ -197,11 +203,21 @@ function FunctionDefinition(node) {
 	this.name = nameDeclarator.params[0];
 
 	assert(Array.isArray(parameterList));
-	/* for now, we'll only support void parameter lists */
-	assert(
-		parameterListIsVoid(parameterList),
-		"Non-void parameter lists are not implemented yet"
-	);
+	this.parameters = [];
+	if (!parameterListIsVoid(parameterList)) {
+		for (var i = 0; i < parameterList.length; i++) {
+			var parameterDeclaration = parameterList[i];
+			assert.equal('ParameterDeclaration', parameterDeclaration.type);
+			var parameterType = getTypeFromDeclarationSpecifiers(parameterDeclaration.params[0]);
+			var parameterIdentifier = parameterDeclaration.params[1];
+			assert.equal('Identifier', parameterIdentifier.type);
+			var ident = parameterIdentifier.params[0];
+			this.parameters.push({
+				'identifier': ident,
+				'type': parameterType
+			});
+		}
+	}
 
 	assert(Array.isArray(declarationList));
 	assert.equal(0, declarationList.length);
@@ -212,7 +228,31 @@ FunctionDefinition.prototype.compile = function() {
 		'variableTypes': {}
 	};
 
-	return 'function ' + this.name + '() ' + compileBlock(this.body, context);
+	var paramNames = [];
+	var paramAnnotations = [];
+	for (var i = 0; i < this.parameters.length; i++) {
+		var param = this.parameters[i];
+		context.variableTypes[param.identifier] = param.type;
+		paramNames.push(param.identifier);
+
+		switch(param.type) {
+			case 'int':
+				paramAnnotations.push(param.identifier + ' = ' + param.identifier + '|0;\n');
+				break;
+			default:
+				throw "Parameter type implementation not yet implemented: " + param.type;
+		}
+	}
+
+	var out = 'function ' + this.name + '(' + paramNames.join(', ') + ') {\n';
+	if (paramAnnotations.length) {
+		out += indent(paramAnnotations.join('')) + '\n';
+	};
+
+	out += indent(compileBlock(this.body, context, false));
+	out += '}\n';
+
+	return out;
 };
 
 function compileModule(name, ast) {
