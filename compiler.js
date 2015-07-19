@@ -159,6 +159,8 @@ function compileBlock(block, parentContext) {
 
 			if (declarationType == 'int' && initialValue === null) {
 				out += '\tvar ' + identifier + ' = 0;\n';
+			} else if (declarationType == 'int' && initialValue.type == 'Const') {
+				out += '\tvar ' + identifier + ' = ' + compileConstExpression(initialValue, declarationType) + ';\n';
 			} else {
 				throw(util.format(
 					"Unsupported declaration type: %s with initial value %s",

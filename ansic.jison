@@ -227,7 +227,7 @@ init_declarator
 	: declarator
 		{ $$ = new yy.Node('InitDeclarator', [$1, null]); }
 	| declarator '=' initializer
-		{ throw("Unimplemented rule for init_declarator: " + yytext); }
+		{ $$ = new yy.Node('InitDeclarator', [$1, $3]); }
 	;
 
 storage_class_specifier
@@ -444,7 +444,6 @@ direct_abstract_declarator
 
 initializer
 	: assignment_expression
-		{ throw("Unimplemented rule for initializer: " + yytext); }
 	| '{' initializer_list '}'
 		{ throw("Unimplemented rule for initializer: " + yytext); }
 	| '{' initializer_list ',' '}'
