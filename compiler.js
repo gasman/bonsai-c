@@ -24,6 +24,63 @@ function indent(code) {
 	return lines.join('\n');
 }
 
+function Expression(node, context) {
+	var left, right;
+	switch (node.type) {
+		case 'Add':
+			left = new Expression(node.params[0], context);
+			right = new Expression(node.params[1], context);
+			assert(types.equal(left.type, right.type));
+			this.type = left.type;
+			this.compile = function() {
+				return '(' + left.compile() + ') + (' + right.compile() + ')';
+			}
+			break;
+		case 'Assign':
+			left = new Expression(node.params[0], context);
+			assert(left.isAssignable);
+
+			var operator = node.params[1];
+			assert.equal('=', operator,
+				"Assignment operators other than '=' are not yet implemented"
+			);
+
+			right = new Expression(node.params[2], context);
+			assert(types.equal(left.type, right.type));
+
+			this.type = left.type;
+
+			this.compile = function() {
+				return left.compile() + ' = (' + right.compile() + ')';
+			}
+			break;
+		case 'Const':
+			var numString = node.params[0];
+			this.isConstant = true;
+			if (numString.match(/^\d+$/)) {
+				this.type = types.int;
+				this.compile = function() {
+					return numString;
+				}
+			} else {
+				throw("Unsupported numeric constant: " + numString);
+			}
+			break;
+		case 'Var':
+			var identifier = node.params[0];
+			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
+
+			this.type = context.variableTypes[identifier];
+			this.isAssignable = true;
+			this.compile = function() {
+				return identifier;
+			}
+			break;
+		default:
+			throw("Unimplemented expression type: " + node.type);
+	}
+}
+
 function parameterListIsVoid(parameterList) {
 	if (parameterList.length != 1) return false;
 	var parameter = parameterList[0];
@@ -39,69 +96,19 @@ function parameterListIsVoid(parameterList) {
 	return true;
 }
 
-function compileConstExpression(expr, expectedType) {
-	assert.equal('Const', expr.type);
-	var numString = expr.params[0];
-	if (expectedType !== null && types.equal(expectedType, types.int) && numString.match(/^\d+$/)) {
-		return numString;
-	} else {
-		throw("Cannot compile " + numString + " as type " + utils.inspect(expectedType));
-	}
-}
+function compileReturnExpression(node, context) {
+	var expr = new Expression(node, context);
+	assert(types.equal(expr.type, context.returnType));
 
-function compileExpression(expr, expectedType, context) {
-	var identifier, varType;
-
-	switch (expr.type) {
-		case 'Add':
-			/* TODO: check that types match, when expectedType is null */
-			var l = compileExpression(expr.params[0], expectedType, context);
-			var r = compileExpression(expr.params[1], expectedType, context);
-			return '(' + l + ') + (' + r + ')';
-		case 'Assign':
-			var lvalue = expr.params[0];
-			var operator = expr.params[1];
-			var rvalue = expr.params[2];
-
-			assert.equal('Var', lvalue.type,
-				"Assignments to non-simple vars are not yet implemented"
-			);
-			identifier = lvalue.params[0];
-			assert.equal('=', operator,
-				"Assignment operators other than '=' are not yet implemented"
-			);
-
-			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
-			varType = context.variableTypes[identifier];
-			if (expectedType !== null) {
-				assert(types.equal(expectedType, varType));
-			}
-			return identifier + ' = (' + compileExpression(rvalue, varType, context) + ')';
-		case 'Const':
-			return compileConstExpression(expr, expectedType);
-		case 'Var':
-			identifier = expr.params[0];
-			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
-			varType = context.variableTypes[identifier];
-			if (expectedType !== null) {
-				assert(types.equal(expectedType, varType));
-			}
-			return identifier;
-		default:
-			throw("Unimplemented expression type: " + expr.type);
-	}
-}
-
-function compileReturnExpression(expr, context) {
-	if (expr.type == 'Const' && types.equal(context.returnType, types.int)) {
+	if (expr.isConstant && types.equal(expr.type, types.int)) {
 		/* no type annotation necessary - just return the literal */
-		return compileConstExpression(expr, context.returnType);
+		return expr.compile();
 	} else {
-		switch (context.returnType.category) {
+		switch (expr.type.category) {
 			case 'int':
-				return '(' + compileExpression(expr, context.returnType, context) + ')|0';
+				return '(' + expr.compile() + ')|0';
 			default:
-				throw("Unimplemented return type: " + utils.inspect(context.returnType));
+				throw("Unimplemented return type: " + utils.inspect(expr.type));
 		}
 	}
 }
@@ -109,7 +116,8 @@ function compileReturnExpression(expr, context) {
 function compileStatement(statement, context) {
 	switch (statement.type) {
 		case 'ExpressionStatement':
-			return compileExpression(statement.params[0], null, context) + ';\n';
+			var expr = new Expression(statement.params[0], context);
+			return expr.compile() + ';\n';
 		case 'Return':
 			var returnValue = statement.params[0];
 			return 'return ' + compileReturnExpression(returnValue, context) + ';\n';
@@ -152,16 +160,23 @@ function compileBlock(block, parentContext, outputBraces) {
 
 			context.variableTypes[identifier] = declarationType;
 
-			if (types.equal(declarationType, types.int) && initialValue === null) {
-				out += 'var ' + identifier + ' = 0;\n';
-			} else if (types.equal(declarationType, types.int) && initialValue.type == 'Const') {
-				out += 'var ' + identifier + ' = ' + compileConstExpression(initialValue, declarationType) + ';\n';
+			if (initialValue === null) {
+				/* declaration does not provide an initial value */
+				if (types.equal(declarationType, types.int)) {
+					out += 'var ' + identifier + ' = 0;\n';
+				} else {
+					throw "Unsupported declaration type: " + util.inspect(declarationType);
+				}
 			} else {
-				throw(util.format(
-					"Unsupported declaration type: %s with initial value %s",
-					util.inspect(declarationType),
-					util.inspect(initialValue)
-				));
+				var initialValueExpr = new Expression(initialValue, context);
+				assert(initialValueExpr.isConstant);
+				assert(types.equal(declarationType, initialValueExpr.type));
+
+				if (types.equal(declarationType, types.int)) {
+					out += 'var ' + identifier + ' = ' + initialValueExpr.compile() + ';\n';
+				} else {
+					throw "Unsupported declaration type: " + util.inspect(declarationType);
+				};
 			}
 		}
 	}
