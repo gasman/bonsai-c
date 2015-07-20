@@ -21,7 +21,8 @@ Build
 Install Node.js <https://nodejs.org/>.
 Install jison:
     npm install -g jison
-To build the parser module, run (from the root of the codebase):
+Then, from the root of the codebase:
+    npm install
     npm run build-parser
 
 Usage
