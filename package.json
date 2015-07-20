@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "escodegen": "^1.6.1"
   },
   "scripts": {
     "build-parser": "jison ansic.jison ansic.jisonlex -o parser.js"

@@ -301,6 +301,13 @@ function compileModule(name, ast) {
 
 	var out = 'function ' + name + '() {\n\t"use asm";\n\n';
 
+	var moduleBody = [
+		{
+			'type': 'ExpressionStatement',
+			'expression':  {'type': 'Literal', 'value': "use asm"}
+		}
+	];
+
 	for (i = 0; i < ast.length; i++) {
 		switch (ast[i].type) {
 			case 'FunctionDefinition':
@@ -315,18 +322,47 @@ function compileModule(name, ast) {
 
 	for (i = 0; i < functionDefinitions.length; i++) {
 		fd = functionDefinitions[i];
+		// TODO: append result of fd.compile to moduleBody
 		out += indent(fd.compile(context)) + '\n';
 	}
 
 	out += "\treturn {\n";
+	var exportsTable = [];
 	for (i = 0; i < functionDefinitions.length; i++) {
 		fd = functionDefinitions[i];
 		out += "\t\t" + fd.name + ': ' + fd.name + (i < functionDefinitions.length - 1 ? ',\n' : '\n');
+		exportsTable.push({
+			'type': 'Property',
+			'key': {'type': 'Identifier', 'name': fd.name},
+			'value': {'type': 'Identifier', 'name': fd.name},
+			'kind': 'init'
+		});
 	}
 	out += "\t};\n";
 
+	moduleBody.push({
+		'type': 'ReturnStatement',
+		'argument': {
+			'type': 'ObjectExpression',
+			'properties': exportsTable
+		}
+	})
+
 	out += "}\n";
-	return out;
+
+	var program = {
+		'type': 'Program',
+		'body': [{
+			'type': 'FunctionDeclaration',
+			'id': {'type': 'Identifier', 'name': name},
+			'params': [],
+			'body': {
+				'type': 'BlockStatement',
+				'body': moduleBody
+			}
+		}]
+	};
+	return program;
 }
 
 exports.compileModule = compileModule;
