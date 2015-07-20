@@ -9,8 +9,9 @@ var escodegen = require('escodegen');
 
 exports.compile = function(filename) {
 	var cSource = fs.readFileSync(filename, "utf8");
-	var ast = parser.parse(cSource);
-	return compiler.compileModule('Module', ast);
+	var cTree = parser.parse(cSource);
+	var jsTree = compiler.compileModule('Module', cTree);
+	return escodegen.generate(jsTree);
 };
 
 exports.main = function(argv) {

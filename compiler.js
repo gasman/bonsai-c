@@ -263,31 +263,52 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 	var context = parentContext.copy();
 	context.returnType = this.returnType;
 
-	var paramNames = [];
-	var paramAnnotations = [];
+	var paramIdentifiers = [];
+	var functionBody = [];
+
 	for (var i = 0; i < this.parameters.length; i++) {
 		var param = this.parameters[i];
 		context.variableTypes[param.identifier] = param.type;
-		paramNames.push(param.identifier);
+		paramIdentifiers.push({'type': 'Identifier', 'name': param.identifier});
 
+		/* add parameter type annotation to function body */
 		switch(param.type.category) {
 			case 'int':
-				paramAnnotations.push(param.identifier + ' = ' + param.identifier + '|0;\n');
+				/* x = x|0; */
+				functionBody.push({
+					'type': 'ExpressionStatement',
+					'expression': {
+						'type': 'AssignmentExpression',
+						'operator': '=',
+						'left': {'type': 'Identifier', 'name': param.identifier},
+						'right': {
+							'type': 'BinaryExpression',
+							'operator': '|',
+							'left': {'type': 'Identifier', 'name': param.identifier},
+							'right': {'type': 'Literal', 'value': 0}
+						}
+					}
+				});
 				break;
 			default:
 				throw "Parameter type annotation not yet implemented: " + util.inspect(param.type);
 		}
 	}
 
-	var out = 'function ' + this.name + '(' + paramNames.join(', ') + ') {\n';
-	if (paramAnnotations.length) {
-		out += indent(paramAnnotations.join('')) + '\n';
+	// TODO: append to functionBody
+	compileBlock(this.body, context, false);
+
+	var functionDeclaration = {
+		'type': 'FunctionDeclaration',
+		'id': {'type': 'Identifier', 'name': this.name},
+		'params': paramIdentifiers,
+		'body': {
+			'type': 'BlockStatement',
+			'body': functionBody
+		}
 	};
 
-	out += indent(compileBlock(this.body, context, false));
-	out += '}\n';
-
-	return out;
+	return functionDeclaration;
 };
 
 function compileModule(name, ast) {
@@ -298,8 +319,6 @@ function compileModule(name, ast) {
 	var i, fd;
 	var functionDefinitions = [];
 	var context = new Context(null, {});
-
-	var out = 'function ' + name + '() {\n\t"use asm";\n\n';
 
 	var moduleBody = [
 		{
@@ -322,15 +341,12 @@ function compileModule(name, ast) {
 
 	for (i = 0; i < functionDefinitions.length; i++) {
 		fd = functionDefinitions[i];
-		// TODO: append result of fd.compile to moduleBody
-		out += indent(fd.compile(context)) + '\n';
+		moduleBody.push(fd.compile(context));
 	}
 
-	out += "\treturn {\n";
 	var exportsTable = [];
 	for (i = 0; i < functionDefinitions.length; i++) {
 		fd = functionDefinitions[i];
-		out += "\t\t" + fd.name + ': ' + fd.name + (i < functionDefinitions.length - 1 ? ',\n' : '\n');
 		exportsTable.push({
 			'type': 'Property',
 			'key': {'type': 'Identifier', 'name': fd.name},
@@ -338,7 +354,6 @@ function compileModule(name, ast) {
 			'kind': 'init'
 		});
 	}
-	out += "\t};\n";
 
 	moduleBody.push({
 		'type': 'ReturnStatement',
@@ -346,9 +361,7 @@ function compileModule(name, ast) {
 			'type': 'ObjectExpression',
 			'properties': exportsTable
 		}
-	})
-
-	out += "}\n";
+	});
 
 	var program = {
 		'type': 'Program',
