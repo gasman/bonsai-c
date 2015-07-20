@@ -12,7 +12,7 @@ Context.prototype.copy = function() {
 		variableTypes[prop] = this.variableTypes[prop];
 	}
 	return new Context(this.returnType, variableTypes);
-}
+};
 
 function indent(code) {
 	lines = code.split('\n');
@@ -33,7 +33,12 @@ function Expression(node, context) {
 			assert(types.equal(left.type, right.type));
 			this.type = left.type;
 			this.compile = function() {
-				return '(' + left.compile() + ') + (' + right.compile() + ')';
+				return {
+					'type': 'BinaryExpression',
+					'operator': '+',
+					'left': left.compile(),
+					'right': right.compile()
+				};
 			};
 			break;
 		case 'Assign':
@@ -51,7 +56,12 @@ function Expression(node, context) {
 			this.type = left.type;
 
 			this.compile = function() {
-				return left.compile() + ' = (' + right.compile() + ')';
+				return {
+					'type': 'AssignmentExpression',
+					'operator': '=',
+					'left': left.compile(),
+					'right': right.compile()
+				};
 			};
 			break;
 		case 'Const':
@@ -60,7 +70,10 @@ function Expression(node, context) {
 			if (numString.match(/^\d+$/)) {
 				this.type = types.int;
 				this.compile = function() {
-					return numString;
+					return {
+						'type': 'Literal',
+						'value': parseInt(numString, 10)
+					};
 				};
 			} else {
 				throw("Unsupported numeric constant: " + numString);
@@ -85,7 +98,11 @@ function Expression(node, context) {
 				for (var i = 0; i < args.length; i++) {
 					compiledArgs[i] = args[i].compile();
 				}
-				return '(' + callee.compile() + ')(' + compiledArgs.join(', ') + ')';
+				return {
+					'type': 'CallExpression',
+					'callee': callee.compile(),
+					'arguments': compiledArgs
+				};
 			};
 			break;
 		case 'Var':
@@ -95,7 +112,7 @@ function Expression(node, context) {
 			this.type = context.variableTypes[identifier];
 			this.isAssignable = true;
 			this.compile = function() {
-				return identifier;
+				return {'type': 'Identifier', 'name': identifier};
 			};
 			break;
 		default:
@@ -201,8 +218,11 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 				assert(types.equal(declarationType, initialValueExpr.type));
 
 				if (types.equal(declarationType, types.int)) {
-					// out += 'var ' + identifier + ' = ' + initialValueExpr.compile() + ';\n';
-					// TODO: append to variableDeclaratorsOut
+					variableDeclaratorsOut.push({
+						'type': 'VariableDeclarator',
+						'id': {'type': 'Identifier', 'name': identifier},
+						'init': initialValueExpr.compile()
+					});
 				} else {
 					throw "Unsupported declaration type: " + util.inspect(declarationType);
 				}
@@ -226,7 +246,7 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 	}
 
 	if (returnBlockStatement) {
-		return {'type': 'BlockStatement', 'body': statementListOut}
+		return {'type': 'BlockStatement', 'body': statementListOut};
 	} else {
 		return statementListOut;
 	}
