@@ -22,7 +22,7 @@ exports.main = function(argv) {
 	console.log("\n---------\n");
 
 	var jsTree = compiler.compileModule('Module', ast);
-	console.log(jsTree);
+	console.log(util.inspect(jsTree, { depth: null }));
 
 	console.log("\n---------\n");
 

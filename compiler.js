@@ -148,7 +148,7 @@ function compileStatement(statement, context) {
 	}
 }
 
-function compileBlock(block, parentContext, outputBraces) {
+function compileBlock(block, parentContext, returnBlockStatement) {
 	var i, j;
 	assert.equal('Block', block.type);
 
@@ -157,7 +157,9 @@ function compileBlock(block, parentContext, outputBraces) {
 	var declarationList = block.params[0];
 	var statementList = block.params[1];
 
-	var out = '';
+	var statementListOut = [];
+
+	var variableDeclaratorsOut = [];
 
 	assert(Array.isArray(declarationList));
 	for (i = 0; i < declarationList.length; i++) {
@@ -185,7 +187,11 @@ function compileBlock(block, parentContext, outputBraces) {
 			if (initialValue === null) {
 				/* declaration does not provide an initial value */
 				if (types.equal(declarationType, types.int)) {
-					out += 'var ' + identifier + ' = 0;\n';
+					variableDeclaratorsOut.push({
+						'type': 'VariableDeclarator',
+						'id': {'type': 'Identifier', 'name': identifier},
+						'init': {'type': 'Literal', 'value': 0}
+					});
 				} else {
 					throw "Unsupported declaration type: " + util.inspect(declarationType);
 				}
@@ -195,24 +201,34 @@ function compileBlock(block, parentContext, outputBraces) {
 				assert(types.equal(declarationType, initialValueExpr.type));
 
 				if (types.equal(declarationType, types.int)) {
-					out += 'var ' + identifier + ' = ' + initialValueExpr.compile() + ';\n';
+					// out += 'var ' + identifier + ' = ' + initialValueExpr.compile() + ';\n';
+					// TODO: append to variableDeclaratorsOut
 				} else {
 					throw "Unsupported declaration type: " + util.inspect(declarationType);
-				};
+				}
 			}
 		}
+	}
+
+	if (variableDeclaratorsOut.length) {
+		statementListOut.push({
+			'type': 'VariableDeclaration',
+			'declarations': variableDeclaratorsOut,
+			'kind': 'var'
+		});
 	}
 
 	assert(Array.isArray(statementList));
 
 	for (i = 0; i < statementList.length; i++) {
-		out += compileStatement(statementList[i], context);
+		compileStatement(statementList[i], context);
+		// TODO: append to statementList
 	}
 
-	if (outputBraces) {
-		return '{\n' + indent(out) + '}\n';
+	if (returnBlockStatement) {
+		return {'type': 'BlockStatement', 'body': statementListOut}
 	} else {
-		return out;
+		return statementListOut;
 	}
 }
 
@@ -295,8 +311,7 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 		}
 	}
 
-	// TODO: append to functionBody
-	compileBlock(this.body, context, false);
+	functionBody = functionBody.concat(compileBlock(this.body, context, false));
 
 	var functionDeclaration = {
 		'type': 'FunctionDeclaration',
