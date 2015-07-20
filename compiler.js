@@ -1,6 +1,7 @@
 var assert = require('assert');
 var util = require('util');
 var types = require('./types');
+var estree = require('./estree');
 
 function Context(returnType, variableTypes) {
 	this.returnType = returnType;
@@ -33,12 +34,7 @@ function Expression(node, context) {
 			assert(types.equal(left.type, right.type));
 			this.type = left.type;
 			this.compile = function() {
-				return {
-					'type': 'BinaryExpression',
-					'operator': '+',
-					'left': left.compile(),
-					'right': right.compile()
-				};
+				return estree.BinaryExpression('+', left.compile(), right.compile());
 			};
 			break;
 		case 'Assign':
@@ -56,12 +52,7 @@ function Expression(node, context) {
 			this.type = left.type;
 
 			this.compile = function() {
-				return {
-					'type': 'AssignmentExpression',
-					'operator': '=',
-					'left': left.compile(),
-					'right': right.compile()
-				};
+				return estree.AssignmentExpression('=', left.compile(), right.compile());
 			};
 			break;
 		case 'Const':
@@ -70,10 +61,7 @@ function Expression(node, context) {
 			if (numString.match(/^\d+$/)) {
 				this.type = types.int;
 				this.compile = function() {
-					return {
-						'type': 'Literal',
-						'value': parseInt(numString, 10)
-					};
+					return estree.Literal(parseInt(numString, 10));
 				};
 			} else {
 				throw("Unsupported numeric constant: " + numString);
@@ -98,11 +86,7 @@ function Expression(node, context) {
 				for (var i = 0; i < args.length; i++) {
 					compiledArgs[i] = args[i].compile();
 				}
-				return {
-					'type': 'CallExpression',
-					'callee': callee.compile(),
-					'arguments': compiledArgs
-				};
+				return estree.CallExpression(callee.compile(), compiledArgs);
 			};
 			break;
 		case 'Var':
@@ -112,7 +96,7 @@ function Expression(node, context) {
 			this.type = context.variableTypes[identifier];
 			this.isAssignable = true;
 			this.compile = function() {
-				return {'type': 'Identifier', 'name': identifier};
+				return estree.Identifier(identifier);
 			};
 			break;
 		default:
@@ -146,12 +130,10 @@ function compileReturnExpression(node, context) {
 		switch (expr.type.category) {
 			case 'int':
 				/* expr|0 */
-				return {
-					'type': 'BinaryExpression',
-					'operator': '|',
-					'left': expr.compile(),
-					'right': {'type': 'Literal', 'value': 0}
-				};
+				return estree.BinaryExpression('|',
+					expr.compile(),
+					estree.Literal(0)
+				);
 			default:
 				throw("Unimplemented return type: " + utils.inspect(expr.type));
 		}
@@ -162,16 +144,10 @@ function compileStatement(statement, context) {
 	switch (statement.type) {
 		case 'ExpressionStatement':
 			var expr = new Expression(statement.params[0], context);
-			return {
-				'type': 'ExpressionStatement',
-				'expression': expr.compile()
-			};
+			return estree.ExpressionStatement(expr.compile());
 		case 'Return':
 			var returnValue = statement.params[0];
-			return {
-				'type': 'ReturnStatement',
-				'argument': compileReturnExpression(returnValue, context)
-			};
+			return estree.ReturnStatement(compileReturnExpression(returnValue, context));
 		default:
 			throw("Unsupported statement type: " + statement.type);
 	}
@@ -216,11 +192,10 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 			if (initialValue === null) {
 				/* declaration does not provide an initial value */
 				if (types.equal(declarationType, types.int)) {
-					variableDeclaratorsOut.push({
-						'type': 'VariableDeclarator',
-						'id': {'type': 'Identifier', 'name': identifier},
-						'init': {'type': 'Literal', 'value': 0}
-					});
+					variableDeclaratorsOut.push(estree.VariableDeclarator(
+						estree.Identifier(identifier),
+						estree.Literal(0)
+					));
 				} else {
 					throw "Unsupported declaration type: " + util.inspect(declarationType);
 				}
@@ -230,11 +205,10 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 				assert(types.equal(declarationType, initialValueExpr.type));
 
 				if (types.equal(declarationType, types.int)) {
-					variableDeclaratorsOut.push({
-						'type': 'VariableDeclarator',
-						'id': {'type': 'Identifier', 'name': identifier},
-						'init': initialValueExpr.compile()
-					});
+					variableDeclaratorsOut.push(estree.VariableDeclarator(
+						estree.Identifier(identifier),
+						initialValueExpr.compile()
+					));
 				} else {
 					throw "Unsupported declaration type: " + util.inspect(declarationType);
 				}
@@ -243,11 +217,7 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 	}
 
 	if (variableDeclaratorsOut.length) {
-		statementListOut.push({
-			'type': 'VariableDeclaration',
-			'declarations': variableDeclaratorsOut,
-			'kind': 'var'
-		});
+		statementListOut.push(estree.VariableDeclaration(variableDeclaratorsOut));
 	}
 
 	assert(Array.isArray(statementList));
@@ -257,7 +227,7 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 	}
 
 	if (returnBlockStatement) {
-		return {'type': 'BlockStatement', 'body': statementListOut};
+		return estree.BlockStatement(statementListOut);
 	} else {
 		return statementListOut;
 	}
@@ -316,26 +286,21 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 	for (var i = 0; i < this.parameters.length; i++) {
 		var param = this.parameters[i];
 		context.variableTypes[param.identifier] = param.type;
-		paramIdentifiers.push({'type': 'Identifier', 'name': param.identifier});
+		paramIdentifiers.push(estree.Identifier(param.identifier));
 
 		/* add parameter type annotation to function body */
 		switch(param.type.category) {
 			case 'int':
 				/* x = x|0; */
-				functionBody.push({
-					'type': 'ExpressionStatement',
-					'expression': {
-						'type': 'AssignmentExpression',
-						'operator': '=',
-						'left': {'type': 'Identifier', 'name': param.identifier},
-						'right': {
-							'type': 'BinaryExpression',
-							'operator': '|',
-							'left': {'type': 'Identifier', 'name': param.identifier},
-							'right': {'type': 'Literal', 'value': 0}
-						}
-					}
-				});
+				functionBody.push(estree.ExpressionStatement(
+					estree.AssignmentExpression('=',
+						estree.Identifier(param.identifier),
+						estree.BinaryExpression('|',
+							estree.Identifier(param.identifier),
+							estree.Literal(0)
+						)
+					)
+				));
 				break;
 			default:
 				throw "Parameter type annotation not yet implemented: " + util.inspect(param.type);
@@ -344,17 +309,11 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 
 	functionBody = functionBody.concat(compileBlock(this.body, context, false));
 
-	var functionDeclaration = {
-		'type': 'FunctionDeclaration',
-		'id': {'type': 'Identifier', 'name': this.name},
-		'params': paramIdentifiers,
-		'body': {
-			'type': 'BlockStatement',
-			'body': functionBody
-		}
-	};
-
-	return functionDeclaration;
+	return estree.FunctionDeclaration(
+		estree.Identifier(this.name),
+		paramIdentifiers,
+		estree.BlockStatement(functionBody)
+	);
 };
 
 function compileModule(name, ast) {
@@ -367,10 +326,7 @@ function compileModule(name, ast) {
 	var context = new Context(null, {});
 
 	var moduleBody = [
-		{
-			'type': 'ExpressionStatement',
-			'expression':  {'type': 'Literal', 'value': "use asm"}
-		}
+		estree.ExpressionStatement(estree.Literal("use asm"))
 	];
 
 	for (i = 0; i < ast.length; i++) {
@@ -393,35 +349,24 @@ function compileModule(name, ast) {
 	var exportsTable = [];
 	for (i = 0; i < functionDefinitions.length; i++) {
 		fd = functionDefinitions[i];
-		exportsTable.push({
-			'type': 'Property',
-			'key': {'type': 'Identifier', 'name': fd.name},
-			'value': {'type': 'Identifier', 'name': fd.name},
-			'kind': 'init'
-		});
+		exportsTable.push(estree.Property(
+			estree.Identifier(fd.name),
+			estree.Identifier(fd.name),
+			'init'
+		));
 	}
 
-	moduleBody.push({
-		'type': 'ReturnStatement',
-		'argument': {
-			'type': 'ObjectExpression',
-			'properties': exportsTable
-		}
-	});
+	moduleBody.push(estree.ReturnStatement(
+		estree.ObjectExpression(exportsTable)
+	));
 
-	var program = {
-		'type': 'Program',
-		'body': [{
-			'type': 'FunctionDeclaration',
-			'id': {'type': 'Identifier', 'name': name},
-			'params': [],
-			'body': {
-				'type': 'BlockStatement',
-				'body': moduleBody
-			}
-		}]
-	};
-	return program;
+	return estree.Program([
+		estree.FunctionDeclaration(
+			estree.Identifier(name),
+			[],
+			estree.BlockStatement(moduleBody)
+		)
+	]);
 }
 
 exports.compileModule = compileModule;
