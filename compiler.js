@@ -153,18 +153,17 @@ function compileStatement(statement, context) {
 	}
 }
 
-function compileBlock(block, parentContext, returnBlockStatement) {
+function BlockStatement(block, parentContext) {
 	var i, j;
 	assert.equal('Block', block.type);
 
-	var context = parentContext.copy();
+	this.context = parentContext.copy();
 
 	var declarationList = block.params[0];
-	var statementList = block.params[1];
+	this.statementList = block.params[1];
+	assert(Array.isArray(this.statementList));
 
-	var statementListOut = [];
-
-	var variableDeclaratorsOut = [];
+	this.variableDeclarators = [];
 
 	assert(Array.isArray(declarationList));
 	for (i = 0; i < declarationList.length; i++) {
@@ -187,12 +186,12 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 			assert.equal('Identifier', declarator.type);
 			var identifier = declarator.params[0];
 
-			context.variableTypes[identifier] = declarationType;
+			this.context.variableTypes[identifier] = declarationType;
 
 			if (initialValue === null) {
 				/* declaration does not provide an initial value */
 				if (types.equal(declarationType, types.int)) {
-					variableDeclaratorsOut.push(estree.VariableDeclarator(
+					this.variableDeclarators.push(estree.VariableDeclarator(
 						estree.Identifier(identifier),
 						estree.Literal(0)
 					));
@@ -200,12 +199,12 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 					throw "Unsupported declaration type: " + util.inspect(declarationType);
 				}
 			} else {
-				var initialValueExpr = new Expression(initialValue, context);
+				var initialValueExpr = new Expression(initialValue, this.context);
 				assert(initialValueExpr.isConstant);
 				assert(types.equal(declarationType, initialValueExpr.type));
 
 				if (types.equal(declarationType, types.int)) {
-					variableDeclaratorsOut.push(estree.VariableDeclarator(
+					this.variableDeclarators.push(estree.VariableDeclarator(
 						estree.Identifier(identifier),
 						initialValueExpr.compile()
 					));
@@ -215,23 +214,22 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 			}
 		}
 	}
-
-	if (variableDeclaratorsOut.length) {
-		statementListOut.push(estree.VariableDeclaration(variableDeclaratorsOut));
-	}
-
-	assert(Array.isArray(statementList));
-
-	for (i = 0; i < statementList.length; i++) {
-		statementListOut.push(compileStatement(statementList[i], context));
-	}
-
-	if (returnBlockStatement) {
-		return estree.BlockStatement(statementListOut);
-	} else {
-		return statementListOut;
-	}
 }
+BlockStatement.prototype.getVariableDeclarators = function() {
+	return this.variableDeclarators;
+};
+BlockStatement.prototype.compileStatementList = function() {
+	var statementListOut = [];
+
+	for (i = 0; i < this.statementList.length; i++) {
+		statementListOut.push(compileStatement(this.statementList[i], this.context));
+	}
+
+	return statementListOut;
+};
+BlockStatement.prototype.compile = function() {
+	return estree.BlockStatement(this.compileStatementList());
+};
 
 function FunctionDefinition(node) {
 	assert.equal('FunctionDefinition', node.type);
@@ -307,7 +305,12 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 		}
 	}
 
-	functionBody = functionBody.concat(compileBlock(this.body, context, false));
+	var blockStatement = new BlockStatement(this.body, context);
+	var variableDeclarators = blockStatement.getVariableDeclarators();
+	if (variableDeclarators.length) {
+		functionBody.push(estree.VariableDeclaration(variableDeclarators));
+	}
+	functionBody = functionBody.concat(blockStatement.compileStatementList());
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(this.name),
