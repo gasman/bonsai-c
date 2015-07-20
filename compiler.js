@@ -145,7 +145,13 @@ function compileReturnExpression(node, context) {
 	} else {
 		switch (expr.type.category) {
 			case 'int':
-				return '(' + expr.compile() + ')|0';
+				/* expr|0 */
+				return {
+					'type': 'BinaryExpression',
+					'operator': '|',
+					'left': expr.compile(),
+					'right': {'type': 'Literal', 'value': 0}
+				};
 			default:
 				throw("Unimplemented return type: " + utils.inspect(expr.type));
 		}
@@ -156,10 +162,16 @@ function compileStatement(statement, context) {
 	switch (statement.type) {
 		case 'ExpressionStatement':
 			var expr = new Expression(statement.params[0], context);
-			return expr.compile() + ';\n';
+			return {
+				'type': 'ExpressionStatement',
+				'expression': expr.compile()
+			};
 		case 'Return':
 			var returnValue = statement.params[0];
-			return 'return ' + compileReturnExpression(returnValue, context) + ';\n';
+			return {
+				'type': 'ReturnStatement',
+				'argument': compileReturnExpression(returnValue, context)
+			};
 		default:
 			throw("Unsupported statement type: " + statement.type);
 	}
@@ -241,8 +253,7 @@ function compileBlock(block, parentContext, returnBlockStatement) {
 	assert(Array.isArray(statementList));
 
 	for (i = 0; i < statementList.length; i++) {
-		compileStatement(statementList[i], context);
-		// TODO: append to statementList
+		statementListOut.push(compileStatement(statementList[i], context));
 	}
 
 	if (returnBlockStatement) {
