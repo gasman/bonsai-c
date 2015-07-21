@@ -15,16 +15,6 @@ Context.prototype.copy = function() {
 	return new Context(this.returnType, variableTypes);
 };
 
-function indent(code) {
-	lines = code.split('\n');
-	for (var i = 0; i < lines.length; i++) {
-		if (lines[i] !== '') {
-			lines[i] = '\t' + lines[i];
-		}
-	}
-	return lines.join('\n');
-}
-
 function Expression(node, context) {
 	var left, right;
 	switch (node.type) {
