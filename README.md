@@ -1,7 +1,7 @@
 bonsai-c
 ========
 
-*** very early work-in-progress ***
+***Very early work-in-progress***
 
 bonsai-c is a C-to-Javascript compiler, outputting asm.js-compatible code, operating on a fundamentally different model to Emscripten.
 
@@ -18,13 +18,19 @@ bonsai-c won't provide a full C implementation from day one. It won't have fancy
 
 Build
 -----
+
 Install Node.js <https://nodejs.org/>.
+
 Install jison:
+
     npm install -g jison
+
 Then, from the root of the codebase:
+
     npm install
     npm run build-parser
 
 Usage
 -----
-node bonsai-c.js infile.c
+
+    node bonsai-c.js infile.c
