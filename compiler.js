@@ -143,6 +143,77 @@ function compileStatement(statement, context) {
 	}
 }
 
+function VariableDeclarator(node, varType, context) {
+	assert.equal('InitDeclarator', node.type);
+
+	var declarator = node.params[0];
+	assert.equal('Identifier', declarator.type,
+		"Variable declarators other than direct identifiers are not implemented yet");
+	this.identifier = declarator.params[0];
+
+	this.type = varType;
+
+	if (node.params[1] === null) {
+		/* no initial value provided */
+		this.initialValue = null;
+	} else {
+		this.initialValue = new Expression(node.params[1], context);
+		assert(this.initialValue.isConstant, "Non-constant initialisers for variables are not supported");
+		assert(types.equal(this.type, this.initialValue.type));
+	}
+}
+VariableDeclarator.prototype.compileAsDeclarator = function(out) {
+	/*
+	Append zero or more VariableDeclarator nodes to 'out' which implement
+	the declaration, but not initial value assignment, for this variable. For example:
+	int i = 42;
+	will produce the declarator 'i = 0'.
+	*/
+	if (types.equal(this.type, types.int)) {
+		out.push(estree.VariableDeclarator(
+			estree.Identifier(this.identifier),
+			estree.Literal(0)
+		));
+	} else {
+		throw "Unsupported declaration type: " + util.inspect(this.type);
+	}
+};
+VariableDeclarator.prototype.compileAsInitDeclarator = function(out) {
+	/*
+	Append zero or more VariableDeclarator nodes to 'out' which implement
+	both the declaration and initial value assignment for this variable. For example:
+	int i = 42;
+	will produce the declarator 'i = 42'.
+	*/
+	if (this.initialValue === null) {
+		/* no initial value passed; just output the declarator */
+		this.compileAsDeclarator(out);
+	} else {
+		out.push(estree.VariableDeclarator(
+			estree.Identifier(this.identifier),
+			this.initialValue.compile()
+		));
+	}
+};
+VariableDeclarator.prototype.compileAsInitializer = function(out) {
+	/*
+	Append zero or more Statement nodes to 'out' which implement
+	initial value assignment for this variable. For example:
+	int i = 42;
+	will produce the statement 'i = 42;'.
+	*/
+	if (this.initialValue === null) {
+		/* no initialization to do */
+	} else {
+		out.push(estree.ExpressionStatement(
+			estree.AssignmentExpression('=',
+				estree.Identifier(this.identifier),
+				this.initialValue.compile()
+			)
+		));
+	}
+};
+
 function BlockStatement(block, parentContext) {
 	var i, j;
 	assert.equal('Block', block.type);
@@ -167,49 +238,30 @@ function BlockStatement(block, parentContext) {
 
 		assert(Array.isArray(initDeclaratorList));
 		for (j = 0; j < initDeclaratorList.length; j++) {
-			var initDeclarator = initDeclaratorList[j];
-			assert.equal('InitDeclarator', initDeclarator.type);
+			var declarator = new VariableDeclarator(initDeclaratorList[j], declarationType);
 
-			var declarator = initDeclarator.params[0];
-			var initialValue = initDeclarator.params[1];
-
-			assert.equal('Identifier', declarator.type);
-			var identifier = declarator.params[0];
-
-			this.context.variableTypes[identifier] = declarationType;
-
-			if (initialValue === null) {
-				/* declaration does not provide an initial value */
-				if (types.equal(declarationType, types.int)) {
-					this.variableDeclarators.push(estree.VariableDeclarator(
-						estree.Identifier(identifier),
-						estree.Literal(0)
-					));
-				} else {
-					throw "Unsupported declaration type: " + util.inspect(declarationType);
-				}
-			} else {
-				var initialValueExpr = new Expression(initialValue, this.context);
-				assert(initialValueExpr.isConstant);
-				assert(types.equal(declarationType, initialValueExpr.type));
-
-				if (types.equal(declarationType, types.int)) {
-					this.variableDeclarators.push(estree.VariableDeclarator(
-						estree.Identifier(identifier),
-						initialValueExpr.compile()
-					));
-				} else {
-					throw "Unsupported declaration type: " + util.inspect(declarationType);
-				}
-			}
+			this.context.variableTypes[declarator.identifier] = declarationType;
+			this.variableDeclarators.push(declarator);
 		}
 	}
 }
-BlockStatement.prototype.getVariableDeclarators = function() {
-	return this.variableDeclarators;
-};
-BlockStatement.prototype.compileStatementList = function() {
+BlockStatement.prototype.compileStatementList = function(includeDeclarators) {
 	var statementListOut = [];
+	var i;
+
+	if (includeDeclarators) {
+		var declaratorList = [];
+		for (i = 0; i < this.variableDeclarators.length; i++) {
+			this.variableDeclarators[i].compileAsInitDeclarator(declaratorList);
+		}
+		if (declaratorList.length) {
+			statementListOut.push(estree.VariableDeclaration(declaratorList));
+		}
+	} else {
+		for (i = 0; i < this.variableDeclarators.length; i++) {
+			this.variableDeclarators[i].compileAsInitializer(statementListOut);
+		}
+	}
 
 	for (i = 0; i < this.statementList.length; i++) {
 		statementListOut.push(compileStatement(this.statementList[i], this.context));
@@ -217,8 +269,8 @@ BlockStatement.prototype.compileStatementList = function() {
 
 	return statementListOut;
 };
-BlockStatement.prototype.compile = function() {
-	return estree.BlockStatement(this.compileStatementList());
+BlockStatement.prototype.compile = function(includeDeclarators) {
+	return estree.BlockStatement(this.compileStatementList(includeDeclarators));
 };
 
 function FunctionDefinition(node) {
@@ -296,11 +348,7 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 	}
 
 	var blockStatement = new BlockStatement(this.body, context);
-	var variableDeclarators = blockStatement.getVariableDeclarators();
-	if (variableDeclarators.length) {
-		functionBody.push(estree.VariableDeclaration(variableDeclarators));
-	}
-	functionBody = functionBody.concat(blockStatement.compileStatementList());
+	functionBody = functionBody.concat(blockStatement.compileStatementList(true));
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(this.name),
