@@ -3,16 +3,20 @@ var util = require('util');
 var types = require('./types');
 var estree = require('./estree');
 
-function Context(returnType, variableTypes) {
+function Context(returnType, parentContext) {
 	this.returnType = returnType;
-	this.variableTypes = variableTypes;
+	this.variableTypes = {};
+	this.parentContext = parentContext;
 }
-Context.prototype.copy = function() {
-	var variableTypes = {};
-	for (var prop in this.variableTypes) {
-		variableTypes[prop] = this.variableTypes[prop];
+Context.prototype.getVariableType = function(identifier) {
+	if (identifier in this.variableTypes) {
+		return this.variableTypes[identifier];
+	} else if (this.parentContext !== null) {
+		return this.parentContext.getVariableType(identifier);
 	}
-	return new Context(this.returnType, variableTypes);
+};
+Context.prototype.createChildContext = function() {
+	return new Context(this.returnType, this);
 };
 
 function Expression(node, context) {
@@ -81,9 +85,11 @@ function Expression(node, context) {
 			break;
 		case 'Var':
 			var identifier = node.params[0];
-			assert(identifier in context.variableTypes, "Undefined variable: " + identifier);
+			this.type = context.getVariableType(identifier);
+			if (this.type === null) {
+				throw "Undefined variable: " + identifier;
+			}
 
-			this.type = context.variableTypes[identifier];
 			this.isAssignable = true;
 			this.compile = function() {
 				return estree.Identifier(identifier);
@@ -218,7 +224,7 @@ function BlockStatement(block, parentContext) {
 	var i, j;
 	assert.equal('Block', block.type);
 
-	this.context = parentContext.copy();
+	this.context = parentContext.createChildContext();
 
 	var declarationList = block.params[0];
 	this.statementList = block.params[1];
@@ -319,7 +325,7 @@ function FunctionDefinition(node) {
 	this.type = types.func(this.returnType, parameterTypes);
 }
 FunctionDefinition.prototype.compile = function(parentContext) {
-	var context = parentContext.copy();
+	var context = parentContext.createChildContext();
 	context.returnType = this.returnType;
 
 	var paramIdentifiers = [];
@@ -367,7 +373,7 @@ function Module(name, declarationNodes) {
 	);
 
 	this.functionDefinitions = [];
-	this.context = new Context(null, {});
+	this.context = new Context(null);
 
 	for (var i = 0; i < declarationNodes.length; i++) {
 		var node = declarationNodes[i];
