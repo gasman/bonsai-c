@@ -204,13 +204,22 @@ function BlockStatement(block, parentContext) {
 		}
 	}
 
-	this.statementList = block.params[1];
-	assert(Array.isArray(this.statementList));
+	var statementNodes = block.params[1];
+	assert(Array.isArray(statementNodes));
+
+	this.statements = [];
+	for (i = 0; i < statementNodes.length; i++) {
+		this.statements.push(buildStatement(statementNodes[i], this.context));
+	}
 }
 BlockStatement.prototype.compileStatementList = function(out, includeDeclarators) {
 	var i;
 
 	if (includeDeclarators) {
+		/* This is the top-level block for a function definition.
+			Variable declarations (including ones defined in inner blocks)
+			shall be output here. For this block's own variables (but not the
+			variables of inner blocks), this can be combined with initializing them. */
 		var declaratorList = [];
 		for (i = 0; i < this.variableDeclarators.length; i++) {
 			this.variableDeclarators[i].compileAsInitDeclarator(declaratorList);
@@ -219,14 +228,15 @@ BlockStatement.prototype.compileStatementList = function(out, includeDeclarators
 			out.push(estree.VariableDeclaration(declaratorList));
 		}
 	} else {
+		/* This is an inner block; we need to initialize block-local variables, but
+			not declare them (that's been done at the top level). */
 		for (i = 0; i < this.variableDeclarators.length; i++) {
-			this.variableDeclarators[i].compileAsInitializer(statementListOut);
+			this.variableDeclarators[i].compileAsInitializer(out);
 		}
 	}
 
-	for (i = 0; i < this.statementList.length; i++) {
-		var statement = buildStatement(this.statementList[i], this.context);
-		statement.compile(out);
+	for (i = 0; i < this.statements.length; i++) {
+		this.statements[i].compile(out);
 	}
 };
 BlockStatement.prototype.compile = function(includeDeclarators) {
