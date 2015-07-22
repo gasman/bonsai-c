@@ -287,6 +287,24 @@ function Parameter(node) {
 	assert.equal('Identifier', identifierNode.type);
 	this.identifier = identifierNode.params[0];
 }
+Parameter.prototype.compileTypeAnnotation = function(out) {
+	switch(this.type.category) {
+		case 'int':
+			/* x = x|0; */
+			out.push(estree.ExpressionStatement(
+				estree.AssignmentExpression('=',
+					estree.Identifier(this.identifier),
+					estree.BinaryExpression('|',
+						estree.Identifier(this.identifier),
+						estree.Literal(0)
+					)
+				)
+			));
+			break;
+		default:
+			throw "Parameter type annotation not yet implemented: " + util.inspect(this.type);
+	}
+};
 
 function FunctionDefinition(node, parentContext) {
 	assert.equal('FunctionDefinition', node.type);
@@ -337,23 +355,7 @@ FunctionDefinition.prototype.compile = function() {
 		var param = this.parameters[i];
 		paramIdentifiers.push(estree.Identifier(param.identifier));
 
-		/* add parameter type annotation to function body */
-		switch(param.type.category) {
-			case 'int':
-				/* x = x|0; */
-				functionBody.push(estree.ExpressionStatement(
-					estree.AssignmentExpression('=',
-						estree.Identifier(param.identifier),
-						estree.BinaryExpression('|',
-							estree.Identifier(param.identifier),
-							estree.Literal(0)
-						)
-					)
-				));
-				break;
-			default:
-				throw "Parameter type annotation not yet implemented: " + util.inspect(param.type);
-		}
+		param.compileTypeAnnotation(functionBody);
 	}
 
 	functionBody = functionBody.concat(this.blockStatement.compileStatementList(true));
