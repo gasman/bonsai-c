@@ -381,7 +381,13 @@ function Module(name, declarationNodes) {
 		}
 	}
 }
-Module.prototype.compileExportsTable = function() {
+Module.prototype.compileFunctionDefinitions = function(out) {
+	for (var i = 0; i < this.functionDefinitions.length; i++) {
+		var fd = this.functionDefinitions[i];
+		out.push(fd.compile(this.context));
+	}
+};
+Module.prototype.compileExportsTable = function(out) {
 	var exportsTable = [];
 	for (i = 0; i < this.functionDefinitions.length; i++) {
 		var fd = this.functionDefinitions[i];
@@ -393,21 +399,17 @@ Module.prototype.compileExportsTable = function() {
 		));
 	}
 
-	return estree.ObjectExpression(exportsTable);
+	out.push(estree.ReturnStatement(
+		estree.ObjectExpression(exportsTable)
+	));
 };
 Module.prototype.compile = function() {
 	var moduleBody = [
 		estree.ExpressionStatement(estree.Literal("use asm"))
 	];
 
-	for (var i = 0; i < this.functionDefinitions.length; i++) {
-		var fd = this.functionDefinitions[i];
-		moduleBody.push(fd.compile(this.context));
-	}
-
-	moduleBody.push(estree.ReturnStatement(
-		this.compileExportsTable()
-	));
+	this.compileFunctionDefinitions(moduleBody);
+	this.compileExportsTable(moduleBody);
 
 	return estree.Program([
 		estree.FunctionDeclaration(
