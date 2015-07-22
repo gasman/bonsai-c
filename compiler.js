@@ -36,35 +36,55 @@ function parameterListIsVoid(parameterList) {
 	return true;
 }
 
-function compileReturnExpression(node, context) {
-	var expr = new expressions.Expression(node, context);
-	assert(types.equal(expr.type, context.returnType));
+function ExpressionStatement(node, context) {
+	this.context = context;
+	this.expressionNode = node.params[0];
+	/* do not construct an Expression object yet, as that may perform lookups
+		in the context for identifiers that are defined further down the file */
+}
+ExpressionStatement.prototype.compile = function(out) {
+	var expr = new expressions.Expression(this.expressionNode, this.context);
+	out.push(estree.ExpressionStatement(expr.compile()));
+};
+
+function ReturnStatement(node, context) {
+	this.context = context;
+	this.expressionNode = node.params[0];
+	/* do not construct an Expression object yet, as that may perform lookups
+		in the context for identifiers that are defined further down the file */
+}
+ReturnStatement.prototype.compile = function(out) {
+	var expr = new expressions.Expression(this.expressionNode, this.context);
+	assert(types.equal(expr.type, this.context.returnType));
+
+	var returnValueNode;
 
 	if (expr.isConstant && types.equal(expr.type, types.int)) {
 		/* no type annotation necessary - just return the literal */
-		return expr.compile();
+		returnValueNode = expr.compile();
 	} else {
 		switch (expr.type.category) {
 			case 'int':
 				/* expr|0 */
-				return estree.BinaryExpression('|',
+				returnValueNode = estree.BinaryExpression('|',
 					expr.compile(),
 					estree.Literal(0)
 				);
+				break;
 			default:
 				throw("Unimplemented return type: " + utils.inspect(expr.type));
 		}
 	}
-}
 
-function compileStatement(statement, context) {
-	switch (statement.type) {
+	out.push(estree.ReturnStatement(returnValueNode));
+};
+
+function buildStatement(statementNode, context) {
+	switch (statementNode.type) {
 		case 'ExpressionStatement':
-			var expr = new expressions.Expression(statement.params[0], context);
-			return estree.ExpressionStatement(expr.compile());
+			return new ExpressionStatement(statementNode, context);
 		case 'Return':
-			var returnValue = statement.params[0];
-			return estree.ReturnStatement(compileReturnExpression(returnValue, context));
+			return new ReturnStatement(statementNode, context);
 		default:
 			throw("Unsupported statement type: " + statement.type);
 	}
@@ -190,7 +210,8 @@ BlockStatement.prototype.compileStatementList = function(out, includeDeclarators
 	}
 
 	for (i = 0; i < this.statementList.length; i++) {
-		out.push(compileStatement(this.statementList[i], this.context));
+		var statement = buildStatement(this.statementList[i], this.context);
+		statement.compile(out);
 	}
 };
 BlockStatement.prototype.compile = function(includeDeclarators) {
