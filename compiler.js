@@ -42,6 +42,9 @@ function ExpressionStatement(node, context) {
 	/* do not construct an Expression object yet, as that may perform lookups
 		in the context for identifiers that are defined further down the file */
 }
+ExpressionStatement.prototype.compileDeclarators = function(out) {
+	/* an ExpressionStatement does not contain variable declarations */
+};
 ExpressionStatement.prototype.compile = function(out) {
 	var expr = new expressions.Expression(this.expressionNode, this.context);
 	out.push(estree.ExpressionStatement(expr.compile()));
@@ -53,6 +56,9 @@ function ReturnStatement(node, context) {
 	/* do not construct an Expression object yet, as that may perform lookups
 		in the context for identifiers that are defined further down the file */
 }
+ReturnStatement.prototype.compileDeclarators = function(out) {
+	/* a ReturnStatement does not contain variable declarations */
+};
 ReturnStatement.prototype.compile = function(out) {
 	var expr = new expressions.Expression(this.expressionNode, this.context);
 	assert(types.equal(expr.type, this.context.returnType));
@@ -212,6 +218,18 @@ function BlockStatement(block, parentContext) {
 		this.statements.push(buildStatement(statementNodes[i], this.context));
 	}
 }
+BlockStatement.prototype.compileDeclarators = function(out) {
+	/* Append the variable declarators (but not initializers) for this block
+		to the list 'out'. Recursively adds the declarators for inner blocks too.
+	*/
+	var i;
+	for (i = 0; i < this.variableDeclarators.length; i++) {
+		this.variableDeclarators[i].compileAsDeclarator(out);
+	}
+	for (i = 0; i < this.statements.length; i++) {
+		this.statements[i].compileDeclarators(out);
+	}
+};
 BlockStatement.prototype.compileStatementList = function(out, includeDeclarators) {
 	var i;
 
@@ -221,9 +239,15 @@ BlockStatement.prototype.compileStatementList = function(out, includeDeclarators
 			shall be output here. For this block's own variables (but not the
 			variables of inner blocks), this can be combined with initializing them. */
 		var declaratorList = [];
+		/* output top-level declarators with initializers */
 		for (i = 0; i < this.variableDeclarators.length; i++) {
 			this.variableDeclarators[i].compileAsInitDeclarator(declaratorList);
 		}
+		/* output declarators (without initializers) for inner blocks */
+		for (i = 0; i < this.statements.length; i++) {
+			this.statements[i].compileDeclarators(declaratorList);
+		}
+		/* output a VariableDeclaration statement, if any declarators are present */
 		if (declaratorList.length) {
 			out.push(estree.VariableDeclaration(declaratorList));
 		}
