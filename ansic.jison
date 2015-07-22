@@ -461,7 +461,6 @@ statement
 	: labeled_statement
 		{ throw("Unimplemented rule for statement: " + yytext); }
 	| compound_statement
-		{ throw("Unimplemented rule for statement: " + yytext); }
 	| expression_statement
 	| selection_statement
 		{ throw("Unimplemented rule for statement: " + yytext); }

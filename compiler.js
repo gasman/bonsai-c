@@ -87,12 +87,14 @@ ReturnStatement.prototype.compile = function(out) {
 
 function buildStatement(statementNode, context) {
 	switch (statementNode.type) {
+		case 'Block':
+			return new BlockStatement(statementNode, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(statementNode, context);
 		case 'Return':
 			return new ReturnStatement(statementNode, context);
 		default:
-			throw("Unsupported statement type: " + statement.type);
+			throw("Unsupported statement type: " + statementNode.type);
 	}
 }
 
@@ -263,10 +265,10 @@ BlockStatement.prototype.compileStatementList = function(out, includeDeclarators
 		this.statements[i].compile(out);
 	}
 };
-BlockStatement.prototype.compile = function(includeDeclarators) {
+BlockStatement.prototype.compile = function(out, includeDeclarators) {
 	var body = [];
 	this.compileStatementList(body, includeDeclarators);
-	return estree.BlockStatement(body);
+	out.push(estree.BlockStatement(body));
 };
 
 function Parameter(node) {

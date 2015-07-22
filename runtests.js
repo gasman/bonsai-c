@@ -27,4 +27,8 @@ js = BonsaiC.compile('tests/call.c');
 module = eval('(' + js + ')')();
 assert.equal(42, module.main());
 
+js = BonsaiC.compile('tests/inner_block.c');
+module = eval('(' + js + ')')();
+assert.equal(42, module.main());
+
 console.log("All tests passed");
