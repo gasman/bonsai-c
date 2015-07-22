@@ -357,39 +357,35 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 	);
 };
 
-function compileModule(name, ast) {
-	assert(Array.isArray(ast),
-		util.format('compileModule expected an array, got %s', util.inspect(ast))
+function Module(name, declarationNodes) {
+	this.name = name;
+
+	assert(Array.isArray(declarationNodes),
+		util.format('Module expected an array, got %s', util.inspect(declarationNodes))
 	);
 
-	var i, fd;
-	var functionDefinitions = [];
-	var context = new Context(null, {});
+	this.functionDefinitions = [];
+	this.context = new Context(null, {});
 
-	var moduleBody = [
-		estree.ExpressionStatement(estree.Literal("use asm"))
-	];
+	for (var i = 0; i < declarationNodes.length; i++) {
+		var node = declarationNodes[i];
 
-	for (i = 0; i < ast.length; i++) {
-		switch (ast[i].type) {
+		switch (node.type) {
 			case 'FunctionDefinition':
-				fd = new FunctionDefinition(ast[i]);
-				functionDefinitions.push(fd);
-				context.variableTypes[fd.name] = fd.type;
+				var fd = new FunctionDefinition(node);
+				this.functionDefinitions.push(fd);
+				this.context.variableTypes[fd.name] = fd.type;
 				break;
 			default:
-				throw "Unexpected node type: " + ast[i].type;
+				throw "Unexpected node type: " + node.type;
 		}
 	}
-
-	for (i = 0; i < functionDefinitions.length; i++) {
-		fd = functionDefinitions[i];
-		moduleBody.push(fd.compile(context));
-	}
-
+}
+Module.prototype.compileExportsTable = function() {
 	var exportsTable = [];
-	for (i = 0; i < functionDefinitions.length; i++) {
-		fd = functionDefinitions[i];
+	for (i = 0; i < this.functionDefinitions.length; i++) {
+		var fd = this.functionDefinitions[i];
+
 		exportsTable.push(estree.Property(
 			estree.Identifier(fd.name),
 			estree.Identifier(fd.name),
@@ -397,17 +393,29 @@ function compileModule(name, ast) {
 		));
 	}
 
+	return estree.ObjectExpression(exportsTable);
+};
+Module.prototype.compile = function() {
+	var moduleBody = [
+		estree.ExpressionStatement(estree.Literal("use asm"))
+	];
+
+	for (var i = 0; i < this.functionDefinitions.length; i++) {
+		var fd = this.functionDefinitions[i];
+		moduleBody.push(fd.compile(this.context));
+	}
+
 	moduleBody.push(estree.ReturnStatement(
-		estree.ObjectExpression(exportsTable)
+		this.compileExportsTable()
 	));
 
 	return estree.Program([
 		estree.FunctionDeclaration(
-			estree.Identifier(name),
+			estree.Identifier(this.name),
 			[],
 			estree.BlockStatement(moduleBody)
 		)
 	]);
-}
+};
 
-exports.compileModule = compileModule;
+exports.Module = Module;

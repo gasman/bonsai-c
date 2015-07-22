@@ -10,18 +10,20 @@ var escodegen = require('escodegen');
 exports.compile = function(filename) {
 	var cSource = fs.readFileSync(filename, "utf8");
 	var cTree = parser.parse(cSource);
-	var jsTree = compiler.compileModule('Module', cTree);
+	var module = new compiler.Module('Module', cTree);
+	var jsTree = module.compile();
 	return escodegen.generate(jsTree);
 };
 
 exports.main = function(argv) {
 	var cSource = fs.readFileSync(argv[2], "utf8");
-	var ast = parser.parse(cSource);
-	console.log(util.inspect(ast, { depth: null }));
+	var cTree = parser.parse(cSource);
+	console.log(util.inspect(cTree, { depth: null }));
 
 	console.log("\n---------\n");
 
-	var jsTree = compiler.compileModule('Module', ast);
+	var module = new compiler.Module('Module', cTree);
+	var jsTree = module.compile();
 	console.log(util.inspect(jsTree, { depth: null }));
 
 	console.log("\n---------\n");
