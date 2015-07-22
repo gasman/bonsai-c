@@ -273,48 +273,50 @@ BlockStatement.prototype.compile = function(includeDeclarators) {
 	return estree.BlockStatement(this.compileStatementList(includeDeclarators));
 };
 
+function Parameter(node) {
+	assert.equal('ParameterDeclaration', node.type);
+	this.type = types.getTypeFromDeclarationSpecifiers(node.params[0]);
+
+	var identifierNode = node.params[1];
+	assert.equal('Identifier', identifierNode.type);
+	this.identifier = identifierNode.params[0];
+}
+
 function FunctionDefinition(node) {
 	assert.equal('FunctionDefinition', node.type);
-	var declarationSpecifiers = node.params[0];
-	var declarator = node.params[1];
+	var returnTypeNodes = node.params[0];
+	this.returnType = types.getTypeFromDeclarationSpecifiers(returnTypeNodes);
+
+	var functionDeclaratorNode = node.params[1];
+	assert.equal('FunctionDeclarator', functionDeclaratorNode.type);
+
+	/* No idea what the declaration list is for -
+		for now, just assert that it's an empty list */
 	var declarationList = node.params[2];
-	this.body = node.params[3];
+	assert(Array.isArray(declarationList));
+	assert.equal(0, declarationList.length);
 
-	this.returnType = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
+	this.blockNode = node.params[3];
 
-	assert.equal('FunctionDeclarator', declarator.type);
-	var nameDeclarator = declarator.params[0];
-	var parameterList = declarator.params[1];
+	/* unpack the FunctionDeclarator node */
+	var nameDeclaratorNode = functionDeclaratorNode.params[0];
+	assert.equal('Identifier', nameDeclaratorNode.type);
+	this.name = nameDeclaratorNode.params[0];
 
-	assert.equal('Identifier', nameDeclarator.type);
-	this.name = nameDeclarator.params[0];
-
-	assert(Array.isArray(parameterList));
+	var parameterNodes = functionDeclaratorNode.params[1];
+	assert(Array.isArray(parameterNodes));
 	this.parameters = [];
 	var parameterTypes = [];
 
-	if (!parameterListIsVoid(parameterList)) {
-		for (var i = 0; i < parameterList.length; i++) {
-			var parameterDeclaration = parameterList[i];
-			assert.equal('ParameterDeclaration', parameterDeclaration.type);
+	if (!parameterListIsVoid(parameterNodes)) {
+		for (var i = 0; i < parameterNodes.length; i++) {
+			var parameter = new Parameter(parameterNodes[i]);
 
-			var parameterType = types.getTypeFromDeclarationSpecifiers(parameterDeclaration.params[0]);
-			parameterTypes.push(parameterType);
-
-			var parameterIdentifier = parameterDeclaration.params[1];
-			assert.equal('Identifier', parameterIdentifier.type);
-			var ident = parameterIdentifier.params[0];
-
-			this.parameters.push({
-				'identifier': ident,
-				'type': parameterType
-			});
+			this.parameters.push(parameter);
+			parameterTypes.push(parameter.type);
 		}
 	}
 	this.type = types.func(this.returnType, parameterTypes);
-
-	assert(Array.isArray(declarationList));
-	assert.equal(0, declarationList.length);
 }
 FunctionDefinition.prototype.compile = function(parentContext) {
 	var context = parentContext.copy();
@@ -347,7 +349,7 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 		}
 	}
 
-	var blockStatement = new BlockStatement(this.body, context);
+	var blockStatement = new BlockStatement(this.blockNode, context);
 	functionBody = functionBody.concat(blockStatement.compileStatementList(true));
 
 	return estree.FunctionDeclaration(
