@@ -161,36 +161,51 @@ VariableDeclarator.prototype.compileAsInitializer = function(out) {
 	}
 };
 
+function Declaration(node) {
+	/* Represents a C variable declaration line, e.g.
+		int i, *j, k = 42;
+	*/
+	assert.equal('Declaration', node.type);
+
+	var declarationSpecifiers = node.params[0];
+	this.type = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
+
+	var initDeclaratorList = node.params[1];
+	assert(Array.isArray(initDeclaratorList));
+
+	this.variableDeclarators = [];
+	for (var i = 0; i < initDeclaratorList.length; i++) {
+		this.variableDeclarators.push(
+			new VariableDeclarator(initDeclaratorList[i], this.type)
+		);
+	}
+}
+
 function BlockStatement(block, parentContext) {
 	var i, j;
 	assert.equal('Block', block.type);
 
 	this.context = parentContext.createChildContext();
 
-	var declarationList = block.params[0];
-	this.statementList = block.params[1];
-	assert(Array.isArray(this.statementList));
+	var declarationNodes = block.params[0];
+	assert(Array.isArray(declarationNodes));
 
+	/* unpack declaration list */
 	this.variableDeclarators = [];
 
-	assert(Array.isArray(declarationList));
-	for (i = 0; i < declarationList.length; i++) {
-		var declaration = declarationList[i];
-		assert.equal('Declaration', declaration.type);
-		
-		var declarationSpecifiers = declaration.params[0];
-		var initDeclaratorList = declaration.params[1];
+	for (i = 0; i < declarationNodes.length; i++) {
+		var declaration = new Declaration(declarationNodes[i]);
 
-		var declarationType = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
+		for (j = 0; j < declaration.variableDeclarators.length; j++) {
+			var declarator = declaration.variableDeclarators[j];
 
-		assert(Array.isArray(initDeclaratorList));
-		for (j = 0; j < initDeclaratorList.length; j++) {
-			var declarator = new VariableDeclarator(initDeclaratorList[j], declarationType);
-
-			this.context.variableTypes[declarator.identifier] = declarationType;
+			this.context.variableTypes[declarator.identifier] = declarator.type;
 			this.variableDeclarators.push(declarator);
 		}
 	}
+
+	this.statementList = block.params[1];
+	assert(Array.isArray(this.statementList));
 }
 BlockStatement.prototype.compileStatementList = function(out, includeDeclarators) {
 	var i;
