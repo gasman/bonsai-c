@@ -288,7 +288,7 @@ function Parameter(node) {
 	this.identifier = identifierNode.params[0];
 }
 
-function FunctionDefinition(node) {
+function FunctionDefinition(node, parentContext) {
 	assert.equal('FunctionDefinition', node.type);
 	var returnTypeNodes = node.params[0];
 	this.returnType = types.getTypeFromDeclarationSpecifiers(returnTypeNodes);
@@ -302,8 +302,6 @@ function FunctionDefinition(node) {
 	assert(Array.isArray(declarationList));
 	assert.equal(0, declarationList.length);
 
-	this.blockNode = node.params[3];
-
 	/* unpack the FunctionDeclarator node */
 	var nameDeclaratorNode = functionDeclaratorNode.params[0];
 	assert.equal('Identifier', nameDeclaratorNode.type);
@@ -311,6 +309,10 @@ function FunctionDefinition(node) {
 
 	var parameterNodes = functionDeclaratorNode.params[1];
 	assert(Array.isArray(parameterNodes));
+
+	this.context = parentContext.createChildContext();
+	this.context.returnType = this.returnType;
+
 	this.parameters = [];
 	var parameterTypes = [];
 
@@ -320,20 +322,19 @@ function FunctionDefinition(node) {
 
 			this.parameters.push(parameter);
 			parameterTypes.push(parameter.type);
+			this.context.variableTypes[parameter.identifier] = parameter.type;
 		}
 	}
 	this.type = types.func(this.returnType, parameterTypes);
-}
-FunctionDefinition.prototype.compile = function(parentContext) {
-	var context = parentContext.createChildContext();
-	context.returnType = this.returnType;
 
+	this.blockStatement = new BlockStatement(node.params[3], this.context);
+}
+FunctionDefinition.prototype.compile = function() {
 	var paramIdentifiers = [];
 	var functionBody = [];
 
 	for (var i = 0; i < this.parameters.length; i++) {
 		var param = this.parameters[i];
-		context.variableTypes[param.identifier] = param.type;
 		paramIdentifiers.push(estree.Identifier(param.identifier));
 
 		/* add parameter type annotation to function body */
@@ -355,8 +356,7 @@ FunctionDefinition.prototype.compile = function(parentContext) {
 		}
 	}
 
-	var blockStatement = new BlockStatement(this.blockNode, context);
-	functionBody = functionBody.concat(blockStatement.compileStatementList(true));
+	functionBody = functionBody.concat(this.blockStatement.compileStatementList(true));
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(this.name),
@@ -380,7 +380,7 @@ function Module(name, declarationNodes) {
 
 		switch (node.type) {
 			case 'FunctionDefinition':
-				var fd = new FunctionDefinition(node);
+				var fd = new FunctionDefinition(node, this.context);
 				this.functionDefinitions.push(fd);
 				this.context.variableTypes[fd.name] = fd.type;
 				break;
@@ -392,7 +392,7 @@ function Module(name, declarationNodes) {
 Module.prototype.compileFunctionDefinitions = function(out) {
 	for (var i = 0; i < this.functionDefinitions.length; i++) {
 		var fd = this.functionDefinitions[i];
-		out.push(fd.compile(this.context));
+		out.push(fd.compile());
 	}
 };
 Module.prototype.compileExportsTable = function(out) {
