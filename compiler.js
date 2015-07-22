@@ -251,8 +251,7 @@ function BlockStatement(block, parentContext) {
 		}
 	}
 }
-BlockStatement.prototype.compileStatementList = function(includeDeclarators) {
-	var statementListOut = [];
+BlockStatement.prototype.compileStatementList = function(out, includeDeclarators) {
 	var i;
 
 	if (includeDeclarators) {
@@ -261,7 +260,7 @@ BlockStatement.prototype.compileStatementList = function(includeDeclarators) {
 			this.variableDeclarators[i].compileAsInitDeclarator(declaratorList);
 		}
 		if (declaratorList.length) {
-			statementListOut.push(estree.VariableDeclaration(declaratorList));
+			out.push(estree.VariableDeclaration(declaratorList));
 		}
 	} else {
 		for (i = 0; i < this.variableDeclarators.length; i++) {
@@ -270,13 +269,13 @@ BlockStatement.prototype.compileStatementList = function(includeDeclarators) {
 	}
 
 	for (i = 0; i < this.statementList.length; i++) {
-		statementListOut.push(compileStatement(this.statementList[i], this.context));
+		out.push(compileStatement(this.statementList[i], this.context));
 	}
-
-	return statementListOut;
 };
 BlockStatement.prototype.compile = function(includeDeclarators) {
-	return estree.BlockStatement(this.compileStatementList(includeDeclarators));
+	var body = [];
+	this.compileStatementList(body, includeDeclarators);
+	return estree.BlockStatement(body);
 };
 
 function Parameter(node) {
@@ -358,7 +357,7 @@ FunctionDefinition.prototype.compile = function() {
 		param.compileTypeAnnotation(functionBody);
 	}
 
-	functionBody = functionBody.concat(this.blockStatement.compileStatementList(true));
+	this.blockStatement.compileStatementList(functionBody, true);
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(this.name),
