@@ -78,7 +78,7 @@ function Expression(node, context) {
 
 			this.isAssignable = true;
 			this.compile = function() {
-				return estree.Identifier(identifier);
+				return estree.Identifier(variable.jsIdentifier);
 			};
 			break;
 		default:

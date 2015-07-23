@@ -4,10 +4,10 @@ var types = require('./types');
 var expressions = require('./expressions');
 var estree = require('./estree');
 
-function Context(returnType, parentContext) {
-	this.returnType = returnType;
+function Context(parentContext) {
 	this.variables = {};
 	this.parentContext = parentContext;
+	this.allocatedJSIdentifiers = {};
 }
 Context.prototype.getVariable = function(identifier) {
 	if (identifier in this.variables) {
@@ -16,8 +16,29 @@ Context.prototype.getVariable = function(identifier) {
 		return this.parentContext.getVariable(identifier);
 	}
 };
+Context.prototype.allocateVariable = function(identifier, varType) {
+	var jsIdentifier = identifier;
+	var i = 0;
+	while (jsIdentifier in this.allocatedJSIdentifiers) {
+		jsIdentifier = identifier + '_' + i;
+		i++;
+	}
+	this.allocatedJSIdentifiers[jsIdentifier] = true;
+
+	var variable = {'type': varType, 'jsIdentifier': jsIdentifier};
+	this.variables[identifier] = variable;
+	return variable;
+};
 Context.prototype.createChildContext = function() {
-	return new Context(this.returnType, this);
+	var context = new Context(this);
+	context.returnType = this.returnType;
+	context.allocatedJSIdentifiers = this.allocatedJSIdentifiers;
+	return context;
+};
+Context.prototype.createFunctionContext = function(returnType) {
+	var context = new Context(this);
+	context.returnType = returnType;
+	return context;
 };
 
 
@@ -129,6 +150,7 @@ function VariableDeclarator(node, varType, context) {
 	this.identifier = declarator.params[0];
 
 	this.type = varType;
+	this.variable = context.allocateVariable(this.identifier, this.type);
 
 	if (node.params[1] === null) {
 		/* no initial value provided */
@@ -148,7 +170,7 @@ VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 	*/
 	if (types.equal(this.type, types.int)) {
 		out.push(estree.VariableDeclarator(
-			estree.Identifier(this.identifier),
+			estree.Identifier(this.variable.jsIdentifier),
 			estree.Literal(0)
 		));
 	} else {
@@ -167,7 +189,7 @@ VariableDeclarator.prototype.compileAsInitDeclarator = function(out) {
 		this.compileAsDeclarator(out);
 	} else {
 		out.push(estree.VariableDeclarator(
-			estree.Identifier(this.identifier),
+			estree.Identifier(this.variable.jsIdentifier),
 			this.initialValue.compile()
 		));
 	}
@@ -184,14 +206,14 @@ VariableDeclarator.prototype.compileAsInitializer = function(out) {
 	} else {
 		out.push(estree.ExpressionStatement(
 			estree.AssignmentExpression('=',
-				estree.Identifier(this.identifier),
+				estree.Identifier(this.variable.jsIdentifier),
 				this.initialValue.compile()
 			)
 		));
 	}
 };
 
-function Declaration(node) {
+function Declaration(node, context) {
 	/* Represents a C variable declaration line, e.g.
 		int i, *j, k = 42;
 	*/
@@ -206,7 +228,7 @@ function Declaration(node) {
 	this.variableDeclarators = [];
 	for (var i = 0; i < initDeclaratorList.length; i++) {
 		this.variableDeclarators.push(
-			new VariableDeclarator(initDeclaratorList[i], this.type)
+			new VariableDeclarator(initDeclaratorList[i], this.type, context)
 		);
 	}
 }
@@ -224,12 +246,11 @@ function BlockStatement(block, parentContext) {
 	this.variableDeclarators = [];
 
 	for (i = 0; i < declarationNodes.length; i++) {
-		var declaration = new Declaration(declarationNodes[i]);
+		var declaration = new Declaration(declarationNodes[i], this.context);
 
 		for (j = 0; j < declaration.variableDeclarators.length; j++) {
 			var declarator = declaration.variableDeclarators[j];
 
-			this.context.variables[declarator.identifier] = {'type': declarator.type};
 			this.variableDeclarators.push(declarator);
 		}
 	}
@@ -293,13 +314,15 @@ BlockStatement.prototype.compile = function(out, includeDeclarators) {
 	out.push(estree.BlockStatement(body));
 };
 
-function Parameter(node) {
+function Parameter(node, context) {
 	assert.equal('ParameterDeclaration', node.type);
 	this.type = types.getTypeFromDeclarationSpecifiers(node.params[0]);
 
 	var identifierNode = node.params[1];
 	assert.equal('Identifier', identifierNode.type);
 	this.identifier = identifierNode.params[0];
+
+	this.variable = context.allocateVariable(this.identifier, this.type);
 }
 Parameter.prototype.compileTypeAnnotation = function(out) {
 	switch(this.type.category) {
@@ -307,9 +330,9 @@ Parameter.prototype.compileTypeAnnotation = function(out) {
 			/* x = x|0; */
 			out.push(estree.ExpressionStatement(
 				estree.AssignmentExpression('=',
-					estree.Identifier(this.identifier),
+					estree.Identifier(this.variable.jsIdentifier),
 					estree.BinaryExpression('|',
-						estree.Identifier(this.identifier),
+						estree.Identifier(this.variable.jsIdentifier),
 						estree.Literal(0)
 					)
 				)
@@ -342,22 +365,21 @@ function FunctionDefinition(node, parentContext) {
 	var parameterNodes = functionDeclaratorNode.params[1];
 	assert(Array.isArray(parameterNodes));
 
-	this.context = parentContext.createChildContext();
-	this.context.returnType = this.returnType;
+	this.context = parentContext.createFunctionContext(this.returnType);
 
 	this.parameters = [];
 	var parameterTypes = [];
 
 	if (!parameterListIsVoid(parameterNodes)) {
 		for (var i = 0; i < parameterNodes.length; i++) {
-			var parameter = new Parameter(parameterNodes[i]);
+			var parameter = new Parameter(parameterNodes[i], this.context);
 
 			this.parameters.push(parameter);
 			parameterTypes.push(parameter.type);
-			this.context.variables[parameter.identifier] = {'type': parameter.type};
 		}
 	}
 	this.type = types.func(this.returnType, parameterTypes);
+	this.variable = parentContext.allocateVariable(this.name, this.type);
 
 	this.blockStatement = new BlockStatement(node.params[3], this.context);
 }
@@ -367,7 +389,7 @@ FunctionDefinition.prototype.compile = function() {
 
 	for (var i = 0; i < this.parameters.length; i++) {
 		var param = this.parameters[i];
-		paramIdentifiers.push(estree.Identifier(param.identifier));
+		paramIdentifiers.push(estree.Identifier(param.variable.jsIdentifier));
 
 		param.compileTypeAnnotation(functionBody);
 	}
@@ -375,7 +397,7 @@ FunctionDefinition.prototype.compile = function() {
 	this.blockStatement.compileStatementList(functionBody, true);
 
 	return estree.FunctionDeclaration(
-		estree.Identifier(this.name),
+		estree.Identifier(this.variable.jsIdentifier),
 		paramIdentifiers,
 		estree.BlockStatement(functionBody)
 	);
@@ -389,7 +411,7 @@ function Module(name, declarationNodes) {
 	);
 
 	this.functionDefinitions = [];
-	this.context = new Context(null);
+	this.context = new Context();
 
 	for (var i = 0; i < declarationNodes.length; i++) {
 		var node = declarationNodes[i];
@@ -398,7 +420,6 @@ function Module(name, declarationNodes) {
 			case 'FunctionDefinition':
 				var fd = new FunctionDefinition(node, this.context);
 				this.functionDefinitions.push(fd);
-				this.context.variables[fd.name] = {'type': fd.type};
 				break;
 			default:
 				throw "Unexpected node type: " + node.type;
@@ -418,7 +439,7 @@ Module.prototype.compileExportsTable = function(out) {
 
 		exportsTable.push(estree.Property(
 			estree.Identifier(fd.name),
-			estree.Identifier(fd.name),
+			estree.Identifier(fd.variable.jsIdentifier),
 			'init'
 		));
 	}
