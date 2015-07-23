@@ -70,10 +70,11 @@ function Expression(node, context) {
 			break;
 		case 'Var':
 			var identifier = node.params[0];
-			this.type = context.getVariableType(identifier);
-			if (this.type === null) {
+			var variable = context.getVariable(identifier);
+			if (variable === null) {
 				throw "Undefined variable: " + identifier;
 			}
+			this.type = variable.type;
 
 			this.isAssignable = true;
 			this.compile = function() {

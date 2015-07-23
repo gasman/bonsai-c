@@ -6,14 +6,14 @@ var estree = require('./estree');
 
 function Context(returnType, parentContext) {
 	this.returnType = returnType;
-	this.variableTypes = {};
+	this.variables = {};
 	this.parentContext = parentContext;
 }
-Context.prototype.getVariableType = function(identifier) {
-	if (identifier in this.variableTypes) {
-		return this.variableTypes[identifier];
+Context.prototype.getVariable = function(identifier) {
+	if (identifier in this.variables) {
+		return this.variables[identifier];
 	} else if (this.parentContext !== null) {
-		return this.parentContext.getVariableType(identifier);
+		return this.parentContext.getVariable(identifier);
 	}
 };
 Context.prototype.createChildContext = function() {
@@ -229,7 +229,7 @@ function BlockStatement(block, parentContext) {
 		for (j = 0; j < declaration.variableDeclarators.length; j++) {
 			var declarator = declaration.variableDeclarators[j];
 
-			this.context.variableTypes[declarator.identifier] = declarator.type;
+			this.context.variables[declarator.identifier] = {'type': declarator.type};
 			this.variableDeclarators.push(declarator);
 		}
 	}
@@ -354,7 +354,7 @@ function FunctionDefinition(node, parentContext) {
 
 			this.parameters.push(parameter);
 			parameterTypes.push(parameter.type);
-			this.context.variableTypes[parameter.identifier] = parameter.type;
+			this.context.variables[parameter.identifier] = {'type': parameter.type};
 		}
 	}
 	this.type = types.func(this.returnType, parameterTypes);
@@ -398,7 +398,7 @@ function Module(name, declarationNodes) {
 			case 'FunctionDefinition':
 				var fd = new FunctionDefinition(node, this.context);
 				this.functionDefinitions.push(fd);
-				this.context.variableTypes[fd.name] = fd.type;
+				this.context.variables[fd.name] = {'type': fd.type};
 				break;
 			default:
 				throw "Unexpected node type: " + node.type;
