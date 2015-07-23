@@ -492,7 +492,7 @@ declaration_list
 	: declaration
 		{ $$ = [$1]; }
 	| declaration_list declaration
-		{ throw("Unimplemented rule for declaration_list: " + yytext); }
+		{ $$ = $1; $$.push($2); }
 	;
 
 statement_list
