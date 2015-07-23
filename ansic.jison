@@ -94,9 +94,9 @@ multiplicative_expression
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression
-		{ $$ = new yy.Node('Add', [$1, $3]); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| additive_expression '-' multiplicative_expression
-		{ throw("Unimplemented rule for additive_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 shift_expression
@@ -220,7 +220,7 @@ init_declarator_list
 	: init_declarator
 		{ $$ = [$1]; }
 	| init_declarator_list ',' init_declarator
-		{ throw("Unimplemented rule for init_declarator_list: " + yytext); }
+		{ $$ = $1; $$.push($3); }
 	;
 
 init_declarator
@@ -465,7 +465,6 @@ statement
 	| selection_statement
 		{ throw("Unimplemented rule for statement: " + yytext); }
 	| iteration_statement
-		{ throw("Unimplemented rule for statement: " + yytext); }
 	| jump_statement
 	;
 
@@ -521,7 +520,7 @@ selection_statement
 
 iteration_statement
 	: WHILE '(' expression ')' statement
-		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
+		{ $$ = new yy.Node('While', [$3, $5]); }
 	| DO statement WHILE '(' expression ')' ';'
 		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
 	| FOR '(' expression_statement expression_statement ')' statement

@@ -91,3 +91,11 @@ exports.VariableDeclarator = function(id, init) {
 		'init': init
 	};
 };
+
+exports.WhileStatement = function(test, body) {
+	return {
+		'type': 'WhileStatement',
+		'test': test,
+		'body': body
+	};
+};

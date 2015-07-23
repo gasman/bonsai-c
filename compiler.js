@@ -85,6 +85,26 @@ ReturnStatement.prototype.compile = function(out) {
 	out.push(estree.ReturnStatement(returnValueNode));
 };
 
+function WhileStatement(node, context) {
+	this.context = context;
+	this.expressionNode = node.params[0];
+	this.body = buildStatement(node.params[1], this.context);
+}
+WhileStatement.prototype.compileDeclarators = function(out) {
+	this.body.compileDeclarators(out);
+};
+WhileStatement.prototype.compile = function(out) {
+	var test = new expressions.Expression(this.expressionNode, this.context);
+	assert(types.equal(types.int, test.type));
+
+	var bodyStatements = [];
+	this.body.compile(bodyStatements);
+	assert.equal(1, bodyStatements.length);
+	var bodyStatement = bodyStatements[0];
+
+	out.push(estree.WhileStatement(test.compile(), bodyStatement));
+};
+
 function buildStatement(statementNode, context) {
 	switch (statementNode.type) {
 		case 'Block':
@@ -93,6 +113,8 @@ function buildStatement(statementNode, context) {
 			return new ExpressionStatement(statementNode, context);
 		case 'Return':
 			return new ReturnStatement(statementNode, context);
+		case 'While':
+			return new WhileStatement(statementNode, context);
 		default:
 			throw("Unsupported statement type: " + statementNode.type);
 	}

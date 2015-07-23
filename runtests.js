@@ -31,4 +31,8 @@ js = BonsaiC.compile('tests/inner_block.c');
 module = eval('(' + js + ')')();
 assert.equal(42, module.main());
 
+js = BonsaiC.compile('tests/while.c');
+module = eval('(' + js + ')')();
+assert.equal(55, module.main());
+
 console.log("All tests passed");

@@ -3,15 +3,17 @@ var types = require('./types');
 var estree = require('./estree');
 
 function Expression(node, context) {
-	var left, right;
+	var left, right, op;
 	switch (node.type) {
-		case 'Add':
-			left = new Expression(node.params[0], context);
-			right = new Expression(node.params[1], context);
+		case 'BinaryOp':
+			op = node.params[0];
+			assert(op == '+' || op == '-');
+			left = new Expression(node.params[1], context);
+			right = new Expression(node.params[2], context);
 			assert(types.equal(left.type, right.type));
 			this.type = left.type;
 			this.compile = function() {
-				return estree.BinaryExpression('+', left.compile(), right.compile());
+				return estree.BinaryExpression(op, left.compile(), right.compile());
 			};
 			break;
 		case 'Assign':
