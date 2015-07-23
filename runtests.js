@@ -39,4 +39,8 @@ js = BonsaiC.compile('tests/variable_shadowing.c');
 module = eval('(' + js + ')')();
 assert.equal(65, module.main());
 
+js = BonsaiC.compile('tests/for.c');
+module = eval('(' + js + ')')();
+assert.equal(45, module.main());
+
 console.log("All tests passed");

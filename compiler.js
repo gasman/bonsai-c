@@ -71,6 +71,43 @@ ExpressionStatement.prototype.compile = function(out) {
 	out.push(estree.ExpressionStatement(expr.compile()));
 };
 
+function ForStatement(node, context) {
+	this.context = context;
+
+	var initExpressionStatementNode = node.params[0];
+	assert.equal('ExpressionStatement', initExpressionStatementNode.type);
+	this.initExpressionNode = initExpressionStatementNode.params[0];
+
+	var testExpressionStatementNode = node.params[1];
+	assert.equal('ExpressionStatement', testExpressionStatementNode.type);
+	this.testExpressionNode = testExpressionStatementNode.params[0];
+
+	this.updateExpressionNode = node.params[2];
+
+	this.body = buildStatement(node.params[3], this.context);
+}
+ForStatement.prototype.compileDeclarators = function(out) {
+	this.body.compileDeclarators(out);
+};
+ForStatement.prototype.compile = function(out) {
+	var init = new expressions.Expression(this.initExpressionNode, this.context);
+	var test = new expressions.Expression(this.testExpressionNode, this.context);
+	assert(types.equal(types.int, test.type));
+	var update = new expressions.Expression(this.updateExpressionNode, this.context);
+
+	var bodyStatements = [];
+	this.body.compile(bodyStatements);
+	assert.equal(1, bodyStatements.length);
+	var bodyStatement = bodyStatements[0];
+
+	out.push(estree.ForStatement(
+		init.compile(),
+		test.compile(),
+		update.compile(),
+		bodyStatement
+	));
+};
+
 function ReturnStatement(node, context) {
 	this.context = context;
 	this.expressionNode = node.params[0];
@@ -132,6 +169,8 @@ function buildStatement(statementNode, context) {
 			return new BlockStatement(statementNode, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(statementNode, context);
+		case 'For':
+			return new ForStatement(statementNode, context);
 		case 'Return':
 			return new ReturnStatement(statementNode, context);
 		case 'While':

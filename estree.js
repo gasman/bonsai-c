@@ -35,6 +35,16 @@ exports.ExpressionStatement = function(expr) {
 	};
 };
 
+exports.ForStatement = function(init, test, update, body) {
+	return {
+		'type': 'ForStatement',
+		'init': init,
+		'test': test,
+		'update': update,
+		'body': body
+	};
+};
+
 exports.FunctionDeclaration = function(id, params, body) {
 	return {
 		'type': 'FunctionDeclaration',

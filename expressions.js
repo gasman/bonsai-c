@@ -7,7 +7,7 @@ function Expression(node, context) {
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			assert(op == '+' || op == '-');
+			assert(op == '+' || op == '-' || op == '<');
 			left = new Expression(node.params[1], context);
 			right = new Expression(node.params[2], context);
 			assert(types.equal(left.type, right.type));
@@ -20,10 +20,8 @@ function Expression(node, context) {
 			left = new Expression(node.params[0], context);
 			assert(left.isAssignable);
 
-			var operator = node.params[1];
-			assert.equal('=', operator,
-				"Assignment operators other than '=' are not yet implemented"
-			);
+			var op = node.params[1];
+			assert(op == '=' || op == '+=');
 
 			right = new Expression(node.params[2], context);
 			assert(types.equal(left.type, right.type));
@@ -31,7 +29,7 @@ function Expression(node, context) {
 			this.type = left.type;
 
 			this.compile = function() {
-				return estree.AssignmentExpression('=', left.compile(), right.compile());
+				return estree.AssignmentExpression(op, left.compile(), right.compile());
 			};
 			break;
 		case 'Const':

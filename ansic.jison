@@ -110,7 +110,7 @@ shift_expression
 relational_expression
 	: shift_expression
 	| relational_expression '<' shift_expression
-		{ throw("Unimplemented rule for relational_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| relational_expression '>' shift_expression
 		{ throw("Unimplemented rule for relational_expression: " + yytext); }
 	| relational_expression LE_OP shift_expression
@@ -526,7 +526,7 @@ iteration_statement
 	| FOR '(' expression_statement expression_statement ')' statement
 		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
 	| FOR '(' expression_statement expression_statement expression ')' statement
-		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
+		{ $$ = new yy.Node('For', [$3, $4, $5, $7]); }
 	;
 
 jump_statement
