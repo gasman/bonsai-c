@@ -95,6 +95,15 @@ exports.ReturnStatement = function(arg) {
 	};
 };
 
+exports.UpdateExpression = function(operator, argument, prefix) {
+	return {
+		'type': 'UpdateExpression',
+		'operator': operator,
+		'argument': argument,
+		'prefix': prefix
+	};
+};
+
 exports.VariableDeclaration = function(declarations) {
 	return {
 		'type': 'VariableDeclaration',

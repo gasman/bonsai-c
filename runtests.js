@@ -47,4 +47,8 @@ js = BonsaiC.compile('tests/if.c');
 module = eval('(' + js + ')')();
 assert.equal(42, module.main());
 
+js = BonsaiC.compile('tests/if_no_else.c');
+module = eval('(' + js + ')')();
+assert.equal(42, module.main());
+
 console.log("All tests passed");

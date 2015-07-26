@@ -113,12 +113,18 @@ function IfStatement(node, context) {
 
 	this.testExpressionNode = node.params[0];
 	this.thenStatement = buildStatement(node.params[1], this.context);
-	this.elseStatement = buildStatement(node.params[2], this.context);
+	if (node.params[2] === null) {
+		this.elseStatement = null;
+	} else {
+		this.elseStatement = buildStatement(node.params[2], this.context);
+	}
 }
 IfStatement.prototype.compileDeclarators = function(out) {
 	this.thenStatement.compileDeclarators(out);
-	this.elseStatement.compileDeclarators(out);
-}
+	if (this.elseStatement !== null) {
+		this.elseStatement.compileDeclarators(out);
+	}
+};
 IfStatement.prototype.compile = function(out) {
 	var test = new expressions.Expression(this.testExpressionNode, this.context);
 	assert(types.equal(types.int, test.type));
@@ -128,17 +134,20 @@ IfStatement.prototype.compile = function(out) {
 	assert.equal(1, thenBodyStatements.length);
 	var thenStatementNode = thenBodyStatements[0];
 
-	var elseBodyStatements = [];
-	this.elseStatement.compile(elseBodyStatements);
-	assert.equal(1, elseBodyStatements.length);
-	var elseStatementNode = elseBodyStatements[0];
+	var elseStatementNode = null;
+	if (this.elseStatement != null) {
+		var elseBodyStatements = [];
+		this.elseStatement.compile(elseBodyStatements);
+		assert.equal(1, elseBodyStatements.length);
+		elseStatementNode = elseBodyStatements[0];
+	}
 
 	out.push(estree.IfStatement(
 		test.compile(),
 		thenStatementNode,
 		elseStatementNode
 	));
-}
+};
 
 function ReturnStatement(node, context) {
 	this.context = context;
