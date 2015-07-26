@@ -24,7 +24,7 @@ primary_expression
 	| STRING_LITERAL
 		{ throw("Unimplemented rule for primary_expression: " + yytext); }
 	| '(' expression ')'
-		{ throw("Unimplemented rule for primary_expression: " + yytext); }
+		{ $$ = $2; }
 	;
 
 postfix_expression
@@ -32,7 +32,7 @@ postfix_expression
 	| postfix_expression '[' expression ']'
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression '(' ')'
-		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
+		{ $$ = new yy.Node('FunctionCall', [$1, []]); }
 	| postfix_expression '(' argument_expression_list ')'
 		{ $$ = new yy.Node('FunctionCall', [$1, $3]); }
 	| postfix_expression '.' IDENTIFIER
@@ -84,7 +84,7 @@ cast_expression
 multiplicative_expression
 	: cast_expression
 	| multiplicative_expression '*' cast_expression
-		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| multiplicative_expression '/' cast_expression
 		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
 	| multiplicative_expression '%' cast_expression
