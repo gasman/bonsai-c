@@ -135,7 +135,7 @@ IfStatement.prototype.compile = function(out) {
 	var thenStatementNode = thenBodyStatements[0];
 
 	var elseStatementNode = null;
-	if (this.elseStatement != null) {
+	if (this.elseStatement !== null) {
 		var elseBodyStatements = [];
 		this.elseStatement.compile(elseBodyStatements);
 		assert.equal(1, elseBodyStatements.length);
