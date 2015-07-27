@@ -160,24 +160,36 @@ ReturnStatement.prototype.compileDeclarators = function(out) {
 };
 ReturnStatement.prototype.compile = function(out) {
 	var expr = new expressions.Expression(this.expressionNode, this.context);
-	assert(types.equal(expr.type, this.context.returnType));
+	assert(
+		types.satisfies(expr.type, this.context.returnType),
+		util.format("Return type %s expected, got %s", util.inspect(this.context.returnType), util.inspect(expr.type))
+	);
 
 	var returnValueNode;
 
-	if (expr.isConstant && types.equal(expr.type, types.int)) {
-		/* no type annotation necessary - just return the literal */
-		returnValueNode = expr.compile();
-	} else {
-		switch (expr.type.category) {
-			case 'int':
+	switch(this.context.returnType.category) {
+		case 'signed':
+			if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
+				/* no type annotation necessary - just return the literal */
+				returnValueNode = expr.compile();
+			} else if (types.satisfies(expr.type, types.intish)) {
 				/* expr|0 */
 				returnValueNode = estree.BinaryExpression('|',
 					expr.compile(),
 					estree.Literal(0)
 				);
-				break;
-			default:
-				throw("Unimplemented return type: " + utils.inspect(expr.type));
+			} else {
+				throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
+			}
+			break;
+		default:
+			throw("Unimplemented return type: " + util.inspect(expr.type));
+	}
+
+	if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
+	} else {
+		switch (expr.type.category) {
+			case 'int':
 		}
 	}
 
@@ -240,7 +252,10 @@ function VariableDeclarator(node, varType, context) {
 	} else {
 		this.initialValue = new expressions.Expression(node.params[1], context);
 		assert(this.initialValue.isConstant, "Non-constant initialisers for variables are not supported");
-		assert(types.equal(this.type, this.initialValue.type));
+		assert(
+			types.satisfies(this.initialValue.type, this.type),
+			util.format("Incompatible types for init declarator: %s vs %s", util.inspect(this.type), util.inspect(this.initialValue.type))
+		);
 	}
 }
 VariableDeclarator.prototype.compileAsDeclarator = function(out) {
@@ -250,7 +265,7 @@ VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 	int i = 42;
 	will produce the declarator 'i = 0'.
 	*/
-	if (types.equal(this.type, types.int)) {
+	if (types.satisfies(this.type, types.int)) {
 		out.push(estree.VariableDeclarator(
 			estree.Identifier(this.variable.jsIdentifier),
 			estree.Literal(0)
@@ -407,21 +422,19 @@ function Parameter(node, context) {
 	this.variable = context.allocateVariable(this.identifier, this.type);
 }
 Parameter.prototype.compileTypeAnnotation = function(out) {
-	switch(this.type.category) {
-		case 'int':
-			/* x = x|0; */
-			out.push(estree.ExpressionStatement(
-				estree.AssignmentExpression('=',
+	if (types.satisfies(this.type, types.int)) {
+		/* x = x|0; */
+		out.push(estree.ExpressionStatement(
+			estree.AssignmentExpression('=',
+				estree.Identifier(this.variable.jsIdentifier),
+				estree.BinaryExpression('|',
 					estree.Identifier(this.variable.jsIdentifier),
-					estree.BinaryExpression('|',
-						estree.Identifier(this.variable.jsIdentifier),
-						estree.Literal(0)
-					)
+					estree.Literal(0)
 				)
-			));
-			break;
-		default:
-			throw "Parameter type annotation not yet implemented: " + util.inspect(this.type);
+			)
+		));
+	} else {
+		throw "Parameter type annotation not yet implemented: " + util.inspect(this.type);
 	}
 };
 

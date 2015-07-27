@@ -5,6 +5,7 @@ var assert = require('assert');
 var js, module;
 
 function testCompile(filename, expectedResult, params) {
+	console.log('running test: ' + filename);
 	js = BonsaiC.compile(filename);
 	try {
 		asmjs.validate(js);

@@ -1,6 +1,7 @@
 var assert = require('assert');
 var types = require('./types');
 var estree = require('./estree');
+var util = require('util');
 
 function Expression(node, context) {
 	var left, right, op;
@@ -24,7 +25,10 @@ function Expression(node, context) {
 			assert(op == '=' || op == '+=');
 
 			right = new Expression(node.params[2], context);
-			assert(types.equal(left.type, right.type));
+			assert(
+				types.satisfies(right.type, left.type),
+				util.format("Incompatible types for assignment: %s vs %s", util.inspect(left.type), util.inspect(right.type))
+			);
 
 			this.type = left.type;
 
@@ -35,8 +39,8 @@ function Expression(node, context) {
 		case 'Const':
 			var numString = node.params[0];
 			this.isConstant = true;
-			if (numString.match(/^\d+$/)) {
-				this.type = types.int;
+			if (numString.match(/^\d+$/) && parseInt(numString, 10) < Math.pow(2, 31)) {
+				this.type = types.fixnum;
 				this.compile = function() {
 					return estree.Literal(parseInt(numString, 10));
 				};
@@ -55,7 +59,10 @@ function Expression(node, context) {
 			var args = [];
 			for (var i = 0; i < argNodes.length; i++) {
 				args[i] = new Expression(argNodes[i], context);
-				assert(types.equal(paramTypes[i], args[i].type));
+				assert(
+					types.satisfies(args[i].type, paramTypes[i]),
+					util.format("Incompatible argument type in function call: expected %s, got %s", util.inspect(paramTypes[i]), util.inspect(args[i].type))
+				);
 			}
 
 			this.compile = function() {
