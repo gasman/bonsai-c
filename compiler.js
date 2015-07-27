@@ -160,11 +160,6 @@ ReturnStatement.prototype.compileDeclarators = function(out) {
 };
 ReturnStatement.prototype.compile = function(out) {
 	var expr = new expressions.Expression(this.expressionNode, this.context);
-	assert(
-		types.satisfies(expr.type, this.context.returnType),
-		util.format("Return type %s expected, got %s", util.inspect(this.context.returnType), util.inspect(expr.type))
-	);
-
 	var returnValueNode;
 
 	switch(this.context.returnType.category) {
