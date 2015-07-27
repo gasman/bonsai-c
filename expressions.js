@@ -3,19 +3,60 @@ var types = require('./types');
 var estree = require('./estree');
 var util = require('util');
 
+function coerce(expr, targetType) {
+	/* Return an estree expression structure for the Expression 'expr' coerced
+	to the specified target type */
+	if (types.satisfies(expr.type, targetType)) {
+		// expression is already of the correct type; no coercion required
+		return expr.compile();
+	} else if (types.satisfies(expr.type, types.intish) && types.satisfies(types.signed, targetType)) {
+		// coerce intish to signed using expr|0
+		return estree.BinaryExpression('|',
+			expr.compile(),
+			estree.Literal(0)
+		);
+	} else {
+		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
+	}
+}
+
 function Expression(node, context) {
 	var left, right, op;
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			assert(op == '+' || op == '-' || op == '<' || op == '>' || op == '<=' || op == '*');
 			left = new Expression(node.params[1], context);
 			right = new Expression(node.params[2], context);
-			assert(types.equal(left.type, right.type));
-			this.type = left.type;
-			this.compile = function() {
-				return estree.BinaryExpression(op, left.compile(), right.compile());
-			};
+
+			switch (op) {
+				case '+':
+				case '-':
+					assert(types.satisfies(left.type, types.int));
+					assert(types.satisfies(right.type, types.int));
+					this.type = types.intish;
+					this.compile = function() {
+						return estree.BinaryExpression(op, left.compile(), right.compile());
+					};
+					break;
+				case '<':
+				case '>':
+				case '<=':
+					assert(types.equal(left.type, right.type));
+					this.type = left.type;
+					this.compile = function() {
+						return estree.BinaryExpression(op, left.compile(), right.compile());
+					};
+					break;
+				case '*':
+					assert(types.equal(left.type, right.type));
+					this.type = left.type;
+					this.compile = function() {
+						return estree.BinaryExpression(op, left.compile(), right.compile());
+					};
+					break;
+				default:
+					throw "Unsupported binary operator: " + op;
+			}
 			break;
 		case 'Assign':
 			left = new Expression(node.params[0], context);
@@ -25,15 +66,11 @@ function Expression(node, context) {
 			assert(op == '=' || op == '+=');
 
 			right = new Expression(node.params[2], context);
-			assert(
-				types.satisfies(right.type, left.type),
-				util.format("Incompatible types for assignment: %s vs %s", util.inspect(left.type), util.inspect(right.type))
-			);
 
 			this.type = left.type;
 
 			this.compile = function() {
-				return estree.AssignmentExpression(op, left.compile(), right.compile());
+				return estree.AssignmentExpression(op, left.compile(), coerce(right, this.type));
 			};
 			break;
 		case 'Const':
