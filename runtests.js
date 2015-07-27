@@ -1,11 +1,20 @@
 var BonsaiC = require('./bonsai-c');
+var asmjs = require('asm.js');
 var assert = require('assert');
 
 var js, module;
 
 function testCompile(filename, expectedResult, params) {
 	js = BonsaiC.compile(filename);
+	try {
+		asmjs.validate(js);
+	} catch(e) {
+		console.log(filename + ' failed asm.js validation:');
+		throw e;
+	}
+
 	module = eval('(' + js + ')')();
+
 	if (!params) {
 		assert.equal(expectedResult, module.main());
 	} else {

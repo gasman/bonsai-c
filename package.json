@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "asm.js": "0.0.2",
     "escodegen": "^1.6.1"
   },
   "scripts": {
