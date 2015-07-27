@@ -7,7 +7,7 @@ function Expression(node, context) {
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			assert(op == '+' || op == '-' || op == '<' || op == '>');
+			assert(op == '+' || op == '-' || op == '<' || op == '>' || op == '<=' || op == '*');
 			left = new Expression(node.params[1], context);
 			right = new Expression(node.params[2], context);
 			assert(types.equal(left.type, right.type));
@@ -64,6 +64,16 @@ function Expression(node, context) {
 					compiledArgs[i] = args[i].compile();
 				}
 				return estree.CallExpression(callee.compile(), compiledArgs);
+			};
+			break;
+		case 'Postupdate':
+			op = node.params[0];
+			assert(op == '++');
+			left = new Expression(node.params[1], context);
+			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
+			this.type = left.type;
+			this.compile = function() {
+				return estree.UpdateExpression(op, left.compile(), false);
 			};
 			break;
 		case 'Var':

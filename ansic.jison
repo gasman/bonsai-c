@@ -24,7 +24,7 @@ primary_expression
 	| STRING_LITERAL
 		{ throw("Unimplemented rule for primary_expression: " + yytext); }
 	| '(' expression ')'
-		{ throw("Unimplemented rule for primary_expression: " + yytext); }
+		{ $$ = $2; }
 	;
 
 postfix_expression
@@ -32,7 +32,7 @@ postfix_expression
 	| postfix_expression '[' expression ']'
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression '(' ')'
-		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
+		{ $$ = new yy.Node('FunctionCall', [$1, []]); }
 	| postfix_expression '(' argument_expression_list ')'
 		{ $$ = new yy.Node('FunctionCall', [$1, $3]); }
 	| postfix_expression '.' IDENTIFIER
@@ -40,7 +40,7 @@ postfix_expression
 	| postfix_expression PTR_OP IDENTIFIER
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	| postfix_expression INC_OP
-		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
+		{ $$ = new yy.Node('Postupdate', [$2, $1]); }
 	| postfix_expression DEC_OP
 		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
 	;
@@ -84,7 +84,7 @@ cast_expression
 multiplicative_expression
 	: cast_expression
 	| multiplicative_expression '*' cast_expression
-		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| multiplicative_expression '/' cast_expression
 		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
 	| multiplicative_expression '%' cast_expression
@@ -114,7 +114,7 @@ relational_expression
 	| relational_expression '>' shift_expression
 		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| relational_expression LE_OP shift_expression
-		{ throw("Unimplemented rule for relational_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| relational_expression GE_OP shift_expression
 		{ throw("Unimplemented rule for relational_expression: " + yytext); }
 	;
@@ -510,7 +510,7 @@ expression_statement
 
 selection_statement
 	: IF '(' expression ')' statement %prec IF_WITHOUT_ELSE
-		{ throw("Unimplemented rule for selection_statement: " + yytext); }
+		{ $$ = new yy.Node('If', [$3, $5, null]); }
 	| IF '(' expression ')' statement ELSE statement
 		{ $$ = new yy.Node('If', [$3, $5, $7]); }
 	| SWITCH '(' expression ')' statement

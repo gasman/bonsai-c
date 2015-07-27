@@ -3,48 +3,28 @@ var assert = require('assert');
 
 var js, module;
 
-js = BonsaiC.compile('tests/fortytwo.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
+function testCompile(filename, expectedResult, params) {
+	js = BonsaiC.compile(filename);
+	module = eval('(' + js + ')')();
+	if (!params) {
+		assert.equal(expectedResult, module.main());
+	} else {
+		assert.equal(expectedResult, module.main.apply(null, params));
+	}
+}
 
-js = BonsaiC.compile('tests/add.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
-
-js = BonsaiC.compile('tests/var.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
-
-js = BonsaiC.compile('tests/initvar.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
-
-js = BonsaiC.compile('tests/param.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main(42));
-
-js = BonsaiC.compile('tests/call.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
-
-js = BonsaiC.compile('tests/inner_block.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
-
-js = BonsaiC.compile('tests/while.c');
-module = eval('(' + js + ')')();
-assert.equal(55, module.main());
-
-js = BonsaiC.compile('tests/variable_shadowing.c');
-module = eval('(' + js + ')')();
-assert.equal(65, module.main());
-
-js = BonsaiC.compile('tests/for.c');
-module = eval('(' + js + ')')();
-assert.equal(45, module.main());
-
-js = BonsaiC.compile('tests/if.c');
-module = eval('(' + js + ')')();
-assert.equal(42, module.main());
+testCompile('tests/fortytwo.c', 42);
+testCompile('tests/add.c', 42);
+testCompile('tests/var.c', 42);
+testCompile('tests/initvar.c', 42);
+testCompile('tests/param.c', 42, [42]);
+testCompile('tests/call.c', 42);
+testCompile('tests/inner_block.c', 42);
+testCompile('tests/while.c', 55);
+testCompile('tests/variable_shadowing.c', 65);
+testCompile('tests/for.c', 45);
+testCompile('tests/if.c', 42);
+testCompile('tests/if_no_else.c', 42);
+testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");
