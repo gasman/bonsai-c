@@ -71,7 +71,7 @@ ExpressionStatement.prototype.compileDeclarators = function(out) {
 	/* an ExpressionStatement does not contain variable declarations */
 };
 ExpressionStatement.prototype.compile = function(out) {
-	var expr = new expressions.Expression(this.expressionNode, this.context, false);
+	var expr = expressions.buildExpression(this.expressionNode, this.context, false);
 	out.push(estree.ExpressionStatement(expr.compile()));
 };
 
@@ -94,9 +94,9 @@ ForStatement.prototype.compileDeclarators = function(out) {
 	this.body.compileDeclarators(out);
 };
 ForStatement.prototype.compile = function(out) {
-	var init = new expressions.Expression(this.initExpressionNode, this.context, false);
-	var test = new expressions.Expression(this.testExpressionNode, this.context, true);
-	var update = new expressions.Expression(this.updateExpressionNode, this.context, false);
+	var init = expressions.buildExpression(this.initExpressionNode, this.context, false);
+	var test = expressions.buildExpression(this.testExpressionNode, this.context, true);
+	var update = expressions.buildExpression(this.updateExpressionNode, this.context, false);
 
 	var bodyStatements = [];
 	this.body.compile(bodyStatements);
@@ -129,7 +129,7 @@ IfStatement.prototype.compileDeclarators = function(out) {
 	}
 };
 IfStatement.prototype.compile = function(out) {
-	var test = new expressions.Expression(this.testExpressionNode, this.context, true);
+	var test = expressions.buildExpression(this.testExpressionNode, this.context, true);
 	assert(types.equal(types.int, test.type));
 
 	var thenBodyStatements = [];
@@ -162,7 +162,7 @@ ReturnStatement.prototype.compileDeclarators = function(out) {
 	/* a ReturnStatement does not contain variable declarations */
 };
 ReturnStatement.prototype.compile = function(out) {
-	var expr = new expressions.Expression(this.expressionNode, this.context, true);
+	var expr = expressions.buildExpression(this.expressionNode, this.context, true);
 	var returnValueNode;
 
 	switch(this.context.returnType.category) {
@@ -203,7 +203,7 @@ WhileStatement.prototype.compileDeclarators = function(out) {
 	this.body.compileDeclarators(out);
 };
 WhileStatement.prototype.compile = function(out) {
-	var test = new expressions.Expression(this.expressionNode, this.context, true);
+	var test = expressions.buildExpression(this.expressionNode, this.context, true);
 
 	var bodyStatements = [];
 	this.body.compile(bodyStatements);
@@ -253,7 +253,7 @@ function VariableDeclarator(node, varType, context) {
 		/* no initial value provided */
 		this.initialValue = null;
 	} else {
-		this.initialValue = new expressions.Expression(node.params[1], context, true);
+		this.initialValue = expressions.buildExpression(node.params[1], context, true);
 		assert(this.initialValue.isConstant, "Non-constant initialisers for variables are not supported");
 		assert(
 			types.satisfies(this.initialValue.type, this.type),
