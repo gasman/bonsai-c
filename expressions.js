@@ -60,25 +60,25 @@ function RelationalExpression(op, left, right) {
 			return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
 		};
 	} else {
-		throw util.format("Unsupported types in relation operator: %s vs %s", util.inspect(left.type), util.inspect(right.type));
+		throw util.format("Unsupported types in relational expression: %s vs %s", util.inspect(left.type), util.inspect(right.type));
 	}
 
 	return self;
 }
 
 function MultiplicativeExpression(op, left, right) {
-	var self = {};
-
-	assert(types.equal(left.type, right.type));
-	assert(types.equal(left.intendedType, right.intendedType));
-	self.type = left.type;
-	self.intendedType = left.intendedType;
-	self.isRepeatable = false;
-	self.compile = function() {
-		return estree.BinaryExpression(op, left.compile(), right.compile());
-	};
-
-	return self;
+	if (types.satisfies(left.type, types.intish) && types.satisfies(right.type, types.intish)) {
+		/* rewrite as a call to Math.imul */
+		throw "Integer multiplication not supported yet";
+		/*
+		return FunctionCallExpression(
+			'stdlib.Math.imul', // TODO: declare this as a variable
+			[left, right]
+		);
+		*/
+	} else {
+		throw util.format("Unsupported types in multiplicative expression: %s vs %s", util.inspect(left.type), util.inspect(right.type));
+	}
 }
 
 function AssignmentExpression(op, left, right) {
