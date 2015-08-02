@@ -502,6 +502,21 @@ FunctionDefinition.prototype.compile = function() {
 
 	this.blockStatement.compileStatementList(functionBody, true);
 
+	/* if function is non-void, and does not end with a return statement,
+	add a dummy one to serve as a type annotation */
+	var lastStatement = functionBody[functionBody.length - 1];
+	if (!lastStatement || lastStatement.type != 'ReturnStatement') {
+		if (types.equal(this.context.returnType, types.void)) {
+			/* no return statement required for void return type */
+		} else if (types.equal(this.context.returnType, types.signed)) {
+			functionBody.push(estree.ReturnStatement(
+				estree.Literal(0)
+			));
+		} else {
+			throw "Unsupported return type: " + util.inspect(this.context.returnType);
+		}
+	}
+
 	return estree.FunctionDeclaration(
 		estree.Identifier(this.variable.jsIdentifier),
 		paramIdentifiers,
