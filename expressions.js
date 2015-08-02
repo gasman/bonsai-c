@@ -21,13 +21,13 @@ function coerce(expr, targetType) {
 }
 exports.coerce = coerce;
 
-function Expression(node, context) {
+function Expression(node, context, resultIsUsed) {
 	var left, right, op;
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			left = new Expression(node.params[1], context);
-			right = new Expression(node.params[2], context);
+			left = new Expression(node.params[1], context, resultIsUsed);
+			right = new Expression(node.params[2], context, resultIsUsed);
 
 			switch (op) {
 				case '+':
@@ -40,6 +40,17 @@ function Expression(node, context) {
 					);
 					this.type = types.intish;
 					this.intendedType = left.intendedType;
+
+					/* an expression is considered to be 'repeatable' if multiple occurrences
+					of it can appear in the output without causing unwanted additional calculation
+					(including, but not limited to, calculation with side effects).
+					For example, transforming "++i" to "i = i + 1" would be acceptable,
+					as would "++i[x]" => "i[x] = i[x] + 1",
+					but "++i[x+y]" => "i[x+y] = i[x+y] + 1" would not;
+					x+y should be evaluated into a temporary variable instead.
+					*/
+					this.isRepeatable = false;
+
 					this.compile = function() {
 						return estree.BinaryExpression(op, left.compile(), right.compile());
 					};
@@ -48,7 +59,8 @@ function Expression(node, context) {
 				case '>':
 				case '<=':
 					if (types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
-						this.type = types.int; // TODO: figure out why this isn't fixnum - surely the only expected values are 0 and 1?
+						this.type = this.intendedType = types.int; // TODO: figure out why this isn't fixnum - surely the only expected values are 0 and 1?
+						this.isRepeatable = false;
 						this.compile = function() {
 							return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
 						};
@@ -61,6 +73,7 @@ function Expression(node, context) {
 					assert(types.equal(left.intendedType, right.intendedType));
 					this.type = left.type;
 					this.intendedType = left.intendedType;
+					this.isRepeatable = false;
 					this.compile = function() {
 						return estree.BinaryExpression(op, left.compile(), right.compile());
 					};
@@ -70,16 +83,17 @@ function Expression(node, context) {
 			}
 			break;
 		case 'Assign':
-			left = new Expression(node.params[0], context);
+			left = new Expression(node.params[0], context, true);
 			assert(left.isAssignable);
 
 			op = node.params[1];
 			assert(op == '=' || op == '+=');
 
-			right = new Expression(node.params[2], context);
+			right = new Expression(node.params[2], context, true);
 
 			this.type = left.type;
 			this.intendedType = left.intendedType;
+			this.isRepeatable = false;
 
 			this.compile = function() {
 				return estree.AssignmentExpression(op, left.compile(), coerce(right, this.type));
@@ -88,6 +102,7 @@ function Expression(node, context) {
 		case 'Const':
 			var numString = node.params[0];
 			this.isConstant = true;
+			this.isRepeatable = true;
 			if (numString.match(/^\d+$/) && parseInt(numString, 10) < Math.pow(2, 31)) {
 				this.type = types.fixnum;
 				this.intendedType = types.signed;
@@ -99,17 +114,18 @@ function Expression(node, context) {
 			}
 			break;
 		case 'FunctionCall':
-			var callee = new Expression(node.params[0], context);
+			var callee = new Expression(node.params[0], context, true);
 			assert.equal('function', callee.type.category);
 			this.type = callee.type.returnType;
 			this.intendedType = callee.intendedType.returnType;
+			this.isRepeatable = false;
 			var paramTypes = callee.type.paramTypes;
 
 			var argNodes = node.params[1];
 			assert(Array.isArray(argNodes));
 			var args = [];
 			for (var i = 0; i < argNodes.length; i++) {
-				args[i] = new Expression(argNodes[i], context);
+				args[i] = new Expression(argNodes[i], context, true);
 				assert(
 					types.satisfies(args[i].type, paramTypes[i]),
 					util.format("Incompatible argument type in function call: expected %s, got %s", util.inspect(paramTypes[i]), util.inspect(args[i].type))
@@ -127,10 +143,20 @@ function Expression(node, context) {
 		case 'Postupdate':
 			op = node.params[0];
 			assert(op == '++');
-			left = new Expression(node.params[1], context);
+			if (resultIsUsed) {
+				throw "Postupdate operations where the result is used (rather than discarded) are not currently supported)"
+			}
+			left = new Expression(node.params[1], context, true);
+			assert(left.isAssignable);
+			assert(left.isRepeatable);
 			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
+
+			/* if the result is not used AND the operand is repeatable AND the operand is an int (signed?),
+				(operand)++ can be compiled to (operand) = (operand) + 1 | 0 */
+
 			this.type = left.type;
 			this.intendedType = left.intendedType;
+			this.isRepeatable = false;
 			this.compile = function() {
 				return estree.UpdateExpression(op, left.compile(), false);
 			};
@@ -143,6 +169,7 @@ function Expression(node, context) {
 			}
 			this.type = variable.type;
 			this.intendedType = variable.intendedType;
+			this.isRepeatable = true;
 
 			this.isAssignable = true;
 			this.compile = function() {
