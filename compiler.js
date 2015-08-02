@@ -16,7 +16,7 @@ Context.prototype.getVariable = function(identifier) {
 		return this.parentContext.getVariable(identifier);
 	}
 };
-Context.prototype.allocateVariable = function(identifier, varType) {
+Context.prototype.allocateVariable = function(identifier, declaredType, intendedType) {
 	var jsIdentifier = identifier;
 	var i = 0;
 	while (jsIdentifier in this.allocatedJSIdentifiers) {
@@ -25,7 +25,11 @@ Context.prototype.allocateVariable = function(identifier, varType) {
 	}
 	this.allocatedJSIdentifiers[jsIdentifier] = true;
 
-	var variable = {'type': varType, 'jsIdentifier': jsIdentifier};
+	var variable = {
+		'type': declaredType,
+		'intendedType': intendedType,
+		'jsIdentifier': jsIdentifier
+	};
 	this.variables[identifier] = variable;
 	return variable;
 };
@@ -92,7 +96,6 @@ ForStatement.prototype.compileDeclarators = function(out) {
 ForStatement.prototype.compile = function(out) {
 	var init = new expressions.Expression(this.initExpressionNode, this.context);
 	var test = new expressions.Expression(this.testExpressionNode, this.context);
-	assert(types.equal(types.int, test.type));
 	var update = new expressions.Expression(this.updateExpressionNode, this.context);
 
 	var bodyStatements = [];
@@ -102,7 +105,7 @@ ForStatement.prototype.compile = function(out) {
 
 	out.push(estree.ForStatement(
 		init.compile(),
-		test.compile(),
+		expressions.coerce(test, types.int),
 		update.compile(),
 		bodyStatement
 	));
@@ -201,14 +204,13 @@ WhileStatement.prototype.compileDeclarators = function(out) {
 };
 WhileStatement.prototype.compile = function(out) {
 	var test = new expressions.Expression(this.expressionNode, this.context);
-	assert(types.equal(types.int, test.type));
 
 	var bodyStatements = [];
 	this.body.compile(bodyStatements);
 	assert.equal(1, bodyStatements.length);
 	var bodyStatement = bodyStatements[0];
 
-	out.push(estree.WhileStatement(test.compile(), bodyStatement));
+	out.push(estree.WhileStatement(expressions.coerce(test, types.int), bodyStatement));
 };
 
 function buildStatement(statementNode, context) {
@@ -238,8 +240,14 @@ function VariableDeclarator(node, varType, context) {
 		"Variable declarators other than direct identifiers are not implemented yet");
 	this.identifier = declarator.params[0];
 
-	this.type = varType;
-	this.variable = context.allocateVariable(this.identifier, this.type);
+	this.intendedType = varType;
+	if (types.satisfies(varType, types.int)) {
+		this.type = types.int;
+	} else {
+		throw("Unsupported variable type: " + util.inspect(varType));
+	}
+
+	this.variable = context.allocateVariable(this.identifier, this.type, this.intendedType);
 
 	if (node.params[1] === null) {
 		/* no initial value provided */
@@ -408,13 +416,18 @@ BlockStatement.prototype.compile = function(out, includeDeclarators) {
 
 function Parameter(node, context) {
 	assert.equal('ParameterDeclaration', node.type);
-	this.type = types.getTypeFromDeclarationSpecifiers(node.params[0]);
+	this.intendedType = types.getTypeFromDeclarationSpecifiers(node.params[0]);
+	if (types.satisfies(this.intendedType, types.int)) {
+		this.type = types.int
+	} else {
+		throw "Unsupported parameter type: " + utils.inspect(this.intendedType);
+	}
 
 	var identifierNode = node.params[1];
 	assert.equal('Identifier', identifierNode.type);
 	this.identifier = identifierNode.params[0];
 
-	this.variable = context.allocateVariable(this.identifier, this.type);
+	this.variable = context.allocateVariable(this.identifier, this.type, this.intendedType);
 }
 Parameter.prototype.compileTypeAnnotation = function(out) {
 	if (types.satisfies(this.type, types.int)) {
@@ -459,6 +472,7 @@ function FunctionDefinition(node, parentContext) {
 
 	this.parameters = [];
 	var parameterTypes = [];
+	var parameterIntendedTypes = [];
 
 	if (!parameterListIsVoid(parameterNodes)) {
 		for (var i = 0; i < parameterNodes.length; i++) {
@@ -466,10 +480,12 @@ function FunctionDefinition(node, parentContext) {
 
 			this.parameters.push(parameter);
 			parameterTypes.push(parameter.type);
+			parameterIntendedTypes.push(parameter.intendedType);
 		}
 	}
 	this.type = types.func(this.returnType, parameterTypes);
-	this.variable = parentContext.allocateVariable(this.name, this.type);
+	this.intendedType = types.func(this.returnType, parameterIntendedTypes);
+	this.variable = parentContext.allocateVariable(this.name, this.type, this.intendedType);
 
 	this.blockStatement = new BlockStatement(node.params[3], this.context);
 }

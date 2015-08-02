@@ -19,6 +19,7 @@ function coerce(expr, targetType) {
 		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
 	}
 }
+exports.coerce = coerce;
 
 function Expression(node, context) {
 	var left, right, op;
@@ -33,7 +34,12 @@ function Expression(node, context) {
 				case '-':
 					assert(types.satisfies(left.type, types.int));
 					assert(types.satisfies(right.type, types.int));
+					assert(
+						types.equal(left.intendedType, right.intendedType),
+						util.format("Intended types in additive operation differ: %s vs %s", util.inspect(left.intendedType), util.inspect(right.intendedType))
+					);
 					this.type = types.intish;
+					this.intendedType = left.intendedType;
 					this.compile = function() {
 						return estree.BinaryExpression(op, left.compile(), right.compile());
 					};
@@ -41,15 +47,20 @@ function Expression(node, context) {
 				case '<':
 				case '>':
 				case '<=':
-					assert(types.equal(left.type, right.type));
-					this.type = left.type;
-					this.compile = function() {
-						return estree.BinaryExpression(op, left.compile(), right.compile());
-					};
+					if (types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
+						this.type = types.int; // TODO: figure out why this isn't fixnum - surely the only expected values are 0 and 1?
+						this.compile = function() {
+							return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
+						};
+					} else {
+						throw util.format("Unsupported types in relation operator: %s vs %s", util.inspect(left.type), util.inspect(right.type));
+					}
 					break;
 				case '*':
 					assert(types.equal(left.type, right.type));
+					assert(types.equal(left.intendedType, right.intendedType));
 					this.type = left.type;
+					this.intendedType = left.intendedType;
 					this.compile = function() {
 						return estree.BinaryExpression(op, left.compile(), right.compile());
 					};
@@ -68,6 +79,7 @@ function Expression(node, context) {
 			right = new Expression(node.params[2], context);
 
 			this.type = left.type;
+			this.intendedType = left.intendedType;
 
 			this.compile = function() {
 				return estree.AssignmentExpression(op, left.compile(), coerce(right, this.type));
@@ -78,6 +90,7 @@ function Expression(node, context) {
 			this.isConstant = true;
 			if (numString.match(/^\d+$/) && parseInt(numString, 10) < Math.pow(2, 31)) {
 				this.type = types.fixnum;
+				this.intendedType = types.signed;
 				this.compile = function() {
 					return estree.Literal(parseInt(numString, 10));
 				};
@@ -89,6 +102,7 @@ function Expression(node, context) {
 			var callee = new Expression(node.params[0], context);
 			assert.equal('function', callee.type.category);
 			this.type = callee.type.returnType;
+			this.intendedType = callee.intendedType.returnType;
 			var paramTypes = callee.type.paramTypes;
 
 			var argNodes = node.params[1];
@@ -116,6 +130,7 @@ function Expression(node, context) {
 			left = new Expression(node.params[1], context);
 			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
 			this.type = left.type;
+			this.intendedType = left.intendedType;
 			this.compile = function() {
 				return estree.UpdateExpression(op, left.compile(), false);
 			};
@@ -127,6 +142,7 @@ function Expression(node, context) {
 				throw "Undefined variable: " + identifier;
 			}
 			this.type = variable.type;
+			this.intendedType = variable.intendedType;
 
 			this.isAssignable = true;
 			this.compile = function() {
