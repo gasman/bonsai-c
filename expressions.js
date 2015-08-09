@@ -81,18 +81,17 @@ function MultiplicativeExpression(op, left, right) {
 	}
 }
 
-function AssignmentExpression(op, left, right) {
+function AssignmentExpression(left, right) {
 	var self = {};
 
 	assert(left.isAssignable);
-	assert(op == '=' || op == '+=');
 
 	self.type = left.type;
 	self.intendedType = left.intendedType;
 	self.isRepeatable = false;
 
 	self.compile = function() {
-		return estree.AssignmentExpression(op, left.compile(), coerce(right, self.type));
+		return estree.AssignmentExpression('=', left.compile(), coerce(right, self.type));
 	};
 
 	return self;
@@ -181,7 +180,19 @@ function buildExpression(node, context, resultIsUsed) {
 			op = node.params[1];
 			right = buildExpression(node.params[2], context, true);
 
-			return AssignmentExpression(op, left, right);
+			if (op == '=') {
+				return AssignmentExpression(left, right);
+			} else if (op == '+=') {
+				assert(left.isRepeatable);
+
+				/* if left is repeatable, left += right is equivalent to
+					left = left + right */
+				return AssignmentExpression(
+					left,
+					AdditiveExpression('+', left, right)
+				);
+			}
+			break;
 		case 'Const':
 			var numString = node.params[0];
 			if (numString.match(/^\d+$/)) {
@@ -219,7 +230,6 @@ function buildExpression(node, context, resultIsUsed) {
 				(operand)++ is equivalent to (operand) = (operand) + 1 */
 
 			return AssignmentExpression(
-				'=',
 				left,
 				AdditiveExpression('+', left, NumericLiteralExpression(1))
 			);
