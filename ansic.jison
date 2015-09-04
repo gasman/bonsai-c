@@ -160,7 +160,7 @@ logical_or_expression
 conditional_expression
 	: logical_or_expression
 	| logical_or_expression '?' expression ':' conditional_expression
-		{ throw("Unimplemented rule for conditional_expression: " + yytext); }
+		{ $$ = new yy.Node('Conditional', [$1, $3, $5]); }
 	;
 
 assignment_expression

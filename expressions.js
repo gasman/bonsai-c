@@ -107,6 +107,32 @@ function AssignmentExpression(left, right) {
 	return self;
 }
 
+function ConditionalExpression(test, cons, alt) {
+	var self = {};
+
+	assert(
+		types.satisfies(test.intendedType, types.int),
+		util.format("Invalid expression type for conditional type - expected int, got %s", util.inspect(test.intendedType))
+	);
+
+	if (types.satisfies(cons.intendedType, types.int) && types.satisfies(alt.intendedType, types.int)) {
+		self.type = self.intendedType = types.int;
+	} else if (types.satisfies(cons.intendedType, types.double) && types.satisfies(alt.intendedType, types.double)) {
+		self.type = self.intendedType = types.double;
+	}
+	self.isRepeatable = false;
+
+	self.compile = function() {
+		return estree.ConditionalExpression(
+			coerce(test, types.int),
+			coerce(cons, self.type),
+			coerce(alt, self.type)
+		);
+	};
+
+	return self;
+}
+
 function NumericLiteralExpression(value, intendedType) {
 	var self = {};
 
@@ -209,6 +235,12 @@ function buildExpression(node, context, resultIsUsed) {
 				);
 			}
 			break;
+		case 'Conditional':
+			var test = buildExpression(node.params[0], context, true);
+			var cons = buildExpression(node.params[1], context, resultIsUsed);
+			var alt = buildExpression(node.params[2], context, resultIsUsed);
+
+			return ConditionalExpression(test, cons, alt);
 		case 'Const':
 			var numString = node.params[0];
 			if (numString.match(/^\d+$/)) {

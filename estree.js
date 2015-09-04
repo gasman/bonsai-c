@@ -28,6 +28,15 @@ exports.CallExpression = function(callee, args) {
 	};
 };
 
+exports.ConditionalExpression = function(test, consequent, alternate) {
+	return {
+		'type': 'ConditionalExpression',
+		'test': test,
+		'alternate': alternate,
+		'consequent': consequent
+	};
+};
+
 exports.ExpressionStatement = function(expr) {
 	return {
 		'type': 'ExpressionStatement',

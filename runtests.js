@@ -4,22 +4,27 @@ var assert = require('assert');
 
 var js, module;
 
-function testCompile(filename, expectedResult, params) {
+function testCompile(filename, expectedResult, opts) {
+	if (!opts) opts = {};
+
 	console.log('running test: ' + filename);
 	js = BonsaiC.compile(filename);
-	try {
-		asmjs.validate(js);
-	} catch(e) {
-		console.log(filename + ' failed asm.js validation:');
-		throw e;
+
+	if (!opts.skipValidate) {
+		try {
+			asmjs.validate(js);
+		} catch(e) {
+			console.log(filename + ' failed asm.js validation:');
+			throw e;
+		}
 	}
 
 	module = eval('(' + js + ')')();
 
-	if (!params) {
+	if (!opts.params) {
 		assert.equal(expectedResult, module.main());
 	} else {
-		assert.equal(expectedResult, module.main.apply(null, params));
+		assert.equal(expectedResult, module.main.apply(null, opts.params));
 	}
 }
 
@@ -27,7 +32,7 @@ testCompile('tests/fortytwo.c', 42);
 testCompile('tests/add.c', 42);
 testCompile('tests/var.c', 42);
 testCompile('tests/initvar.c', 42);
-testCompile('tests/param.c', 42, [42]);
+testCompile('tests/param.c', 42, {params: [42]});
 testCompile('tests/call.c', 42);
 testCompile('tests/inner_block.c', 42);
 testCompile('tests/while.c', 55);
@@ -35,7 +40,7 @@ testCompile('tests/variable_shadowing.c', 65);
 testCompile('tests/for.c', 45);
 testCompile('tests/if.c', 42);
 testCompile('tests/if_no_else.c', 42);
-testCompile('tests/double.c', 42);
+testCompile('tests/double.c', 42, {skipValidate: true});
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");
