@@ -1,6 +1,7 @@
 var assert = require('assert');
 var util = require('util');
 
+exports.double = {'category': 'double'};
 exports.fixnum = {'category': 'fixnum'};
 exports.int = {'category': 'int'};
 exports.intish = {'category': 'intish'};
@@ -20,6 +21,7 @@ var equal = function(t1, t2) {
 	if (t1.category != t2.category) return false;
 
 	switch (t1.category) {
+		case 'double':
 		case 'fixnum':
 		case 'int':
 		case 'intish':
@@ -41,6 +43,8 @@ exports.equal = equal;
 
 var satisfies = function(t, targetType) {
 	switch(targetType.category) {
+		case 'double':
+			return (t.category == 'double');
 		case 'intish':
 			return (t.category == 'intish' || t.category == 'int' || t.category == 'signed' || t.category == 'unsigned' || t.category == 'fixnum');
 		case 'int':

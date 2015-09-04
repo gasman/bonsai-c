@@ -43,14 +43,15 @@ IS			[uUlL]*
 
 {L}({L}|{D})*		return 'IDENTIFIER';
 
+{D}+"."{D}*({E})?{FS}?	return 'CONSTANT';
+{D}*"."{D}+({E})?{FS}?	return 'CONSTANT';
+
 "0"[xX]{H}+{IS}?		return 'CONSTANT';
 "0"{D}+{IS}?		return 'CONSTANT';
 {D}+{IS}?		return 'CONSTANT';
 "L"?"'"("\'"|[^'])+"'"	return 'CONSTANT';
 
 {D}+{E}{FS}?		return 'CONSTANT';
-{D}*"."{D}+({E})?{FS}?	return 'CONSTANT';
-{D}+"."{D}*({E})?{FS}?	return 'CONSTANT';
 
 "L"?'"'('\"'|[^"])*'"'	return 'STRING_LITERAL';
 

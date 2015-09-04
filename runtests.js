@@ -35,6 +35,7 @@ testCompile('tests/variable_shadowing.c', 65);
 testCompile('tests/for.c', 45);
 testCompile('tests/if.c', 42);
 testCompile('tests/if_no_else.c', 42);
+testCompile('tests/double.c', 42);
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");

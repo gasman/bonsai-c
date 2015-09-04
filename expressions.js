@@ -53,7 +53,17 @@ function AdditiveExpression(op, left, right) {
 function RelationalExpression(op, left, right) {
 	var self = {};
 
+	var hasValidTypes;
+
 	if (types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
+		hasValidTypes = true;
+	} else if (types.satisfies(left.intendedType, types.double) && types.satisfies(right.intendedType, types.double)) {
+		hasValidTypes = true;
+	} else {
+		hasValidTypes = false;
+	}
+
+	if (hasValidTypes) {
 		self.type = self.intendedType = types.int; // TODO: figure out why this isn't fixnum - surely the only expected values are 0 and 1?
 		self.isRepeatable = false;
 		self.compile = function() {
@@ -97,13 +107,19 @@ function AssignmentExpression(left, right) {
 	return self;
 }
 
-function NumericLiteralExpression(value) {
+function NumericLiteralExpression(value, intendedType) {
 	var self = {};
 
 	self.isConstant = true;
 	self.isRepeatable = true;
-	self.type = types.fixnum;
-	self.intendedType = types.signed;
+	self.intendedType = intendedType;
+	if (types.equal(self.intendedType, types.signed)) {
+		self.type = types.fixnum;
+	} else if (types.equal(self.intendedType, types.double)) {
+		self.type = types.double;
+	} else {
+		throw util.format("Don't know how to determine actual type for intended type %s", util.inspect(self.intendedType));
+	}
 	self.compile = function() {
 		return estree.Literal(value);
 	};
@@ -152,7 +168,7 @@ function VariableExpression(variable) {
 }
 
 function buildExpression(node, context, resultIsUsed) {
-	var left, right, op;
+	var left, right, op, value;
 	var self = {};
 
 	switch (node.type) {
@@ -196,12 +212,15 @@ function buildExpression(node, context, resultIsUsed) {
 		case 'Const':
 			var numString = node.params[0];
 			if (numString.match(/^\d+$/)) {
-				var value = parseInt(numString, 10);
+				value = parseInt(numString, 10);
 				if (value < Math.pow(2, 31)) {
-					return NumericLiteralExpression(value);
+					return NumericLiteralExpression(value, types.signed);
 				} else {
 					throw("Unsupported numeric constant: " + numString);
 				}
+			} else if (numString.match(/^(\d+\.\d*|\.\d+)$/)) {
+				value = parseFloat(numString);
+				return NumericLiteralExpression(value, types.double);
 			} else {
 				throw("Unsupported numeric constant: " + numString);
 			}
@@ -231,7 +250,7 @@ function buildExpression(node, context, resultIsUsed) {
 
 			return AssignmentExpression(
 				left,
-				AdditiveExpression('+', left, NumericLiteralExpression(1))
+				AdditiveExpression('+', left, NumericLiteralExpression(1, types.signed))
 			);
 		case 'Var':
 			var identifier = node.params[0];
