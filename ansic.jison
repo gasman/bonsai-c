@@ -148,7 +148,7 @@ inclusive_or_expression
 logical_and_expression
 	: inclusive_or_expression
 	| logical_and_expression AND_OP inclusive_or_expression
-		{ throw("Unimplemented rule for logical_and_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 logical_or_expression
