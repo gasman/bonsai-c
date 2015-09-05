@@ -133,6 +133,19 @@ function ConditionalExpression(test, cons, alt) {
 	return self;
 }
 
+function LogicalNotExpression(argument) {
+	var self = {};
+
+	self.type = self.intendedType = types.int;
+	self.isRepeatable = false;
+
+	self.compile = function() {
+		return estree.UnaryExpression('!', coerce(argument, types.int), true);
+	};
+
+	return self;
+}
+
 function NumericLiteralExpression(value, intendedType) {
 	var self = {};
 
@@ -284,6 +297,17 @@ function buildExpression(node, context, resultIsUsed) {
 				left,
 				AdditiveExpression('+', left, NumericLiteralExpression(1, types.signed))
 			);
+		case 'UnaryOp':
+			op = node.params[0];
+			var argument = buildExpression(node.params[1], context, resultIsUsed);
+			switch (op) {
+				case '!':
+					return LogicalNotExpression(argument);
+				default:
+					throw "Unsupported unary operator: " + op;
+			}
+			break;
+
 		case 'Var':
 			var identifier = node.params[0];
 			var variable = context.getVariable(identifier);

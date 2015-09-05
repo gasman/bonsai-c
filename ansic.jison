@@ -59,7 +59,7 @@ unary_expression
 	| DEC_OP unary_expression
 		{ throw("Unimplemented rule for unary_expression: " + yytext); }
 	| unary_operator cast_expression
-		{ throw("Unimplemented rule for unary_expression: " + yytext); }
+		{ $$ = new yy.Node('UnaryOp', [$1, $2]); }
 	| SIZEOF unary_expression
 		{ throw("Unimplemented rule for unary_expression: " + yytext); }
 	| SIZEOF '(' type_name ')'

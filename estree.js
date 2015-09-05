@@ -104,6 +104,15 @@ exports.ReturnStatement = function(arg) {
 	};
 };
 
+exports.UnaryExpression = function(operator, argument, prefix) {
+	return {
+		'type': 'UnaryExpression',
+		'operator': operator,
+		'argument': argument,
+		'prefix': prefix
+	};
+};
+
 exports.UpdateExpression = function(operator, argument, prefix) {
 	return {
 		'type': 'UpdateExpression',
