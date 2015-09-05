@@ -236,6 +236,16 @@ function buildExpression(node, context, resultIsUsed) {
 						LogicalNotExpression(LogicalNotExpression(right)),
 						NumericLiteralExpression(0, types.signed)
 					);
+				case '||':
+					/* asm.js does not provide logical OR; fake it with a conditional instead.
+					a || b  is equivalent to:  a ? 1 : !!b
+					TODO: omit the !! if we can be sure that b is a boolean (0 or 1)
+					*/
+					return ConditionalExpression(
+						left,
+						NumericLiteralExpression(1, types.signed),
+						LogicalNotExpression(LogicalNotExpression(right))
+					);
 				default:
 					throw "Unsupported binary operator: " + op;
 			}

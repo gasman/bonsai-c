@@ -43,6 +43,7 @@ testCompile('tests/if_no_else.c', 42);
 testCompile('tests/double.c', 42, {skipValidate: true});
 testCompile('tests/logical_not.c', 0);
 testCompile('tests/logical_and.c', 42, {skipValidate: true});
+testCompile('tests/logical_or.c', 42, {skipValidate: true});
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");

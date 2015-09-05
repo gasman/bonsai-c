@@ -154,7 +154,7 @@ logical_and_expression
 logical_or_expression
 	: logical_and_expression
 	| logical_or_expression OR_OP logical_and_expression
-		{ throw("Unimplemented rule for logical_or_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 conditional_expression
