@@ -174,7 +174,7 @@ ReturnStatement.prototype.compile = function(out) {
 				/* expr|0 */
 				returnValueNode = estree.BinaryExpression('|',
 					expr.compile(),
-					estree.Literal(0)
+					estree.RawLiteral(0, '0')
 				);
 			} else {
 				throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
@@ -264,7 +264,7 @@ VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 	if (types.satisfies(this.type, types.int)) {
 		out.push(estree.VariableDeclarator(
 			estree.Identifier(this.variable.jsIdentifier),
-			estree.Literal(0)
+			estree.RawLiteral(0, '0')
 		));
 	} else {
 		throw "Unsupported declaration type: " + util.inspect(this.type);
@@ -430,7 +430,7 @@ Parameter.prototype.compileTypeAnnotation = function(out) {
 				estree.Identifier(this.variable.jsIdentifier),
 				estree.BinaryExpression('|',
 					estree.Identifier(this.variable.jsIdentifier),
-					estree.Literal(0)
+					estree.RawLiteral(0, '0')
 				)
 			)
 		));
@@ -503,7 +503,7 @@ FunctionDefinition.prototype.compile = function() {
 			/* no return statement required for void return type */
 		} else if (types.equal(this.context.returnType, types.signed)) {
 			functionBody.push(estree.ReturnStatement(
-				estree.Literal(0)
+				estree.RawLiteral(0, '0')
 			));
 		} else {
 			throw "Unsupported return type: " + util.inspect(this.context.returnType);

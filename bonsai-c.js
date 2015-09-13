@@ -12,7 +12,7 @@ exports.compile = function(filename) {
 	var cTree = parser.parse(cSource);
 	var module = new compiler.Module('Module', cTree);
 	var jsTree = module.compile();
-	return escodegen.generate(jsTree);
+	return escodegen.generate(jsTree, {'verbatim': 'x-verbatim-property'});
 };
 
 exports.main = function(argv) {
@@ -28,7 +28,7 @@ exports.main = function(argv) {
 
 	console.log("\n---------\n");
 
-	var out = escodegen.generate(jsTree);
+	var out = escodegen.generate(jsTree, {'verbatim': 'x-verbatim-property'});
 
 	console.log(out);
 };

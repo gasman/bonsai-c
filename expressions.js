@@ -13,7 +13,7 @@ function coerce(expr, targetType) {
 		// coerce intish to signed using expr|0
 		return estree.BinaryExpression('|',
 			expr.compile(),
-			estree.Literal(0)
+			estree.RawLiteral(0, '0')
 		);
 	} else {
 		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
@@ -160,7 +160,15 @@ function NumericLiteralExpression(value, intendedType) {
 		throw util.format("Don't know how to determine actual type for intended type %s", util.inspect(self.intendedType));
 	}
 	self.compile = function() {
-		return estree.Literal(value);
+		var valueString = '' + value;
+		var hasDecimalPoint = (valueString.indexOf('.') > -1);
+
+		if (types.equal(self.type, types.fixnum) && hasDecimalPoint) {
+			throw util.format("Expected an integer literal, got %s" % valueString);
+		} else if (types.equal(self.type, types.double) && !hasDecimalPoint) {
+			valueString += '.0';
+		}
+		return estree.RawLiteral(value, valueString);
 	};
 
 	return self;

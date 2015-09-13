@@ -1,3 +1,5 @@
+var escodegen = require('escodegen');
+
 exports.AssignmentExpression = function(op, l, r) {
 	return {
 		'type': 'AssignmentExpression',
@@ -78,6 +80,14 @@ exports.IfStatement = function(test, consequent, alternate) {
 
 exports.Literal = function(value) {
 	return {'type': 'Literal', 'value': value};
+};
+
+exports.RawLiteral = function(value, raw) {
+	return {
+		'type': 'Literal',
+		'x-verbatim-property': {'content': raw, 'precedence': escodegen.Precedence.Primary},
+		'value': value
+	};
 };
 
 exports.ObjectExpression = function(properties) {
