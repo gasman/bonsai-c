@@ -184,13 +184,6 @@ ReturnStatement.prototype.compile = function(out) {
 			throw("Unimplemented return type: " + util.inspect(expr.type));
 	}
 
-	if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
-	} else {
-		switch (expr.type.category) {
-			case 'int':
-		}
-	}
-
 	out.push(estree.ReturnStatement(returnValueNode));
 };
 
