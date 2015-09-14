@@ -3,6 +3,13 @@ var types = require('./types');
 var estree = require('./estree');
 var util = require('util');
 
+function annotateAsSigned(exprTree) {
+	return estree.BinaryExpression('|',
+		exprTree,
+		estree.RawLiteral(0, '0')
+	);
+}
+
 function coerce(expr, targetType) {
 	/* Return an estree expression structure for the Expression 'expr' coerced
 	to the specified target type */
@@ -11,10 +18,7 @@ function coerce(expr, targetType) {
 		return expr.compile();
 	} else if (types.satisfies(expr.type, types.intish) && types.satisfies(types.signed, targetType)) {
 		// coerce intish to signed using expr|0
-		return estree.BinaryExpression('|',
-			expr.compile(),
-			estree.RawLiteral(0, '0')
-		);
+		return annotateAsSigned(expr.compile());
 	} else {
 		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
 	}
@@ -174,7 +178,7 @@ function NumericLiteralExpression(value, intendedType) {
 	return self;
 }
 
-function FunctionCallExpression(callee, args) {
+function FunctionCallExpression(callee, args, resultIsUsed) {
 	var self = {};
 
 	assert.equal('function', callee.type.category);
@@ -195,7 +199,17 @@ function FunctionCallExpression(callee, args) {
 		for (var i = 0; i < args.length; i++) {
 			compiledArgs[i] = args[i].compile();
 		}
-		return estree.CallExpression(callee.compile(), compiledArgs);
+		var callExpression = estree.CallExpression(callee.compile(), compiledArgs);
+		if (resultIsUsed) {
+			/* function calls where the result is not discarded must be annotated */
+			if (types.satisfies(self.intendedType, types.signed)) {
+				return annotateAsSigned(callExpression);
+			} else {
+				throw util.format("Don't know how to annotate function call as type %s", util.inspect(self.intendedType));
+			}
+		} else {
+			return callExpression;
+		}
 	};
 	return self;
 }
@@ -306,7 +320,7 @@ function buildExpression(node, context, resultIsUsed) {
 			for (var i = 0; i < argNodes.length; i++) {
 				args[i] = buildExpression(argNodes[i], context, true);
 			}
-			return FunctionCallExpression(callee, args);
+			return FunctionCallExpression(callee, args, resultIsUsed);
 		case 'Postupdate':
 			op = node.params[0];
 			assert(op == '++');
