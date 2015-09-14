@@ -9,6 +9,7 @@ function annotateAsSigned(exprTree) {
 		estree.RawLiteral(0, '0')
 	);
 }
+exports.annotateAsSigned = annotateAsSigned;
 
 function coerce(expr, targetType) {
 	/* Return an estree expression structure for the Expression 'expr' coerced
@@ -185,6 +186,11 @@ function FunctionCallExpression(callee, args, resultIsUsed) {
 	self.type = callee.type.returnType;
 	self.intendedType = callee.intendedType.returnType;
 	self.isRepeatable = false;
+
+	/* isTypeAnnotated = true indicates that this expression provides its own type
+	annotation, so the parent (e.g. a return statement) doesn't need to attach one */
+	self.isTypeAnnotated = resultIsUsed;
+
 	var paramTypes = callee.type.paramTypes;
 
 	for (var i = 0; i < args.length; i++) {

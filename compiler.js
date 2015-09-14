@@ -167,15 +167,16 @@ ReturnStatement.prototype.compile = function(out) {
 
 	switch(this.context.returnType.category) {
 		case 'signed':
+
 			if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
 				/* no type annotation necessary - just return the literal */
 				returnValueNode = expr.compile();
+			} else if (types.satisfies(expr.type, types.intish) && expr.isTypeAnnotated) {
+				/* expression provides its own type annotation - e.g. function call */
+				returnValueNode = expr.compile();
 			} else if (types.satisfies(expr.type, types.intish)) {
 				/* expr|0 */
-				returnValueNode = estree.BinaryExpression('|',
-					expr.compile(),
-					estree.RawLiteral(0, '0')
-				);
+				returnValueNode = expressions.annotateAsSigned(expr.compile());
 			} else {
 				throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
 			}
@@ -411,7 +412,7 @@ function Parameter(node, context) {
 	assert.equal('ParameterDeclaration', node.type);
 	this.intendedType = types.getTypeFromDeclarationSpecifiers(node.params[0]);
 	if (types.satisfies(this.intendedType, types.int)) {
-		this.type = types.int
+		this.type = types.int;
 	} else {
 		throw "Unsupported parameter type: " + utils.inspect(this.intendedType);
 	}
