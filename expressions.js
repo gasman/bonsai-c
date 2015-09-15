@@ -34,14 +34,22 @@ exports.coerce = coerce;
 function AdditiveExpression(op, left, right) {
 	var self = {};
 
-	assert(types.satisfies(left.type, types.int));
-	assert(types.satisfies(right.type, types.int));
 	assert(
 		types.equal(left.intendedType, right.intendedType),
 		util.format("Intended types in additive operation differ: %s vs %s", util.inspect(left.intendedType), util.inspect(right.intendedType))
 	);
-	self.type = types.intish;
-	self.intendedType = left.intendedType;
+	if (types.satisfies(left.type, types.int) && types.satisfies(right.type, types.int)) {
+		self.type = types.intish;
+		self.intendedType = left.intendedType;
+	} else if (op == '-' && types.satisfies(left.type, types.doubleq) && types.satisfies(right.type, types.doubleq)) {
+		self.type = types.double;
+		self.intendedType = left.intendedType;
+	} else if (op == '+' && types.satisfies(left.type, types.double) && types.satisfies(right.type, types.double)) {
+		self.type = types.double;
+		self.intendedType = left.intendedType;
+	} else {
+		throw util.format("Unsupported types for additive operation: %s and %s", util.inspect(left.type), util.inspect(right.type));
+	}
 
 	/* an expression is considered to be 'repeatable' if multiple occurrences
 	of it can appear in the output without causing unwanted additional calculation
