@@ -6,7 +6,7 @@ var estree = require('./estree');
 
 function Context(parentContext) {
 	this.variables = {};
-	this.parentContext = parentContext;
+	this.parentContext = parentContext || null;
 	this.allocatedJSIdentifiers = {};
 }
 Context.prototype.getVariable = function(identifier) {
@@ -16,10 +16,19 @@ Context.prototype.getVariable = function(identifier) {
 		return this.parentContext.getVariable(identifier);
 	}
 };
+Context.prototype.jsIdentifierIsAllocated = function(identifier) {
+	if (this.allocatedJSIdentifiers[identifier]) {
+		return true;
+	} else if (this.parentContext !== null) {
+		return this.parentContext.jsIdentifierIsAllocated(identifier);
+	} else {
+		return false;
+	}
+};
 Context.prototype.allocateVariable = function(identifier, declaredType, intendedType) {
 	var jsIdentifier = identifier;
 	var i = 0;
-	while (jsIdentifier in this.allocatedJSIdentifiers) {
+	while (this.jsIdentifierIsAllocated(jsIdentifier)) {
 		jsIdentifier = identifier + '_' + i;
 		i++;
 	}
@@ -560,6 +569,11 @@ function Module(name, declarationNodes) {
 
 	this.functionDefinitions = [];
 	this.context = new Context();
+
+	/* reserve the variable names 'stdlib', 'foreign' and 'heap' */
+	this.context.allocateVariable('stdlib', null, null);
+	this.context.allocateVariable('foreign', null, null);
+	this.context.allocateVariable('heap', null, null);
 
 	for (var i = 0; i < declarationNodes.length; i++) {
 		var node = declarationNodes[i];
