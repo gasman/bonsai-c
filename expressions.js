@@ -41,6 +41,11 @@ function AdditiveExpression(op, left, right) {
 	if (types.satisfies(left.type, types.int) && types.satisfies(right.type, types.int)) {
 		self.type = types.intish;
 		self.intendedType = left.intendedType;
+	} else if (left.isAdditiveExpression && types.satisfies(left.type, types.intish) && types.satisfies(right.type, types.int)) {
+		/* int-typed additive expressions can be chained, even though the result of an intermediate
+		additive expression is intish rather than int */
+		self.type = types.intish;
+		self.intendedType = left.intendedType;
 	} else if (op == '-' && types.satisfies(left.type, types.doubleq) && types.satisfies(right.type, types.doubleq)) {
 		self.type = types.double;
 		self.intendedType = left.intendedType;
@@ -60,6 +65,12 @@ function AdditiveExpression(op, left, right) {
 	x+y should be evaluated into a temporary variable instead.
 	*/
 	self.isRepeatable = false;
+
+	/* used in the type-checking rules immediately above, to indicate that (for operations on
+	int) this is legal to be chained with other integer additive expressions, despite its
+	result type being intish rather than int
+	*/
+	self.isAdditiveExpression = true;
 
 	self.compile = function() {
 		return estree.BinaryExpression(op, left.compile(), right.compile());
