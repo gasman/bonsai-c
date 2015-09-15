@@ -167,11 +167,10 @@ ReturnStatement.prototype.compile = function(out) {
 
 	switch(this.context.returnType.category) {
 		case 'signed':
-
 			if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
 				/* no type annotation necessary - just return the literal */
 				returnValueNode = expr.compile();
-			} else if (types.satisfies(expr.type, types.intish) && expr.isTypeAnnotated) {
+			} else if (types.satisfies(expr.type, types.signed) && expr.isTypeAnnotated) {
 				/* expression provides its own type annotation - e.g. function call */
 				returnValueNode = expr.compile();
 			} else if (types.satisfies(expr.type, types.intish)) {
@@ -179,6 +178,20 @@ ReturnStatement.prototype.compile = function(out) {
 				returnValueNode = expressions.annotateAsSigned(expr.compile());
 			} else {
 				throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
+			}
+			break;
+		case 'double':
+			if (expr.isConstant && types.satisfies(expr.type, types.double)) {
+				/* no type annotation necessary - just return the literal */
+				returnValueNode = expr.compile();
+			} else if (types.satisfies(expr.type, types.double) && expr.isTypeAnnotated) {
+				/* expression provides its own type annotation - e.g. function call */
+				returnValueNode = expr.compile();
+			} else if (types.satisfies(expr.type, types.doubleq)) {
+				/* +expr */
+				returnValueNode = expressions.annotateAsDouble(expr.compile());
+			} else {
+				throw util.format("Cannot convert %s to a return type of 'double'", util.inspect(expr.type));
 			}
 			break;
 		default:
@@ -237,6 +250,8 @@ function VariableDeclarator(node, varType, context) {
 	this.intendedType = varType;
 	if (types.satisfies(varType, types.int)) {
 		this.type = types.int;
+	} else if (types.satisfies(varType, types.double)) {
+		this.type = types.double;
 	} else {
 		throw("Unsupported variable type: " + util.inspect(varType));
 	}
@@ -266,6 +281,11 @@ VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 		out.push(estree.VariableDeclarator(
 			estree.Identifier(this.variable.jsIdentifier),
 			estree.RawLiteral(0, '0')
+		));
+	} else if (types.satisfies(this.type, types.double)) {
+		out.push(estree.VariableDeclarator(
+			estree.Identifier(this.variable.jsIdentifier),
+			estree.RawLiteral(0, '0.0')
 		));
 	} else {
 		throw "Unsupported declaration type: " + util.inspect(this.type);
@@ -413,8 +433,10 @@ function Parameter(node, context) {
 	this.intendedType = types.getTypeFromDeclarationSpecifiers(node.params[0]);
 	if (types.satisfies(this.intendedType, types.int)) {
 		this.type = types.int;
+	} else if (types.satisfies(this.intendedType, types.double)) {
+		this.type = types.double;
 	} else {
-		throw "Unsupported parameter type: " + utils.inspect(this.intendedType);
+		throw "Unsupported parameter type: " + util.inspect(this.intendedType);
 	}
 
 	var identifierNode = node.params[1];
@@ -432,6 +454,17 @@ Parameter.prototype.compileTypeAnnotation = function(out) {
 				estree.BinaryExpression('|',
 					estree.Identifier(this.variable.jsIdentifier),
 					estree.RawLiteral(0, '0')
+				)
+			)
+		));
+	} else if (types.satisfies(this.type, types.double)) {
+		/* x = +x; */
+		out.push(estree.ExpressionStatement(
+			estree.AssignmentExpression('=',
+				estree.Identifier(this.variable.jsIdentifier),
+				estree.UnaryExpression('+',
+					estree.Identifier(this.variable.jsIdentifier),
+					true
 				)
 			)
 		));

@@ -3,6 +3,11 @@ var types = require('./types');
 var estree = require('./estree');
 var util = require('util');
 
+function annotateAsDouble(exprTree) {
+	return estree.UnaryExpression('+', exprTree, true);
+}
+exports.annotateAsDouble = annotateAsDouble;
+
 function annotateAsSigned(exprTree) {
 	return estree.BinaryExpression('|',
 		exprTree,
@@ -210,6 +215,8 @@ function FunctionCallExpression(callee, args, resultIsUsed) {
 			/* function calls where the result is not discarded must be annotated */
 			if (types.satisfies(self.intendedType, types.signed)) {
 				return annotateAsSigned(callExpression);
+			} else if (types.satisfies(self.intendedType, types.double)) {
+				return annotateAsDouble(callExpression);
 			} else {
 				throw util.format("Don't know how to annotate function call as type %s", util.inspect(self.intendedType));
 			}

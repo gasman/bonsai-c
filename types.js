@@ -2,6 +2,7 @@ var assert = require('assert');
 var util = require('util');
 
 exports.double = {'category': 'double'};
+exports.doubleq = {'category': 'doubleq'};
 exports.fixnum = {'category': 'fixnum'};
 exports.int = {'category': 'int'};
 exports.intish = {'category': 'intish'};
@@ -22,6 +23,7 @@ var equal = function(t1, t2) {
 
 	switch (t1.category) {
 		case 'double':
+		case 'doubleq':
 		case 'fixnum':
 		case 'int':
 		case 'intish':
@@ -45,6 +47,8 @@ var satisfies = function(t, targetType) {
 	switch(targetType.category) {
 		case 'double':
 			return (t.category == 'double');
+		case 'doubleq':
+			return (t.category == 'doubleq' || t.category == 'double');
 		case 'intish':
 			return (t.category == 'intish' || t.category == 'int' || t.category == 'signed' || t.category == 'unsigned' || t.category == 'fixnum');
 		case 'int':
@@ -81,6 +85,8 @@ exports.getTypeFromDeclarationSpecifiers = function(declarationSpecifiers) {
 		case 'int':
 			// a C type of 'int' corresponds to the 'signed' type in asm.js
 			return exports.signed;
+		case 'double':
+			return exports.double;
 		case 'void':
 			return exports.void;
 		default:
