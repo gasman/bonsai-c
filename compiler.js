@@ -98,14 +98,8 @@ ExpressionStatement.prototype.compile = function(out) {
 function ForStatement(node, context) {
 	this.context = context;
 
-	var initExpressionStatementNode = node.params[0];
-	assert.equal('ExpressionStatement', initExpressionStatementNode.type);
-	this.initExpressionNode = initExpressionStatementNode.params[0];
-
-	var testExpressionStatementNode = node.params[1];
-	assert.equal('ExpressionStatement', testExpressionStatementNode.type);
-	this.testExpressionNode = testExpressionStatementNode.params[0];
-
+	this.initStatementNode = node.params[0];
+	this.testStatementNode = node.params[1];
 	this.updateExpressionNode = node.params[2];
 
 	this.body = buildStatement(node.params[3], this.context);
@@ -114,8 +108,26 @@ ForStatement.prototype.compileDeclarators = function(out) {
 	this.body.compileDeclarators(out);
 };
 ForStatement.prototype.compile = function(out) {
-	var init = expressions.buildExpression(this.initExpressionNode, this.context, false);
-	var test = expressions.buildExpression(this.testExpressionNode, this.context, true);
+	var init, test;
+	if (this.initStatementNode.type == 'ExpressionStatement') {
+		var initExpressionNode = this.initStatementNode.params[0];
+		init = expressions.buildExpression(initExpressionNode, this.context, false).compile();
+	} else if (this.initStatementNode.type == 'NullStatement') {
+		init = null;
+	} else {
+		throw(util.format("Invalid statement type as initialiser of for statement: %s", this.initStatementNode.type));
+	}
+
+	if (this.testStatementNode.type == 'ExpressionStatement') {
+		var testExpressionNode = this.testStatementNode.params[0];
+		var testExpression = expressions.buildExpression(testExpressionNode, this.context, true);
+		test = expressions.coerce(testExpression, types.int);
+	} else if (this.testStatementNode.type == 'NullStatement') {
+		test = null;
+	} else {
+		throw(util.format("Invalid statement type as test of for statement: %s", this.testStatementNode.type));
+	}
+
 	var update = expressions.buildExpression(this.updateExpressionNode, this.context, false);
 
 	var bodyStatements = [];
@@ -124,8 +136,8 @@ ForStatement.prototype.compile = function(out) {
 	var bodyStatement = bodyStatements[0];
 
 	out.push(estree.ForStatement(
-		init.compile(),
-		expressions.coerce(test, types.int),
+		init,
+		test,
 		update.compile(),
 		bodyStatement
 	));
@@ -170,6 +182,15 @@ IfStatement.prototype.compile = function(out) {
 		thenStatementNode,
 		elseStatementNode
 	));
+};
+
+function NullStatement(node, context) {
+	this.context = context;
+	assert(node.params.length === 0);
+}
+NullStatement.prototype.compileDeclarators = function(out) {
+};
+NullStatement.prototype.compile = function(out) {
 };
 
 function ReturnStatement(node, context) {
@@ -262,6 +283,8 @@ function buildStatement(statementNode, context) {
 			return new ForStatement(statementNode, context);
 		case 'If':
 			return new IfStatement(statementNode, context);
+		case 'NullStatement':
+			return new NullStatement(statementNode, context);
 		case 'Return':
 			return new ReturnStatement(statementNode, context);
 		case 'While':

@@ -503,7 +503,7 @@ statement_list
 
 expression_statement
 	: ';'
-		{ throw("Unimplemented rule for expression_statement: " + yytext); }
+		{ $$ = new yy.Node('NullStatement', []); }
 	| expression ';'
 		{ $$ = new yy.Node('ExpressionStatement', [$1]); }
 	;

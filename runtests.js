@@ -53,6 +53,8 @@ testCompile('tests/empty_params.c', 42);
 testCompile('tests/void_return.c', 42);
 testCompile('tests/equal.c', 42, {skipValidate: true});
 testCompile('tests/break.c', 42);
+testCompile('tests/for_without_test.c', 45);
+testCompile('tests/for_without_init.c', 45, {skipValidate: true});
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");
