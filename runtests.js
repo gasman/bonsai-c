@@ -49,6 +49,7 @@ testCompile('tests/double_var.c', 42);
 testCompile('tests/double_add.c', 42, {skipValidate: true});
 testCompile('tests/chained_add.c', 42);
 testCompile('tests/reserved_vars.c', 42);
+testCompile('tests/empty_params.c', 42);
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");

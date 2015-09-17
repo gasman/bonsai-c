@@ -354,7 +354,7 @@ direct_declarator
 	| direct_declarator '(' identifier_list ')'
 		{ throw("Unimplemented rule 5 for direct_declarator: " + yytext); }
 	| direct_declarator '(' ')'
-		{ throw("Unimplemented rule 6 for direct_declarator: " + yytext); }
+		{ $$ = new yy.Node('FunctionDeclarator', [$1, []]); }
 	;
 
 pointer
