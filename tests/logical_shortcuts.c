@@ -1,6 +1,12 @@
+int foo() {
+    return 99;
+}
+
 int main(void)
 {
     int i;
+
+    0 || foo();
 
     i = 0 || 99;
     if (i != 1) return 0;
@@ -10,6 +16,8 @@ int main(void)
 
     i = 0 || (2 < 3);
     if (i != 1) return 0;
+
+    1 && foo();
 
     i = 1 && 99;
     if (i != 1) return 0;

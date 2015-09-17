@@ -208,7 +208,7 @@ function NumericLiteralExpression(value, intendedType) {
 	return self;
 }
 
-function FunctionCallExpression(callee, args, resultIsUsed) {
+function FunctionCallExpression(callee, args, isSubexpression) {
 	var self = {};
 
 	assert.equal('function', callee.type.category);
@@ -218,7 +218,7 @@ function FunctionCallExpression(callee, args, resultIsUsed) {
 
 	/* isTypeAnnotated = true indicates that this expression provides its own type
 	annotation, so the parent (e.g. a return statement) doesn't need to attach one */
-	self.isTypeAnnotated = resultIsUsed;
+	self.isTypeAnnotated = isSubexpression;
 
 	var paramTypes = callee.type.paramTypes;
 
@@ -235,7 +235,7 @@ function FunctionCallExpression(callee, args, resultIsUsed) {
 			compiledArgs[i] = args[i].compile();
 		}
 		var callExpression = estree.CallExpression(callee.compile(), compiledArgs);
-		if (resultIsUsed) {
+		if (isSubexpression) {
 			/* function calls where the result is not discarded must be annotated */
 			if (types.satisfies(self.intendedType, types.signed)) {
 				return annotateAsSigned(callExpression);
@@ -272,8 +272,8 @@ function buildExpression(node, context, hints) {
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			left = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed});
-			right = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed});
+			left = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
+			right = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
 
 			switch (op) {
 				case '+':
@@ -321,9 +321,9 @@ function buildExpression(node, context, hints) {
 			}
 			break;
 		case 'Assign':
-			left = buildExpression(node.params[0], context, {resultIsUsed: true});
+			left = buildExpression(node.params[0], context, {resultIsUsed: true, isSubexpression: true});
 			op = node.params[1];
-			right = buildExpression(node.params[2], context, {resultIsUsed: true});
+			right = buildExpression(node.params[2], context, {resultIsUsed: true, isSubexpression: true});
 
 			if (op == '=') {
 				return AssignmentExpression(left, right);
@@ -350,9 +350,9 @@ function buildExpression(node, context, hints) {
 			}
 			break;
 		case 'Conditional':
-			var test = buildExpression(node.params[0], context, {resultIsUsed: true});
-			var cons = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed});
-			var alt = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed});
+			var test = buildExpression(node.params[0], context, {resultIsUsed: true, isSubexpression: true});
+			var cons = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
+			var alt = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
 
 			return ConditionalExpression(test, cons, alt);
 		case 'Const':
@@ -372,21 +372,21 @@ function buildExpression(node, context, hints) {
 			}
 			break;
 		case 'FunctionCall':
-			var callee = buildExpression(node.params[0], context, {resultIsUsed: true});
+			var callee = buildExpression(node.params[0], context, {resultIsUsed: true, isSubexpression: true});
 			var argNodes = node.params[1];
 			assert(Array.isArray(argNodes));
 			var args = [];
 			for (var i = 0; i < argNodes.length; i++) {
-				args[i] = buildExpression(argNodes[i], context, {resultIsUsed: true});
+				args[i] = buildExpression(argNodes[i], context, {resultIsUsed: true, isSubexpression: true});
 			}
-			return FunctionCallExpression(callee, args, hints.resultIsUsed);
+			return FunctionCallExpression(callee, args, hints.isSubexpression);
 		case 'Postupdate':
 			op = node.params[0];
 
 			if (hints.resultIsUsed) {
 				throw "Postupdate operations where the result is used (rather than discarded) are not currently supported)";
 			}
-			left = buildExpression(node.params[1], context, {resultIsUsed: true});
+			left = buildExpression(node.params[1], context, {resultIsUsed: true, isSubexpression: true});
 			assert(left.isAssignable);
 			assert(left.isRepeatable);
 			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
@@ -412,7 +412,7 @@ function buildExpression(node, context, hints) {
 			break;
 		case 'UnaryOp':
 			op = node.params[0];
-			var argument = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed});
+			var argument = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
 			switch (op) {
 				case '!':
 					return LogicalNotExpression(argument);
