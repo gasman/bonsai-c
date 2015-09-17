@@ -521,7 +521,7 @@ iteration_statement
 	: WHILE '(' expression ')' statement
 		{ $$ = new yy.Node('While', [$3, $5]); }
 	| DO statement WHILE '(' expression ')' ';'
-		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
+		{ $$ = new yy.Node('DoWhile', [$2, $5]); }
 	| FOR '(' expression_statement expression_statement ')' statement
 		{ $$ = new yy.Node('For', [$3, $4, null, $6]); }
 	| FOR '(' expression_statement expression_statement expression ')' statement

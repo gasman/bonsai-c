@@ -92,6 +92,24 @@ ContinueStatement.prototype.compile = function(out) {
 	out.push(estree.ContinueStatement(null));
 };
 
+function DoWhileStatement(node, context) {
+	this.context = context;
+	this.body = buildStatement(node.params[0], this.context);
+	this.expressionNode = node.params[1];
+}
+DoWhileStatement.prototype.compileDeclarators = function(out) {
+	this.body.compileDeclarators(out);
+};
+DoWhileStatement.prototype.compile = function(out) {
+	var bodyStatements = [];
+	this.body.compile(bodyStatements);
+	assert.equal(1, bodyStatements.length);
+	var bodyStatement = bodyStatements[0];
+	var test = expressions.buildExpression(this.expressionNode, this.context, true);
+
+	out.push(estree.DoWhileStatement(bodyStatement, expressions.coerce(test, types.int)));
+};
+
 function ExpressionStatement(node, context) {
 	this.context = context;
 	this.expressionNode = node.params[0];
@@ -294,6 +312,8 @@ function buildStatement(statementNode, context) {
 			return new BreakStatement(statementNode, context);
 		case 'Continue':
 			return new ContinueStatement(statementNode, context);
+		case 'DoWhile':
+			return new DoWhileStatement(statementNode, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(statementNode, context);
 		case 'For':
