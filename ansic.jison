@@ -536,7 +536,7 @@ jump_statement
 	| BREAK ';'
 		{ throw("Unimplemented rule for jump_statement: " + yytext); }
 	| RETURN ';'
-		{ throw("Unimplemented rule for jump_statement: " + yytext); }
+		{ $$ = new yy.Node('Return', []); }
 	| RETURN expression ';'
 		{ $$ = new yy.Node('Return', [$2]); }
 	;

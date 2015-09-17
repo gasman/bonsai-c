@@ -163,7 +163,11 @@ IfStatement.prototype.compile = function(out) {
 
 function ReturnStatement(node, context) {
 	this.context = context;
-	this.expressionNode = node.params[0];
+	if (node.params.length) {
+		this.expressionNode = node.params[0];
+	} else {
+		this.expressionNode = null;
+	}
 	/* do not construct an Expression object yet, as that may perform lookups
 		in the context for identifiers that are defined further down the file */
 }
@@ -171,40 +175,46 @@ ReturnStatement.prototype.compileDeclarators = function(out) {
 	/* a ReturnStatement does not contain variable declarations */
 };
 ReturnStatement.prototype.compile = function(out) {
-	var expr = expressions.buildExpression(this.expressionNode, this.context, true);
 	var returnValueNode;
+	if (this.expressionNode === null) {
+		assert(types.equal(this.context.returnType, types.void),
+			"Void return statement encountered in a non-void function");
+		returnValueNode = null;
+	} else {
+		var expr = expressions.buildExpression(this.expressionNode, this.context, true);
 
-	switch(this.context.returnType.category) {
-		case 'signed':
-			if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
-				/* no type annotation necessary - just return the literal */
-				returnValueNode = expr.compile();
-			} else if (types.satisfies(expr.type, types.signed) && expr.isTypeAnnotated) {
-				/* expression provides its own type annotation - e.g. function call */
-				returnValueNode = expr.compile();
-			} else if (types.satisfies(expr.type, types.intish)) {
-				/* expr|0 */
-				returnValueNode = expressions.annotateAsSigned(expr.compile());
-			} else {
-				throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
-			}
-			break;
-		case 'double':
-			if (expr.isConstant && types.satisfies(expr.type, types.double)) {
-				/* no type annotation necessary - just return the literal */
-				returnValueNode = expr.compile();
-			} else if (types.satisfies(expr.type, types.double) && expr.isTypeAnnotated) {
-				/* expression provides its own type annotation - e.g. function call */
-				returnValueNode = expr.compile();
-			} else if (types.satisfies(expr.type, types.doubleq)) {
-				/* +expr */
-				returnValueNode = expressions.annotateAsDouble(expr.compile());
-			} else {
-				throw util.format("Cannot convert %s to a return type of 'double'", util.inspect(expr.type));
-			}
-			break;
-		default:
-			throw("Unimplemented return type: " + util.inspect(expr.type));
+		switch(this.context.returnType.category) {
+			case 'signed':
+				if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
+					/* no type annotation necessary - just return the literal */
+					returnValueNode = expr.compile();
+				} else if (types.satisfies(expr.type, types.signed) && expr.isTypeAnnotated) {
+					/* expression provides its own type annotation - e.g. function call */
+					returnValueNode = expr.compile();
+				} else if (types.satisfies(expr.type, types.intish)) {
+					/* expr|0 */
+					returnValueNode = expressions.annotateAsSigned(expr.compile());
+				} else {
+					throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
+				}
+				break;
+			case 'double':
+				if (expr.isConstant && types.satisfies(expr.type, types.double)) {
+					/* no type annotation necessary - just return the literal */
+					returnValueNode = expr.compile();
+				} else if (types.satisfies(expr.type, types.double) && expr.isTypeAnnotated) {
+					/* expression provides its own type annotation - e.g. function call */
+					returnValueNode = expr.compile();
+				} else if (types.satisfies(expr.type, types.doubleq)) {
+					/* +expr */
+					returnValueNode = expressions.annotateAsDouble(expr.compile());
+				} else {
+					throw util.format("Cannot convert %s to a return type of 'double'", util.inspect(expr.type));
+				}
+				break;
+			default:
+				throw("Unimplemented return type: " + util.inspect(expr.type));
+		}
 	}
 
 	out.push(estree.ReturnStatement(returnValueNode));
