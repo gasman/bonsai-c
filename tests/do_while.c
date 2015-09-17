@@ -8,7 +8,7 @@ int main(void)
 
     do {
         n += i;
-        i = i - 1;
+        i -= 1;
     } while (i > 0);
 
     return n;

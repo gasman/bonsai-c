@@ -323,6 +323,17 @@ function buildExpression(node, context, resultIsUsed) {
 					left,
 					AdditiveExpression('+', left, right)
 				);
+			} else if (op == '-=') {
+				assert(left.isRepeatable);
+
+				/* if left is repeatable, left -= right is equivalent to
+					left = left - right */
+				return AssignmentExpression(
+					left,
+					AdditiveExpression('-', left, right)
+				);
+			} else {
+				throw "Unsupported assignment operator: " + op;
 			}
 			break;
 		case 'Conditional':
