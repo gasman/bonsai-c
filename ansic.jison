@@ -532,7 +532,7 @@ jump_statement
 	: GOTO IDENTIFIER ';'
 		{ throw("Unimplemented rule for jump_statement: " + yytext); }
 	| CONTINUE ';'
-		{ throw("Unimplemented rule for jump_statement: " + yytext); }
+		{ $$ = new yy.Node('Continue', []); }
 	| BREAK ';'
 		{ $$ = new yy.Node('Break', []); }
 	| RETURN ';'

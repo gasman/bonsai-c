@@ -43,6 +43,10 @@ exports.ConditionalExpression = function(test, consequent, alternate) {
 	};
 };
 
+exports.ContinueStatement = function(label) {
+	return {'type': 'ContinueStatement', 'label': label};
+};
+
 exports.ExpressionStatement = function(expr) {
 	return {
 		'type': 'ExpressionStatement',

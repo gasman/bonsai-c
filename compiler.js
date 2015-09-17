@@ -81,6 +81,17 @@ BreakStatement.prototype.compile = function(out) {
 	out.push(estree.BreakStatement(null));
 };
 
+function ContinueStatement(node, context) {
+	this.context = context;
+	assert(node.params.length === 0);
+}
+ContinueStatement.prototype.compileDeclarators = function(out) {
+	/* a ContinueStatement does not contain variable declarations */
+};
+ContinueStatement.prototype.compile = function(out) {
+	out.push(estree.ContinueStatement(null));
+};
+
 function ExpressionStatement(node, context) {
 	this.context = context;
 	this.expressionNode = node.params[0];
@@ -281,6 +292,8 @@ function buildStatement(statementNode, context) {
 			return new BlockStatement(statementNode, context);
 		case 'Break':
 			return new BreakStatement(statementNode, context);
+		case 'Continue':
+			return new ContinueStatement(statementNode, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(statementNode, context);
 		case 'For':
