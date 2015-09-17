@@ -277,6 +277,7 @@ function buildExpression(node, context, resultIsUsed) {
 				case '<':
 				case '>':
 				case '<=':
+				case '>=':
 				case '==':
 				case '!=':
 					return RelationalExpression(op, left, right);

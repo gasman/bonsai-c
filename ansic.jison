@@ -116,7 +116,7 @@ relational_expression
 	| relational_expression LE_OP shift_expression
 		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| relational_expression GE_OP shift_expression
-		{ throw("Unimplemented rule for relational_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 equality_expression
