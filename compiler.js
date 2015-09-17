@@ -108,7 +108,7 @@ ForStatement.prototype.compileDeclarators = function(out) {
 	this.body.compileDeclarators(out);
 };
 ForStatement.prototype.compile = function(out) {
-	var init, test;
+	var init, test, update;
 	if (this.initStatementNode.type == 'ExpressionStatement') {
 		var initExpressionNode = this.initStatementNode.params[0];
 		init = expressions.buildExpression(initExpressionNode, this.context, false).compile();
@@ -128,7 +128,11 @@ ForStatement.prototype.compile = function(out) {
 		throw(util.format("Invalid statement type as test of for statement: %s", this.testStatementNode.type));
 	}
 
-	var update = expressions.buildExpression(this.updateExpressionNode, this.context, false);
+	if (this.updateExpressionNode === null) {
+		update = null;
+	} else {
+		update = expressions.buildExpression(this.updateExpressionNode, this.context, false).compile();
+	}
 
 	var bodyStatements = [];
 	this.body.compile(bodyStatements);
@@ -138,7 +142,7 @@ ForStatement.prototype.compile = function(out) {
 	out.push(estree.ForStatement(
 		init,
 		test,
-		update.compile(),
+		update,
 		bodyStatement
 	));
 };

@@ -523,7 +523,7 @@ iteration_statement
 	| DO statement WHILE '(' expression ')' ';'
 		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
 	| FOR '(' expression_statement expression_statement ')' statement
-		{ throw("Unimplemented rule for iteration_statement: " + yytext); }
+		{ $$ = new yy.Node('For', [$3, $4, null, $6]); }
 	| FOR '(' expression_statement expression_statement expression ')' statement
 		{ $$ = new yy.Node('For', [$3, $4, $5, $7]); }
 	;
