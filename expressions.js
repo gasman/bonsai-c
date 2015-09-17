@@ -260,15 +260,15 @@ function VariableExpression(variable) {
 	return self;
 }
 
-function buildExpression(node, context, resultIsUsed) {
+function buildExpression(node, context, hints) {
 	var left, right, op, value;
 	var self = {};
 
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			left = buildExpression(node.params[1], context, resultIsUsed);
-			right = buildExpression(node.params[2], context, resultIsUsed);
+			left = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed});
+			right = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed});
 
 			switch (op) {
 				case '+':
@@ -308,9 +308,9 @@ function buildExpression(node, context, resultIsUsed) {
 			}
 			break;
 		case 'Assign':
-			left = buildExpression(node.params[0], context, true);
+			left = buildExpression(node.params[0], context, {resultIsUsed: true});
 			op = node.params[1];
-			right = buildExpression(node.params[2], context, true);
+			right = buildExpression(node.params[2], context, {resultIsUsed: true});
 
 			if (op == '=') {
 				return AssignmentExpression(left, right);
@@ -337,9 +337,9 @@ function buildExpression(node, context, resultIsUsed) {
 			}
 			break;
 		case 'Conditional':
-			var test = buildExpression(node.params[0], context, true);
-			var cons = buildExpression(node.params[1], context, resultIsUsed);
-			var alt = buildExpression(node.params[2], context, resultIsUsed);
+			var test = buildExpression(node.params[0], context, {resultIsUsed: true});
+			var cons = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed});
+			var alt = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed});
 
 			return ConditionalExpression(test, cons, alt);
 		case 'Const':
@@ -359,21 +359,21 @@ function buildExpression(node, context, resultIsUsed) {
 			}
 			break;
 		case 'FunctionCall':
-			var callee = buildExpression(node.params[0], context, true);
+			var callee = buildExpression(node.params[0], context, {resultIsUsed: true});
 			var argNodes = node.params[1];
 			assert(Array.isArray(argNodes));
 			var args = [];
 			for (var i = 0; i < argNodes.length; i++) {
-				args[i] = buildExpression(argNodes[i], context, true);
+				args[i] = buildExpression(argNodes[i], context, {resultIsUsed: true});
 			}
-			return FunctionCallExpression(callee, args, resultIsUsed);
+			return FunctionCallExpression(callee, args, hints.resultIsUsed);
 		case 'Postupdate':
 			op = node.params[0];
 
-			if (resultIsUsed) {
+			if (hints.resultIsUsed) {
 				throw "Postupdate operations where the result is used (rather than discarded) are not currently supported)";
 			}
-			left = buildExpression(node.params[1], context, true);
+			left = buildExpression(node.params[1], context, {resultIsUsed: true});
 			assert(left.isAssignable);
 			assert(left.isRepeatable);
 			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
@@ -399,7 +399,7 @@ function buildExpression(node, context, resultIsUsed) {
 			break;
 		case 'UnaryOp':
 			op = node.params[0];
-			var argument = buildExpression(node.params[1], context, resultIsUsed);
+			var argument = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed});
 			switch (op) {
 				case '!':
 					return LogicalNotExpression(argument);
