@@ -42,7 +42,7 @@ postfix_expression
 	| postfix_expression INC_OP
 		{ $$ = new yy.Node('Postupdate', [$2, $1]); }
 	| postfix_expression DEC_OP
-		{ throw("Unimplemented rule for postfix_expression: " + yytext); }
+		{ $$ = new yy.Node('Postupdate', [$2, $1]); }
 	;
 
 argument_expression_list

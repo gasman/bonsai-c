@@ -4,7 +4,7 @@ int main(void)
 
     while (i) {
         n = n + i;
-        i = i - 1;
+        i--;
     }
 
     return n;

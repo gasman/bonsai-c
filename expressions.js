@@ -369,7 +369,7 @@ function buildExpression(node, context, resultIsUsed) {
 			return FunctionCallExpression(callee, args, resultIsUsed);
 		case 'Postupdate':
 			op = node.params[0];
-			assert(op == '++');
+
 			if (resultIsUsed) {
 				throw "Postupdate operations where the result is used (rather than discarded) are not currently supported)";
 			}
@@ -379,12 +379,24 @@ function buildExpression(node, context, resultIsUsed) {
 			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
 
 			/* if the result is not used AND the operand is repeatable,
-				(operand)++ is equivalent to (operand) = (operand) + 1 */
+				(operand)++ is equivalent to (operand) = (operand) + 1
+				(operand)-- is equivalent to (operand) = (operand) - 1
+			*/
 
-			return AssignmentExpression(
-				left,
-				AdditiveExpression('+', left, NumericLiteralExpression(1, types.signed))
-			);
+			if (op == '++') {
+				return AssignmentExpression(
+					left,
+					AdditiveExpression('+', left, NumericLiteralExpression(1, types.signed))
+				);
+			} else if (op == '--') {
+				return AssignmentExpression(
+					left,
+					AdditiveExpression('-', left, NumericLiteralExpression(1, types.signed))
+				);
+			} else {
+				throw("Unsupported postupdate operator: " + op);
+			}
+			break;
 		case 'UnaryOp':
 			op = node.params[0];
 			var argument = buildExpression(node.params[1], context, resultIsUsed);
