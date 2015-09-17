@@ -95,6 +95,7 @@ function RelationalExpression(op, left, right) {
 	if (hasValidTypes) {
 		self.type = self.intendedType = types.int; // TODO: figure out why this isn't fixnum - surely the only expected values are 0 and 1?
 		self.isRepeatable = false;
+		self.isPureBoolean = true;  /* results are always 0 or 1 (so don't need casting to boolean when faking && / || with conditional expressions) */
 		self.compile = function() {
 			return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
 		};
@@ -128,6 +129,7 @@ function AssignmentExpression(left, right) {
 	self.type = left.type;
 	self.intendedType = left.intendedType;
 	self.isRepeatable = false;
+	self.isPureBoolean = right.isPureBoolean;
 
 	self.compile = function() {
 		return estree.AssignmentExpression('=', left.compile(), coerce(right, self.type));
@@ -150,6 +152,7 @@ function ConditionalExpression(test, cons, alt) {
 		self.type = self.intendedType = types.double;
 	}
 	self.isRepeatable = false;
+	self.isPureBoolean = (cons.isPureBoolean && alt.isPureBoolean);
 
 	self.compile = function() {
 		return estree.ConditionalExpression(
@@ -167,6 +170,7 @@ function LogicalNotExpression(argument) {
 
 	self.type = self.intendedType = types.int;
 	self.isRepeatable = false;
+	self.isPureBoolean = true;
 
 	self.compile = function() {
 		return estree.UnaryExpression('!', coerce(argument, types.int), true);
@@ -180,6 +184,7 @@ function NumericLiteralExpression(value, intendedType) {
 
 	self.isConstant = true;
 	self.isRepeatable = true;
+	self.isPureBoolean = (value === 0 || value === 1);
 	self.intendedType = intendedType;
 	if (types.equal(self.intendedType, types.signed)) {
 		self.type = types.fixnum;
@@ -286,22 +291,30 @@ function buildExpression(node, context, hints) {
 				case '&&':
 					/* asm.js does not provide logical AND; fake it with a conditional instead.
 					a && b  is equivalent to:  a ? !!b : 0
-					TODO: omit the !! if we can be sure that b is a boolean (0 or 1)
+					The !! can be omitted if we can be sure that b is a pure boolean (0 or 1)
+					or the result is used in a pure boolean context
 					*/
+					if (!right.isPureBoolean) {
+						right = LogicalNotExpression(LogicalNotExpression(right));
+					}
 					return ConditionalExpression(
 						left,
-						LogicalNotExpression(LogicalNotExpression(right)),
+						right,
 						NumericLiteralExpression(0, types.signed)
 					);
 				case '||':
 					/* asm.js does not provide logical OR; fake it with a conditional instead.
 					a || b  is equivalent to:  a ? 1 : !!b
-					TODO: omit the !! if we can be sure that b is a boolean (0 or 1)
+					The !! can be omitted if we can be sure that b is a pure boolean (0 or 1)
+					or the result is used in a pure boolean context
 					*/
+					if (!right.isPureBoolean) {
+						right = LogicalNotExpression(LogicalNotExpression(right));
+					}
 					return ConditionalExpression(
 						left,
 						NumericLiteralExpression(1, types.signed),
-						LogicalNotExpression(LogicalNotExpression(right))
+						right
 					);
 				default:
 					throw "Unsupported binary operator: " + op;
