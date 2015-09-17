@@ -70,6 +70,17 @@ function parameterListIsVoid(parameterList) {
 	return true;
 }
 
+function BreakStatement(node, context) {
+	this.context = context;
+	assert(node.params.length === 0);
+}
+BreakStatement.prototype.compileDeclarators = function(out) {
+	/* a BreakStatement does not contain variable declarations */
+};
+BreakStatement.prototype.compile = function(out) {
+	out.push(estree.BreakStatement(null));
+};
+
 function ExpressionStatement(node, context) {
 	this.context = context;
 	this.expressionNode = node.params[0];
@@ -243,6 +254,8 @@ function buildStatement(statementNode, context) {
 	switch (statementNode.type) {
 		case 'Block':
 			return new BlockStatement(statementNode, context);
+		case 'Break':
+			return new BreakStatement(statementNode, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(statementNode, context);
 		case 'For':
