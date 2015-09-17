@@ -122,9 +122,9 @@ relational_expression
 equality_expression
 	: relational_expression
 	| equality_expression EQ_OP relational_expression
-		{ throw("Unimplemented rule for equality_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| equality_expression NE_OP relational_expression
-		{ throw("Unimplemented rule for equality_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 and_expression

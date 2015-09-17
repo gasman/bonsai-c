@@ -51,6 +51,7 @@ testCompile('tests/chained_add.c', 42);
 testCompile('tests/reserved_vars.c', 42);
 testCompile('tests/empty_params.c', 42);
 testCompile('tests/void_return.c', 42);
+testCompile('tests/equal.c', 42, {skipValidate: true});
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");
