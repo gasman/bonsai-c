@@ -118,16 +118,20 @@ function MultiplicativeExpression(op, left, right) {
 			[left, right]
 		);
 		*/
+	} else if (op == '/' && types.satisfies(left.type, types.signed) && types.satisfies(right.type, types.signed)) {
+		self.type = types.intish;
+		self.intendedType = left.intendedType;
 	} else if (types.satisfies(left.type, types.doubleq) && types.satisfies(right.type, types.doubleq)) {
 		self.type = types.double;
 		self.intendedType = left.intendedType;
-		self.isRepeatable = false;
-		self.compile = function() {
-			return estree.BinaryExpression(op, left.compile(), right.compile());
-		};
 	} else {
 		throw util.format("Unsupported types in multiplicative expression with operator '%s': %s vs %s", op, util.inspect(left.type), util.inspect(right.type));
 	}
+
+	self.isRepeatable = false;
+	self.compile = function() {
+		return estree.BinaryExpression(op, left.compile(), right.compile());
+	};
 
 	return self;
 }
