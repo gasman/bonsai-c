@@ -1,3 +1,3 @@
 int main(void) {
-    return 84 / 2;
+    return (42 / 2) + ((21 + 21) / 2);
 }
