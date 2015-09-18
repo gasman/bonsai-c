@@ -7,36 +7,9 @@
 				'#000', '#00f', '#f00', '#f0f', '#0f0', '#0ff', '#ff0', '#fff'
 			];
 
-			MAX_ITERATIONS = 32;
-
-			function calc(c, d) {
-				var iterations = 0;
-
-				/*
-				z := a + bi ; initially a = 0, b = 0
-				k := c + di
-
-				z' = z^2 + k ; bail out when |z| >= 2, i.e. a^2 + b^2 >= 4
-
-				z' = (a + bi)(a + bi) + (c + di)
-				z' = a*a + 2*a*b*i - b*b + c + di
-
-				a' = a*a - b*b + c
-				b' = 2*a*b + d
-				*/
-
-				var a = 0.0, b = 0.0;
-				while (a*a + b*b < 4.0 && iterations < MAX_ITERATIONS) {
-					var aNew = a*a - b*b + c;
-					b = 2.0*a*b + d;
-					a = aNew;
-					iterations++;
-				}
-
-				return iterations;
-			}
-
 			function run() {
+				var worker = new Worker('worker.js?1');
+
 				var canvas = document.getElementById('canvas');
 				var ctx = canvas.getContext('2d');
 
@@ -45,13 +18,17 @@
 				var SCALE_X = 4;
 				var SCALE_Y = SCALE_X * canvas.height / canvas.width;
 
+				worker.onmessage = function(e) {
+					ctx.fillStyle = SHADES[e.data[2] % 8];
+					ctx.fillRect(e.data[0], e.data[1], 1, 1);
+				}
+
 				for (var screenY = 0; screenY < canvas.height; screenY++) {
 					for (var screenX = 0; screenX < canvas.width; screenX++) {
 						var x = (screenX / canvas.width - 0.5) * SCALE_X + CENTRE_X;
 						var y = (screenY / canvas.height - 0.5) * SCALE_Y + CENTRE_Y;
 
-						ctx.fillStyle = SHADES[calc(x, y) % 8];
-						ctx.fillRect(screenX, screenY, 1, 1);
+						worker.postMessage([x, y, screenX, screenY]);
 					}
 				}
 			}
