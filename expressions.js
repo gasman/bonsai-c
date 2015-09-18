@@ -294,7 +294,10 @@ function buildExpression(node, context, hints) {
 					The !! can be omitted if we can be sure that b is a pure boolean (0 or 1)
 					or the result is used in a pure boolean context
 					*/
-					if (!right.isPureBoolean) {
+					if (right.isPureBoolean || !hints.resultIsUsed) {
+						/* we can return right directly with no ill effects */
+					} else {
+						/* we need to explicitly cast right to a boolean, using !! */
 						right = LogicalNotExpression(LogicalNotExpression(right));
 					}
 					return ConditionalExpression(
@@ -308,7 +311,10 @@ function buildExpression(node, context, hints) {
 					The !! can be omitted if we can be sure that b is a pure boolean (0 or 1)
 					or the result is used in a pure boolean context
 					*/
-					if (!right.isPureBoolean) {
+					if (right.isPureBoolean || !hints.resultIsUsed) {
+						/* we can return right directly with no ill effects */
+					} else {
+						/* we need to explicitly cast right to a boolean, using !! */
 						right = LogicalNotExpression(LogicalNotExpression(right));
 					}
 					return ConditionalExpression(
