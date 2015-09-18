@@ -118,7 +118,7 @@ function MultiplicativeExpression(op, left, right) {
 			[left, right]
 		);
 		*/
-	} else if (op == '*' && types.satisfies(left.type, types.doubleq) && types.satisfies(right.type, types.doubleq)) {
+	} else if (types.satisfies(left.type, types.doubleq) && types.satisfies(right.type, types.doubleq)) {
 		self.type = types.double;
 		self.intendedType = left.intendedType;
 		self.isRepeatable = false;
@@ -316,6 +316,7 @@ function buildExpression(node, context, hints) {
 					});
 					return RelationalExpression(op, left, right);
 				case '*':
+				case '/':
 					left = buildExpression(node.params[1], context, {
 						resultIsUsed: hints.resultIsUsed,
 						resultIsOnlyUsedInBooleanContext: false,
