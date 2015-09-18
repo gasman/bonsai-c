@@ -107,7 +107,9 @@ function RelationalExpression(op, left, right) {
 }
 
 function MultiplicativeExpression(op, left, right) {
-	if (types.satisfies(left.type, types.intish) && types.satisfies(right.type, types.intish)) {
+	var self = {};
+
+	if (op == '*' && types.satisfies(left.type, types.intish) && types.satisfies(right.type, types.intish)) {
 		/* rewrite as a call to Math.imul */
 		throw "Integer multiplication not supported yet";
 		/*
@@ -116,9 +118,18 @@ function MultiplicativeExpression(op, left, right) {
 			[left, right]
 		);
 		*/
+	} else if (op == '*' && types.satisfies(left.type, types.doubleq) && types.satisfies(right.type, types.doubleq)) {
+		self.type = types.double;
+		self.intendedType = left.intendedType;
+		self.isRepeatable = false;
+		self.compile = function() {
+			return estree.BinaryExpression(op, left.compile(), right.compile());
+		};
 	} else {
-		throw util.format("Unsupported types in multiplicative expression: %s vs %s", util.inspect(left.type), util.inspect(right.type));
+		throw util.format("Unsupported types in multiplicative expression with operator '%s': %s vs %s", op, util.inspect(left.type), util.inspect(right.type));
 	}
+
+	return self;
 }
 
 function AssignmentExpression(left, right) {
