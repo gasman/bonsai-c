@@ -272,12 +272,20 @@ function buildExpression(node, context, hints) {
 	switch (node.type) {
 		case 'BinaryOp':
 			op = node.params[0];
-			left = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
-			right = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
 
 			switch (op) {
 				case '+':
 				case '-':
+					left = buildExpression(node.params[1], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: false,
+						isSubexpression: true
+					});
+					right = buildExpression(node.params[2], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: false,
+						isSubexpression: true
+					});
 					return AdditiveExpression(op, left, right);
 				case '<':
 				case '>':
@@ -285,19 +293,48 @@ function buildExpression(node, context, hints) {
 				case '>=':
 				case '==':
 				case '!=':
+					left = buildExpression(node.params[1], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: false,
+						isSubexpression: true
+					});
+					right = buildExpression(node.params[2], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: false,
+						isSubexpression: true
+					});
 					return RelationalExpression(op, left, right);
 				case '*':
+					left = buildExpression(node.params[1], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: false,
+						isSubexpression: true
+					});
+					right = buildExpression(node.params[2], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: false,
+						isSubexpression: true
+					});
 					return MultiplicativeExpression(op, left, right);
 				case '&&':
+					left = buildExpression(node.params[1], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: true,
+						isSubexpression: true
+					});
+					right = buildExpression(node.params[2], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: true,
+						isSubexpression: true
+					});
 					/* asm.js does not provide logical AND; fake it with a conditional instead.
 					a && b  is equivalent to:  a ? !!b : 0
 					The !! can be omitted if we can be sure that b is a pure boolean (0 or 1)
 					or the result is used in a pure boolean context
 					*/
-					if (right.isPureBoolean || !hints.resultIsUsed) {
-						/* we can return right directly with no ill effects */
-					} else {
-						/* we need to explicitly cast right to a boolean, using !! */
+					if (hints.resultIsUsed && !hints.resultIsOnlyUsedInBooleanContext && !right.isPureBoolean) {
+						/* we are required to return the specific value 0 or 1, and the right operand
+						is not guaranteed to provide that - thus we must cast it to a boolean, using !! */
 						right = LogicalNotExpression(LogicalNotExpression(right));
 					}
 					return ConditionalExpression(
@@ -306,15 +343,24 @@ function buildExpression(node, context, hints) {
 						NumericLiteralExpression(0, types.signed)
 					);
 				case '||':
+					left = buildExpression(node.params[1], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: true,
+						isSubexpression: true
+					});
+					right = buildExpression(node.params[2], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: true,
+						isSubexpression: true
+					});
 					/* asm.js does not provide logical OR; fake it with a conditional instead.
 					a || b  is equivalent to:  a ? 1 : !!b
 					The !! can be omitted if we can be sure that b is a pure boolean (0 or 1)
 					or the result is used in a pure boolean context
 					*/
-					if (right.isPureBoolean || !hints.resultIsUsed) {
-						/* we can return right directly with no ill effects */
-					} else {
-						/* we need to explicitly cast right to a boolean, using !! */
+					if (hints.resultIsUsed && !hints.resultIsOnlyUsedInBooleanContext && !right.isPureBoolean) {
+						/* we are required to return the specific value 0 or 1, and the right operand
+						is not guaranteed to provide that - thus we must cast it to a boolean, using !! */
 						right = LogicalNotExpression(LogicalNotExpression(right));
 					}
 					return ConditionalExpression(
@@ -327,9 +373,17 @@ function buildExpression(node, context, hints) {
 			}
 			break;
 		case 'Assign':
-			left = buildExpression(node.params[0], context, {resultIsUsed: true, isSubexpression: true});
+			left = buildExpression(node.params[0], context, {
+				resultIsUsed: true,
+				resultIsOnlyUsedInBooleanContext: false,
+				isSubexpression: true
+			});
 			op = node.params[1];
-			right = buildExpression(node.params[2], context, {resultIsUsed: true, isSubexpression: true});
+			right = buildExpression(node.params[2], context, {
+				resultIsUsed: true,
+				resultIsOnlyUsedInBooleanContext: false,
+				isSubexpression: true
+			});
 
 			if (op == '=') {
 				return AssignmentExpression(left, right);
@@ -356,9 +410,21 @@ function buildExpression(node, context, hints) {
 			}
 			break;
 		case 'Conditional':
-			var test = buildExpression(node.params[0], context, {resultIsUsed: true, isSubexpression: true});
-			var cons = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
-			var alt = buildExpression(node.params[2], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
+			var test = buildExpression(node.params[0], context, {
+				resultIsUsed: true,
+				resultIsOnlyUsedInBooleanContext: true,
+				isSubexpression: true
+			});
+			var cons = buildExpression(node.params[1], context, {
+				resultIsUsed: hints.resultIsUsed,
+				resultIsOnlyUsedInBooleanContext: hints.resultIsOnlyUsedInBooleanContext,
+				isSubexpression: true
+			});
+			var alt = buildExpression(node.params[2], context, {
+				resultIsUsed: hints.resultIsUsed,
+				resultIsOnlyUsedInBooleanContext: hints.resultIsOnlyUsedInBooleanContext,
+				isSubexpression: true
+			});
 
 			return ConditionalExpression(test, cons, alt);
 		case 'Const':
@@ -378,12 +444,20 @@ function buildExpression(node, context, hints) {
 			}
 			break;
 		case 'FunctionCall':
-			var callee = buildExpression(node.params[0], context, {resultIsUsed: true, isSubexpression: true});
+			var callee = buildExpression(node.params[0], context, {
+				resultIsUsed: true,
+				resultIsOnlyUsedInBooleanContext: false,
+				isSubexpression: true
+			});
 			var argNodes = node.params[1];
 			assert(Array.isArray(argNodes));
 			var args = [];
 			for (var i = 0; i < argNodes.length; i++) {
-				args[i] = buildExpression(argNodes[i], context, {resultIsUsed: true, isSubexpression: true});
+				args[i] = buildExpression(argNodes[i], context, {
+					resultIsUsed: true,
+					resultIsOnlyUsedInBooleanContext: false,
+					isSubexpression: true
+				});
 			}
 			return FunctionCallExpression(callee, args, hints.isSubexpression);
 		case 'Postupdate':
@@ -392,7 +466,11 @@ function buildExpression(node, context, hints) {
 			if (hints.resultIsUsed) {
 				throw "Postupdate operations where the result is used (rather than discarded) are not currently supported)";
 			}
-			left = buildExpression(node.params[1], context, {resultIsUsed: true, isSubexpression: true});
+			left = buildExpression(node.params[1], context, {
+				resultIsUsed: true,
+				resultIsOnlyUsedInBooleanContext: false,
+				isSubexpression: true
+			});
 			assert(left.isAssignable);
 			assert(left.isRepeatable);
 			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
@@ -418,9 +496,13 @@ function buildExpression(node, context, hints) {
 			break;
 		case 'UnaryOp':
 			op = node.params[0];
-			var argument = buildExpression(node.params[1], context, {resultIsUsed: hints.resultIsUsed, isSubexpression: true});
 			switch (op) {
 				case '!':
+					var argument = buildExpression(node.params[1], context, {
+						resultIsUsed: hints.resultIsUsed,
+						resultIsOnlyUsedInBooleanContext: hints.resultIsUsed,
+						isSubexpression: true
+					});
 					return LogicalNotExpression(argument);
 				default:
 					throw "Unsupported unary operator: " + op;
