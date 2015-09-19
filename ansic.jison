@@ -517,14 +517,21 @@ selection_statement
 		{ throw("Unimplemented rule for selection_statement: " + yytext); }
 	;
 
+optional_expression
+	: ';'
+		{ $$ = null; }
+	| expression ';'
+		{ $$ = $1; }
+	;
+
 iteration_statement
 	: WHILE '(' expression ')' statement
 		{ $$ = new yy.Node('While', [$3, $5]); }
 	| DO statement WHILE '(' expression ')' ';'
 		{ $$ = new yy.Node('DoWhile', [$2, $5]); }
-	| FOR '(' expression_statement expression_statement ')' statement
+	| FOR '(' expression_statement optional_expression ')' statement
 		{ $$ = new yy.Node('For', [$3, $4, null, $6]); }
-	| FOR '(' expression_statement expression_statement expression ')' statement
+	| FOR '(' expression_statement optional_expression expression ')' statement
 		{ $$ = new yy.Node('For', [$3, $4, $5, $7]); }
 	;
 

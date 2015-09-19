@@ -136,7 +136,7 @@ function ForStatement(node, context) {
 	this.context = context;
 
 	this.initStatementNode = node.params[0];
-	this.testStatementNode = node.params[1];
+	this.testExpressionNode = node.params[1];
 	this.updateExpressionNode = node.params[2];
 
 	this.body = buildStatement(node.params[3], this.context);
@@ -159,18 +159,15 @@ ForStatement.prototype.compile = function(out) {
 		throw(util.format("Invalid statement type as initialiser of for statement: %s", this.initStatementNode.type));
 	}
 
-	if (this.testStatementNode.type == 'ExpressionStatement') {
-		var testExpressionNode = this.testStatementNode.params[0];
-		var testExpression = expressions.buildExpression(testExpressionNode, this.context, {
+	if (this.testExpressionNode == null) {
+		test = null;
+	} else {
+		var testExpression = expressions.buildExpression(this.testExpressionNode, this.context, {
 			resultIsUsed: true,
 			resultIsOnlyUsedInBooleanContext: true,
 			isSubexpression: true
 		});
 		test = expressions.coerce(testExpression, types.int);
-	} else if (this.testStatementNode.type == 'NullStatement') {
-		test = null;
-	} else {
-		throw(util.format("Invalid statement type as test of for statement: %s", this.testStatementNode.type));
 	}
 
 	if (this.updateExpressionNode === null) {
