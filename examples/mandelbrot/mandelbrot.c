@@ -4,8 +4,7 @@ int calc(double c, double d) {
 
 	double a = 0.0, b = 0.0;
 	while (a*a + b*b < 4.0 && iterations < MAX_ITERATIONS) {
-		double aNew;
-		aNew = a*a - b*b + c;
+		double aNew = a*a - b*b + c;
 		b = 2.0*a*b + d;
 		a = aNew;
 		iterations++;
