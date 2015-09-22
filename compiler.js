@@ -437,7 +437,7 @@ function VariableDeclarator(node, varType, context) {
 			isSubexpression: true
 		});
 		assert(
-			types.satisfies(this.initialValue.type, this.type),
+			types.satisfies(this.initialValue.intendedType, this.type),
 			util.format("Incompatible types for init declarator: %s vs %s", util.inspect(this.type), util.inspect(this.initialValue.type))
 		);
 	}
@@ -468,7 +468,7 @@ VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 	} else {
 		out.push(estree.VariableDeclarator(
 			estree.Identifier(this.variable.jsIdentifier),
-			this.initialValue.compile()
+			expressions.coerce(this.initialValue, this.type)
 		));
 	}
 };
@@ -485,7 +485,7 @@ VariableDeclarator.prototype.compileAsInitializer = function(out) {
 	} else {
 		out.push(estree.AssignmentExpression('=',
 			estree.Identifier(this.variable.jsIdentifier),
-			this.initialValue.compile()
+			expressions.coerce(this.initialValue, this.type)
 		));
 	}
 };

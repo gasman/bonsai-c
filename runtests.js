@@ -62,6 +62,7 @@ testCompile('tests/logical_shortcuts.c', 42);
 testCompile('tests/double_mul.c', 42);
 testCompile('tests/int_div.c', 42);
 testCompile('tests/late_declaration.c', 52);
+testCompile('tests/nonconstant_declare.c', 42);
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");
