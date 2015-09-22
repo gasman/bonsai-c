@@ -198,7 +198,7 @@ declaration
 	: declaration_specifiers ';'
 		{ throw("Unimplemented rule for declaration: " + yytext); }
 	| declaration_specifiers init_declarator_list ';'
-		{ $$ = new yy.Node('Declaration', [$1, $2]); }
+		{ $$ = new yy.Node('DeclarationStatement', [$1, $2]); }
 	;
 
 declaration_specifiers
@@ -480,11 +480,7 @@ compound_statement
 	: '{' '}'
 		{ throw("Unimplemented rule for compound_statement: " + yytext); }
 	| '{' statement_list '}'
-		{ $$ = new yy.Node('Block', [[], $2]); }
-	| '{' declaration_list '}'
-		{ throw("Unimplemented rule for compound_statement: " + yytext); }
-	| '{' declaration_list statement_list '}'
-		{ $$ = new yy.Node('Block', [$2, $3]); }
+		{ $$ = new yy.Node('Block', [$2]); }
 	;
 
 declaration_list
@@ -506,6 +502,7 @@ expression_statement
 		{ $$ = new yy.Node('NullStatement', []); }
 	| expression ';'
 		{ $$ = new yy.Node('ExpressionStatement', [$1]); }
+	| declaration
 	;
 
 selection_statement
@@ -521,7 +518,6 @@ optional_expression
 	: ';'
 		{ $$ = null; }
 	| expression ';'
-		{ $$ = $1; }
 	;
 
 iteration_statement

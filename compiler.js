@@ -94,7 +94,7 @@ ContinueStatement.prototype.compile = function(out) {
 
 function DoWhileStatement(node, context) {
 	this.context = context;
-	this.body = buildStatement(node.params[0], this.context);
+	this.body = buildStatement(node.params[0], this.context, false);
 	this.expressionNode = node.params[1];
 }
 DoWhileStatement.prototype.compileDeclarators = function(out) {
@@ -114,52 +114,95 @@ DoWhileStatement.prototype.compile = function(out) {
 	out.push(estree.DoWhileStatement(bodyStatement, expressions.coerce(test, types.int)));
 };
 
-function ExpressionStatement(node, context) {
+function ExpressionStatement(node, context, isSubexpression) {
 	this.context = context;
 	this.expressionNode = node.params[0];
-	/* do not construct an Expression object yet, as that may perform lookups
-		in the context for identifiers that are defined further down the file */
+	this.isSubexpression = isSubexpression;
+	this.expr = expressions.buildExpression(this.expressionNode, this.context, {
+		resultIsUsed: false,
+		resultIsOnlyUsedInBooleanContext: false,
+		isSubexpression: this.isSubexpression
+	});
 }
 ExpressionStatement.prototype.compileDeclarators = function(out) {
 	/* an ExpressionStatement does not contain variable declarations */
 };
+ExpressionStatement.prototype.compileAsExpression = function(out) {
+	return this.expr.compile();
+};
 ExpressionStatement.prototype.compile = function(out) {
-	var expr = expressions.buildExpression(this.expressionNode, this.context, {
-		resultIsUsed: false,
-		resultIsOnlyUsedInBooleanContext: false,
-		isSubexpression: false
-	});
-	out.push(estree.ExpressionStatement(expr.compile()));
+	out.push(estree.ExpressionStatement(this.compileAsExpression()));
 };
 
-function ForStatement(node, context) {
-	this.context = context;
+function DeclarationStatement(node, context) {
+	/* Represents a C variable declaration line, e.g.
+		int i, *j, k = 42;
+	*/
+	var declarationSpecifiers = node.params[0];
+	this.type = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
 
-	this.initStatementNode = node.params[0];
+	var initDeclaratorList = node.params[1];
+	assert(Array.isArray(initDeclaratorList));
+
+	this.variableDeclarators = [];
+	for (var i = 0; i < initDeclaratorList.length; i++) {
+		this.variableDeclarators.push(
+			new VariableDeclarator(initDeclaratorList[i], this.type, context)
+		);
+	}
+}
+DeclarationStatement.prototype.compileDeclarators = function(out) {
+	/* Output 'var' declarations for all declarators in this.variableDeclarators.
+	If they provide a constant initial value, assign their values immediately; if not, assign 0 or 0.0
+	*/
+	for (var i = 0; i < this.variableDeclarators.length; i++) {
+		this.variableDeclarators[i].compileAsDeclarator(out);
+	}
+};
+DeclarationStatement.prototype.compile = function(out) {
+	/* Output a comma expression assigning all vars that have non-constant values (if any). */
+	var expression = this.compileAsExpression();
+	if (expression === null) {
+		return;
+	} else {
+		out.push(estree.ExpressionStatement(expression));
+	}
+};
+DeclarationStatement.prototype.compileAsExpression = function() {
+	/* Output a comma expression assigning all vars that have non-constant values (if any). */
+	var initializers = [];
+	for (var i = 0; i < this.variableDeclarators.length; i++) {
+		this.variableDeclarators[i].compileAsInitializer(initializers);
+	}
+	if (initializers.length === 0) {
+		return null;
+	} else if (initializers.length === 1) {
+		return initializers[0];
+	} else {
+		return estree.SequenceExpression(initializers);
+	}
+};
+
+
+function ForStatement(node, context) {
+	this.context = context.createChildContext();
+
+	this.initStatement = buildStatement(node.params[0], this.context, true);
 	this.testExpressionNode = node.params[1];
 	this.updateExpressionNode = node.params[2];
 
-	this.body = buildStatement(node.params[3], this.context);
+	this.body = buildStatement(node.params[3], this.context, false);
 }
 ForStatement.prototype.compileDeclarators = function(out) {
+	this.initStatement.compileDeclarators(out);
 	this.body.compileDeclarators(out);
 };
 ForStatement.prototype.compile = function(out) {
 	var init, test, update;
-	if (this.initStatementNode.type == 'ExpressionStatement') {
-		var initExpressionNode = this.initStatementNode.params[0];
-		init = expressions.buildExpression(initExpressionNode, this.context, {
-			resultIsUsed: false,
-			resultIsOnlyUsedInBooleanContext: false,
-			isSubexpression: true
-		}).compile();
-	} else if (this.initStatementNode.type == 'NullStatement') {
-		init = null;
-	} else {
-		throw(util.format("Invalid statement type as initialiser of for statement: %s", this.initStatementNode.type));
-	}
 
-	if (this.testExpressionNode == null) {
+	init = this.initStatement.compileAsExpression();
+
+	if (this.testExpressionNode === null) {
 		test = null;
 	} else {
 		var testExpression = expressions.buildExpression(this.testExpressionNode, this.context, {
@@ -197,11 +240,11 @@ function IfStatement(node, context) {
 	this.context = context;
 
 	this.testExpressionNode = node.params[0];
-	this.thenStatement = buildStatement(node.params[1], this.context);
+	this.thenStatement = buildStatement(node.params[1], this.context, false);
 	if (node.params[2] === null) {
 		this.elseStatement = null;
 	} else {
-		this.elseStatement = buildStatement(node.params[2], this.context);
+		this.elseStatement = buildStatement(node.params[2], this.context, false);
 	}
 }
 IfStatement.prototype.compileDeclarators = function(out) {
@@ -243,6 +286,9 @@ function NullStatement(node, context) {
 	assert(node.params.length === 0);
 }
 NullStatement.prototype.compileDeclarators = function(out) {
+};
+NullStatement.prototype.compileAsExpression = function() {
+	return null;
 };
 NullStatement.prototype.compile = function(out) {
 };
@@ -313,7 +359,7 @@ ReturnStatement.prototype.compile = function(out) {
 function WhileStatement(node, context) {
 	this.context = context;
 	this.expressionNode = node.params[0];
-	this.body = buildStatement(node.params[1], this.context);
+	this.body = buildStatement(node.params[1], this.context, false);
 }
 WhileStatement.prototype.compileDeclarators = function(out) {
 	this.body.compileDeclarators(out);
@@ -333,7 +379,7 @@ WhileStatement.prototype.compile = function(out) {
 	out.push(estree.WhileStatement(expressions.coerce(test, types.int), bodyStatement));
 };
 
-function buildStatement(statementNode, context) {
+function buildStatement(statementNode, context, isSubexpression) {
 	switch (statementNode.type) {
 		case 'Block':
 			return new BlockStatement(statementNode, context);
@@ -341,10 +387,12 @@ function buildStatement(statementNode, context) {
 			return new BreakStatement(statementNode, context);
 		case 'Continue':
 			return new ContinueStatement(statementNode, context);
+		case 'DeclarationStatement':
+			return new DeclarationStatement(statementNode, context);
 		case 'DoWhile':
 			return new DoWhileStatement(statementNode, context);
 		case 'ExpressionStatement':
-			return new ExpressionStatement(statementNode, context);
+			return new ExpressionStatement(statementNode, context, isSubexpression);
 		case 'For':
 			return new ForStatement(statementNode, context);
 		case 'If':
@@ -388,7 +436,6 @@ function VariableDeclarator(node, varType, context) {
 			resultIsOnlyUsedInBooleanContext: false,
 			isSubexpression: true
 		});
-		assert(this.initialValue.isConstant, "Non-constant initialisers for variables are not supported");
 		assert(
 			types.satisfies(this.initialValue.type, this.type),
 			util.format("Incompatible types for init declarator: %s vs %s", util.inspect(this.type), util.inspect(this.initialValue.type))
@@ -398,34 +445,26 @@ function VariableDeclarator(node, varType, context) {
 VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 	/*
 	Append zero or more VariableDeclarator nodes to 'out' which implement
-	the declaration, but not initial value assignment, for this variable. For example:
+	the declaration for this variable, along with initial value assignment, if a
+	constant initial value is provided. For example:
 	int i = 42;
 	will produce the declarator 'i = 0'.
 	*/
-	if (types.satisfies(this.type, types.int)) {
-		out.push(estree.VariableDeclarator(
-			estree.Identifier(this.variable.jsIdentifier),
-			estree.RawLiteral(0, '0')
-		));
-	} else if (types.satisfies(this.type, types.double)) {
-		out.push(estree.VariableDeclarator(
-			estree.Identifier(this.variable.jsIdentifier),
-			estree.RawLiteral(0, '0.0')
-		));
-	} else {
-		throw "Unsupported declaration type: " + util.inspect(this.type);
-	}
-};
-VariableDeclarator.prototype.compileAsInitDeclarator = function(out) {
-	/*
-	Append zero or more VariableDeclarator nodes to 'out' which implement
-	both the declaration and initial value assignment for this variable. For example:
-	int i = 42;
-	will produce the declarator 'i = 42'.
-	*/
-	if (this.initialValue === null) {
-		/* no initial value passed; just output the declarator */
-		this.compileAsDeclarator(out);
+	if (this.initialValue === null || !this.initialValue.isConstant) {
+		/* Initial value is not given or is not constant - initialise to 0 */
+		if (types.satisfies(this.type, types.int)) {
+			out.push(estree.VariableDeclarator(
+				estree.Identifier(this.variable.jsIdentifier),
+				estree.RawLiteral(0, '0')
+			));
+		} else if (types.satisfies(this.type, types.double)) {
+			out.push(estree.VariableDeclarator(
+				estree.Identifier(this.variable.jsIdentifier),
+				estree.RawLiteral(0, '0.0')
+			));
+		} else {
+			throw "Unsupported declaration type: " + util.inspect(this.type);
+		}
 	} else {
 		out.push(estree.VariableDeclarator(
 			estree.Identifier(this.variable.jsIdentifier),
@@ -435,42 +474,21 @@ VariableDeclarator.prototype.compileAsInitDeclarator = function(out) {
 };
 VariableDeclarator.prototype.compileAsInitializer = function(out) {
 	/*
-	Append zero or more Statement nodes to 'out' which implement
-	initial value assignment for this variable. For example:
-	int i = 42;
-	will produce the statement 'i = 42;'.
+	Append zero or more AssignmentExpression nodes to 'out' which implement
+	initial value assignment for this variable, if that was not already done
+	by the declarator. For example:
+	int i = foo();
+	will produce the expression 'i = foo()|0'.
 	*/
-	if (this.initialValue === null) {
+	if (this.initialValue === null || this.initialValue.isConstant) {
 		/* no initialization to do */
 	} else {
-		out.push(estree.ExpressionStatement(
-			estree.AssignmentExpression('=',
-				estree.Identifier(this.variable.jsIdentifier),
-				this.initialValue.compile()
-			)
+		out.push(estree.AssignmentExpression('=',
+			estree.Identifier(this.variable.jsIdentifier),
+			this.initialValue.compile()
 		));
 	}
 };
-
-function Declaration(node, context) {
-	/* Represents a C variable declaration line, e.g.
-		int i, *j, k = 42;
-	*/
-	assert.equal('Declaration', node.type);
-
-	var declarationSpecifiers = node.params[0];
-	this.type = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
-
-	var initDeclaratorList = node.params[1];
-	assert(Array.isArray(initDeclaratorList));
-
-	this.variableDeclarators = [];
-	for (var i = 0; i < initDeclaratorList.length; i++) {
-		this.variableDeclarators.push(
-			new VariableDeclarator(initDeclaratorList[i], this.type, context)
-		);
-	}
-}
 
 function BlockStatement(block, parentContext) {
 	var i, j;
@@ -478,38 +496,17 @@ function BlockStatement(block, parentContext) {
 
 	this.context = parentContext.createChildContext();
 
-	var declarationNodes = block.params[0];
-	assert(Array.isArray(declarationNodes));
-
-	/* unpack declaration list */
-	this.variableDeclarators = [];
-
-	for (i = 0; i < declarationNodes.length; i++) {
-		var declaration = new Declaration(declarationNodes[i], this.context);
-
-		for (j = 0; j < declaration.variableDeclarators.length; j++) {
-			var declarator = declaration.variableDeclarators[j];
-
-			this.variableDeclarators.push(declarator);
-		}
-	}
-
-	var statementNodes = block.params[1];
+	var statementNodes = block.params[0];
 	assert(Array.isArray(statementNodes));
 
 	this.statements = [];
 	for (i = 0; i < statementNodes.length; i++) {
-		this.statements.push(buildStatement(statementNodes[i], this.context));
+		this.statements.push(buildStatement(statementNodes[i], this.context, false));
 	}
 }
 BlockStatement.prototype.compileDeclarators = function(out) {
-	/* Append the variable declarators (but not initializers) for this block
-		to the list 'out'. Recursively adds the declarators for inner blocks too.
-	*/
+	/* Append the variable declarators for this block to the list 'out'. */
 	var i;
-	for (i = 0; i < this.variableDeclarators.length; i++) {
-		this.variableDeclarators[i].compileAsDeclarator(out);
-	}
 	for (i = 0; i < this.statements.length; i++) {
 		this.statements[i].compileDeclarators(out);
 	}
@@ -523,23 +520,13 @@ BlockStatement.prototype.compileStatementList = function(out, includeDeclarators
 			shall be output here. For this block's own variables (but not the
 			variables of inner blocks), this can be combined with initializing them. */
 		var declaratorList = [];
-		/* output top-level declarators with initializers */
-		for (i = 0; i < this.variableDeclarators.length; i++) {
-			this.variableDeclarators[i].compileAsInitDeclarator(declaratorList);
-		}
-		/* output declarators (without initializers) for inner blocks */
+		/* output declarators (optionally with initializers) for inner blocks */
 		for (i = 0; i < this.statements.length; i++) {
 			this.statements[i].compileDeclarators(declaratorList);
 		}
 		/* output a VariableDeclaration statement, if any declarators are present */
 		if (declaratorList.length) {
 			out.push(estree.VariableDeclaration(declaratorList));
-		}
-	} else {
-		/* This is an inner block; we need to initialize block-local variables, but
-			not declare them (that's been done at the top level). */
-		for (i = 0; i < this.variableDeclarators.length; i++) {
-			this.variableDeclarators[i].compileAsInitializer(out);
 		}
 	}
 
