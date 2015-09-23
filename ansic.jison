@@ -186,7 +186,7 @@ assignment_operator
 expression
 	: assignment_expression
 	| expression ',' assignment_expression
-		{ throw("Unimplemented rule for expression: " + yytext); }
+		{ $$ = new yy.Node('Sequence', [$1, $3]); }
 	;
 
 constant_expression

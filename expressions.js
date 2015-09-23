@@ -180,6 +180,29 @@ function ConditionalExpression(test, cons, alt) {
 	return self;
 }
 
+function SequenceExpression(left, right) {
+	var self = {};
+
+	self.type = right.type;
+	self.intendedType = right.intendedType;
+	self.isRepeatable = false;
+	self.isPureBoolean = right.isPureBoolean;
+
+	self.compile = function() {
+		var leftNode = left.compile();
+		var rightNode = right.compile();
+		if (leftNode.type == 'SequenceExpression') {
+			/* nested sequence expressions should be flattened into a single list */
+			leftNode.expressions.push(rightNode);
+			return leftNode;
+		} else {
+			return estree.SequenceExpression([leftNode, rightNode]);
+		}
+	};
+
+	return self;
+}
+
 function LogicalNotExpression(argument) {
 	var self = {};
 
@@ -510,6 +533,18 @@ function buildExpression(node, context, hints) {
 				throw("Unsupported postupdate operator: " + op);
 			}
 			break;
+		case 'Sequence':
+			left = buildExpression(node.params[0], context, {
+				resultIsUsed: false,
+				resultIsOnlyUsedInBooleanContext: false,
+				isSubexpression: false
+			});
+			right = buildExpression(node.params[1], context, {
+				resultIsUsed: hints.resultIsUsed,
+				resultIsOnlyUsedInBooleanContext: hints.resultIsOnlyUsedInBooleanContext,
+				isSubexpression: false
+			});
+			return SequenceExpression(left, right);
 		case 'UnaryOp':
 			op = node.params[0];
 			switch (op) {
