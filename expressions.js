@@ -533,6 +533,34 @@ function buildExpression(node, context, hints) {
 				throw("Unsupported postupdate operator: " + op);
 			}
 			break;
+		case 'Preupdate':
+			op = node.params[0];
+
+			left = buildExpression(node.params[1], context, {
+				resultIsUsed: true,
+				resultIsOnlyUsedInBooleanContext: false,
+				isSubexpression: true
+			});
+
+			assert(left.isAssignable);
+			assert(left.isRepeatable);
+			assert(types.equal(types.int, left.type), "Postupdate is only currently supported on ints");
+
+			/* ++(operand) is equivalent to (operand) = (operand) + 1 */
+			if (op == '++') {
+				return AssignmentExpression(
+					left,
+					AdditiveExpression('+', left, NumericLiteralExpression(1, types.signed))
+				);
+			} else if (op == '--') {
+				return AssignmentExpression(
+					left,
+					AdditiveExpression('-', left, NumericLiteralExpression(1, types.signed))
+				);
+			} else {
+				throw("Unsupported postupdate operator: " + op);
+			}
+			break;
 		case 'Sequence':
 			left = buildExpression(node.params[0], context, {
 				resultIsUsed: false,

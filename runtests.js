@@ -64,6 +64,8 @@ testCompile('tests/int_div.c', 42);
 testCompile('tests/late_declaration.c', 52);
 testCompile('tests/nonconstant_declare.c', 42);
 testCompile('tests/comma.c', 42);
+testCompile('tests/preincrement.c', 42);
+testCompile('tests/predecrement.c', 42);
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");

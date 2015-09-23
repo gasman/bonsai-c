@@ -55,9 +55,9 @@ argument_expression_list
 unary_expression
 	: postfix_expression
 	| INC_OP unary_expression
-		{ throw("Unimplemented rule for unary_expression: " + yytext); }
+		{ $$ = new yy.Node('Preupdate', [$1, $2]); }
 	| DEC_OP unary_expression
-		{ throw("Unimplemented rule for unary_expression: " + yytext); }
+		{ $$ = new yy.Node('Preupdate', [$1, $2]); }
 	| unary_operator cast_expression
 		{ $$ = new yy.Node('UnaryOp', [$1, $2]); }
 	| SIZEOF unary_expression
