@@ -31,6 +31,17 @@ function coerce(expr, targetType) {
 }
 exports.coerce = coerce;
 
+function typeAfterCoercion(expr, targetType) {
+	/* Return the type that 'expr' will become after coercing to targetType using the 'coerce' function */
+	if (types.satisfies(expr.type, targetType)) {
+		return expr.type;
+	} else if (types.satisfies(expr.type, types.intish) && types.satisfies(types.signed, targetType)) {
+		return types.signed;
+	} else {
+		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
+	}
+}
+
 function AdditiveExpression(op, left, right) {
 	var self = {};
 
@@ -40,17 +51,25 @@ function AdditiveExpression(op, left, right) {
 	);
 	if (types.satisfies(left.intendedType, types.int) && types.satisfies(right.intendedType, types.int)) {
 		self.type = types.intish;
+		self.expectedLeftType = types.int;
+		self.expectedRightType = types.int;
 		self.intendedType = left.intendedType;
 	} else if (left.isAdditiveExpression && types.satisfies(left.intendedType, types.intish) && types.satisfies(right.intendedType, types.int)) {
 		/* int-typed additive expressions can be chained, even though the result of an intermediate
 		additive expression is intish rather than int */
 		self.type = types.intish;
+		self.expectedLeftType = types.int;
+		self.expectedRightType = types.int;
 		self.intendedType = left.intendedType;
 	} else if (op == '-' && types.satisfies(left.intendedType, types.doubleq) && types.satisfies(right.intendedType, types.doubleq)) {
 		self.type = types.double;
+		self.expectedLeftType = types.doubleq;
+		self.expectedRightType = types.doubleq;
 		self.intendedType = left.intendedType;
 	} else if (op == '+' && types.satisfies(left.intendedType, types.double) && types.satisfies(right.intendedType, types.double)) {
 		self.type = types.double;
+		self.expectedLeftType = types.double;
+		self.expectedRightType = types.double;
 		self.intendedType = left.intendedType;
 	} else {
 		throw util.format("Unsupported types for additive operation: %s and %s", util.inspect(left.type), util.inspect(right.type));
@@ -73,7 +92,7 @@ function AdditiveExpression(op, left, right) {
 	self.isAdditiveExpression = true;
 
 	self.compile = function() {
-		return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
+		return estree.BinaryExpression(op, coerce(left, self.expectedLeftType), coerce(right, self.expectedRightType));
 	};
 
 	return self;
@@ -86,8 +105,12 @@ function RelationalExpression(op, left, right) {
 
 	if (types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
 		hasValidTypes = true;
+		self.expectedLeftType = types.signed;
+		self.expectedRightType = types.signed;
 	} else if (types.satisfies(left.intendedType, types.double) && types.satisfies(right.intendedType, types.double)) {
 		hasValidTypes = true;
+		self.expectedLeftType = types.double;
+		self.expectedRightType = types.double;
 	} else {
 		hasValidTypes = false;
 	}
@@ -97,7 +120,7 @@ function RelationalExpression(op, left, right) {
 		self.isRepeatable = false;
 		self.isPureBoolean = true;  /* results are always 0 or 1 (so don't need casting to boolean when faking && / || with conditional expressions) */
 		self.compile = function() {
-			return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
+			return estree.BinaryExpression(op, coerce(left, self.expectedLeftType), coerce(right, self.expectedRightType));
 		};
 	} else {
 		throw util.format("Unsupported types in relational expression: %s vs %s", util.inspect(left.type), util.inspect(right.type));
@@ -120,9 +143,13 @@ function MultiplicativeExpression(op, left, right) {
 		*/
 	} else if (op == '/' && types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
 		self.type = types.intish;
+		self.expectedLeftType = types.signed;
+		self.expectedRightType = types.signed;
 		self.intendedType = left.intendedType;
 	} else if (types.satisfies(left.intendedType, types.doubleq) && types.satisfies(right.intendedType, types.doubleq)) {
 		self.type = types.double;
+		self.expectedLeftType = types.doubleq;
+		self.expectedRightType = types.doubleq;
 		self.intendedType = left.intendedType;
 	} else {
 		throw util.format("Unsupported types in multiplicative expression with operator '%s': %s vs %s", op, util.inspect(left.intendedType), util.inspect(right.intendedType));
@@ -130,7 +157,7 @@ function MultiplicativeExpression(op, left, right) {
 
 	self.isRepeatable = false;
 	self.compile = function() {
-		return estree.BinaryExpression(op, coerce(left, left.intendedType), coerce(right, right.intendedType));
+		return estree.BinaryExpression(op, coerce(left, self.expectedLeftType), coerce(right, self.expectedRightType));
 	};
 
 	return self;
@@ -141,13 +168,13 @@ function AssignmentExpression(left, right) {
 
 	assert(left.isAssignable);
 
-	self.type = left.type;
+	self.type = typeAfterCoercion(right, left.type);
 	self.intendedType = left.intendedType;
 	self.isRepeatable = false;
 	self.isPureBoolean = right.isPureBoolean;
 
 	self.compile = function() {
-		return estree.AssignmentExpression('=', left.compile(), coerce(right, self.type));
+		return estree.AssignmentExpression('=', left.compile(), coerce(right, left.type));
 	};
 
 	return self;
