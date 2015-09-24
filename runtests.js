@@ -66,6 +66,8 @@ testCompile('tests/nonconstant_declare.c', 42);
 testCompile('tests/comma.c', 42);
 testCompile('tests/preincrement.c', 42);
 testCompile('tests/predecrement.c', 42);
+testCompile('tests/postincrement.c', 42);
+testCompile('tests/postdecrement.c', 42);
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");

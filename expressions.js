@@ -94,6 +94,10 @@ function AdditiveExpression(op, left, right) {
 	self.compile = function() {
 		return estree.BinaryExpression(op, coerce(left, self.expectedLeftType), coerce(right, self.expectedRightType));
 	};
+	self.findDeclaredVariables = function(vars) {
+		left.findDeclaredVariables(vars);
+		right.findDeclaredVariables(vars);
+	};
 
 	return self;
 }
@@ -121,6 +125,10 @@ function RelationalExpression(op, left, right) {
 		self.isPureBoolean = true;  /* results are always 0 or 1 (so don't need casting to boolean when faking && / || with conditional expressions) */
 		self.compile = function() {
 			return estree.BinaryExpression(op, coerce(left, self.expectedLeftType), coerce(right, self.expectedRightType));
+		};
+		self.findDeclaredVariables = function(vars) {
+			left.findDeclaredVariables(vars);
+			right.findDeclaredVariables(vars);
 		};
 	} else {
 		throw util.format("Unsupported types in relational expression: %s vs %s", util.inspect(left.type), util.inspect(right.type));
@@ -159,6 +167,10 @@ function MultiplicativeExpression(op, left, right) {
 	self.compile = function() {
 		return estree.BinaryExpression(op, coerce(left, self.expectedLeftType), coerce(right, self.expectedRightType));
 	};
+	self.findDeclaredVariables = function(vars) {
+		left.findDeclaredVariables(vars);
+		right.findDeclaredVariables(vars);
+	};
 
 	return self;
 }
@@ -175,6 +187,10 @@ function AssignmentExpression(left, right) {
 
 	self.compile = function() {
 		return estree.AssignmentExpression('=', left.compile(), coerce(right, left.type));
+	};
+	self.findDeclaredVariables = function(vars) {
+		left.findDeclaredVariables(vars);
+		right.findDeclaredVariables(vars);
 	};
 
 	return self;
@@ -203,6 +219,11 @@ function ConditionalExpression(test, cons, alt) {
 			coerce(alt, self.type)
 		);
 	};
+	self.findDeclaredVariables = function(vars) {
+		test.findDeclaredVariables(vars);
+		cons.findDeclaredVariables(vars);
+		alt.findDeclaredVariables(vars);
+	};
 
 	return self;
 }
@@ -226,6 +247,10 @@ function SequenceExpression(left, right) {
 			return estree.SequenceExpression([leftNode, rightNode]);
 		}
 	};
+	self.findDeclaredVariables = function(vars) {
+		left.findDeclaredVariables(vars);
+		right.findDeclaredVariables(vars);
+	};
 
 	return self;
 }
@@ -239,6 +264,9 @@ function LogicalNotExpression(argument) {
 
 	self.compile = function() {
 		return estree.UnaryExpression('!', coerce(argument, types.int), true);
+	};
+	self.findDeclaredVariables = function(vars) {
+		argument.findDeclaredVariables(vars);
 	};
 
 	return self;
@@ -268,6 +296,8 @@ function NumericLiteralExpression(value, intendedType) {
 			valueString += '.0';
 		}
 		return estree.RawLiteral(value, valueString);
+	};
+	self.findDeclaredVariables = function(vars) {
 	};
 
 	return self;
@@ -313,10 +343,17 @@ function FunctionCallExpression(callee, args, isSubexpression) {
 			return callExpression;
 		}
 	};
+	self.findDeclaredVariables = function(vars) {
+		callee.findDeclaredVariables(vars);
+		for (var i = 0; i < args.length; i++) {
+			args[i].findDeclaredVariables(vars);
+		}
+	};
 	return self;
 }
 
-function VariableExpression(variable) {
+function VariableExpression(variable, addDeclaration) {
+	/* if addDeclaration is true, this expression must generate a declaration for this variable */
 	var self = {};
 
 	self.type = variable.type;
@@ -326,6 +363,9 @@ function VariableExpression(variable) {
 	self.isAssignable = true;
 	self.compile = function() {
 		return estree.Identifier(variable.jsIdentifier);
+	};
+	self.findDeclaredVariables = function(vars) {
+		if (addDeclaration) vars.push(variable);
 	};
 	return self;
 }
@@ -529,9 +569,6 @@ function buildExpression(node, context, hints) {
 		case 'Postupdate':
 			op = node.params[0];
 
-			if (hints.resultIsUsed) {
-				throw "Postupdate operations where the result is used (rather than discarded) are not currently supported)";
-			}
 			left = buildExpression(node.params[1], context, {
 				resultIsUsed: true,
 				resultIsOnlyUsedInBooleanContext: false,
@@ -544,20 +581,38 @@ function buildExpression(node, context, hints) {
 			/* if the result is not used AND the operand is repeatable,
 				(operand)++ is equivalent to (operand) = (operand) + 1
 				(operand)-- is equivalent to (operand) = (operand) - 1
+
+				If the result is used AND the operand is repeatable,
+				(operand)++ is equivalent to ((operand) = (tmp = (operand)) + 1), tmp
+				(operand)++ is equivalent to ((operand) = (tmp = (operand)) - 1), tmp
 			*/
 
+			var additiveExpressionOp;
 			if (op == '++') {
-				return AssignmentExpression(
-					left,
-					AdditiveExpression('+', left, NumericLiteralExpression(1, types.signed))
-				);
+				additiveExpressionOp = '+';
 			} else if (op == '--') {
-				return AssignmentExpression(
-					left,
-					AdditiveExpression('-', left, NumericLiteralExpression(1, types.signed))
-				);
+				additiveExpressionOp = '-';
 			} else {
 				throw("Unsupported postupdate operator: " + op);
+			}
+
+			if (hints.resultIsUsed) {
+				var tempVar = context.allocateVariable('temp', left.type, left.intendedType);
+				return SequenceExpression(
+					AssignmentExpression(
+						left,
+						AdditiveExpression(additiveExpressionOp,
+							AssignmentExpression(VariableExpression(tempVar, true), left),
+							NumericLiteralExpression(1, types.signed)
+						)
+					),
+					VariableExpression(tempVar, false)
+				);
+			} else {
+				return AssignmentExpression(
+					left,
+					AdditiveExpression(additiveExpressionOp, left, NumericLiteralExpression(1, types.signed))
+				);
 			}
 			break;
 		case 'Preupdate':
@@ -621,7 +676,7 @@ function buildExpression(node, context, hints) {
 			if (variable === null) {
 				throw "Undefined variable: " + identifier;
 			}
-			return VariableExpression(variable);
+			return VariableExpression(variable, false);
 		default:
 			throw("Unimplemented expression type: " + node.type);
 	}

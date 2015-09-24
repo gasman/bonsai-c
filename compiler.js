@@ -94,10 +94,15 @@ ContinueStatement.prototype.compile = function(out) {
 
 function DoWhileStatement(node, context) {
 	this.context = context;
+	this.test = expressions.buildExpression(node.params[1], this.context, {
+		resultIsUsed: true,
+		resultIsOnlyUsedInBooleanContext: true,
+		isSubexpression: true
+	});
 	this.body = buildStatement(node.params[0], this.context, false);
-	this.expressionNode = node.params[1];
 }
 DoWhileStatement.prototype.compileDeclarators = function(out) {
+	compileDeclaratorsFromExpression(this.test);
 	this.body.compileDeclarators(out);
 };
 DoWhileStatement.prototype.compile = function(out) {
@@ -105,14 +110,17 @@ DoWhileStatement.prototype.compile = function(out) {
 	this.body.compile(bodyStatements);
 	assert.equal(1, bodyStatements.length);
 	var bodyStatement = bodyStatements[0];
-	var test = expressions.buildExpression(this.expressionNode, this.context, {
-		resultIsUsed: true,
-		resultIsOnlyUsedInBooleanContext: true,
-		isSubexpression: true
-	});
 
-	out.push(estree.DoWhileStatement(bodyStatement, expressions.coerce(test, types.int)));
+	out.push(estree.DoWhileStatement(bodyStatement, expressions.coerce(this.test, types.int)));
 };
+
+function compileDeclaratorsFromExpression(expr, out) {
+	declaredVars = [];
+	expr.findDeclaredVariables(declaredVars);
+	for (var i = 0; i < declaredVars.length; i++) {
+		compileVariableAsDeclarator(declaredVars[i], null, out);
+	}
+}
 
 function ExpressionStatement(node, context, isSubexpression) {
 	this.context = context;
@@ -125,7 +133,7 @@ function ExpressionStatement(node, context, isSubexpression) {
 	});
 }
 ExpressionStatement.prototype.compileDeclarators = function(out) {
-	/* an ExpressionStatement does not contain variable declarations */
+	compileDeclaratorsFromExpression(this.expr, out);
 };
 ExpressionStatement.prototype.compileAsExpression = function(out) {
 	return this.expr.compile();
@@ -156,6 +164,9 @@ DeclarationStatement.prototype.compileDeclarators = function(out) {
 	If they provide a constant initial value, assign their values immediately; if not, assign 0 or 0.0
 	*/
 	for (var i = 0; i < this.variableDeclarators.length; i++) {
+		if (this.variableDeclarators[i].initialValue !== null) {
+			compileDeclaratorsFromExpression(this.variableDeclarators[i].initialValue, out);
+		}
 		this.variableDeclarators[i].compileAsDeclarator(out);
 	}
 };
@@ -188,13 +199,35 @@ function ForStatement(node, context) {
 	this.context = context.createChildContext();
 
 	this.initStatement = buildStatement(node.params[0], this.context, true);
-	this.testExpressionNode = node.params[1];
-	this.updateExpressionNode = node.params[2];
+
+	var testExpressionNode = node.params[1];
+	if (testExpressionNode === null) {
+		this.testExpression = null;
+	} else {
+		this.testExpression = expressions.buildExpression(testExpressionNode, this.context, {
+			resultIsUsed: true,
+			resultIsOnlyUsedInBooleanContext: true,
+			isSubexpression: true
+		});
+	}
+
+	var updateExpressionNode = node.params[2];
+	if (updateExpressionNode === null) {
+		this.updateExpression = null;
+	} else {
+		this.updateExpression = expressions.buildExpression(updateExpressionNode, this.context, {
+			resultIsUsed: false,
+			resultIsOnlyUsedInBooleanContext: false,
+			isSubexpression: true
+		});
+	}
 
 	this.body = buildStatement(node.params[3], this.context, false);
 }
 ForStatement.prototype.compileDeclarators = function(out) {
 	this.initStatement.compileDeclarators(out);
+	if (this.testExpression !== null) compileDeclaratorsFromExpression(this.testExpression, out);
+	if (this.updateExpression !== null) compileDeclaratorsFromExpression(this.updateExpression, out);
 	this.body.compileDeclarators(out);
 };
 ForStatement.prototype.compile = function(out) {
@@ -202,25 +235,16 @@ ForStatement.prototype.compile = function(out) {
 
 	init = this.initStatement.compileAsExpression();
 
-	if (this.testExpressionNode === null) {
+	if (this.testExpression === null) {
 		test = null;
 	} else {
-		var testExpression = expressions.buildExpression(this.testExpressionNode, this.context, {
-			resultIsUsed: true,
-			resultIsOnlyUsedInBooleanContext: true,
-			isSubexpression: true
-		});
-		test = expressions.coerce(testExpression, types.int);
+		test = expressions.coerce(this.testExpression, types.int);
 	}
 
-	if (this.updateExpressionNode === null) {
+	if (this.updateExpression === null) {
 		update = null;
 	} else {
-		update = expressions.buildExpression(this.updateExpressionNode, this.context, {
-			resultIsUsed: false,
-			resultIsOnlyUsedInBooleanContext: false,
-			isSubexpression: true
-		}).compile();
+		update = this.updateExpression.compile();
 	}
 
 	var bodyStatements = [];
@@ -239,7 +263,14 @@ ForStatement.prototype.compile = function(out) {
 function IfStatement(node, context) {
 	this.context = context;
 
-	this.testExpressionNode = node.params[0];
+	var testExpressionNode = node.params[0];
+	this.testExpression = expressions.buildExpression(testExpressionNode, this.context, {
+		resultIsUsed: true,
+		resultIsOnlyUsedInBooleanContext: true,
+		isSubexpression: true
+	});
+	assert(types.equal(types.int, this.testExpression.type));
+
 	this.thenStatement = buildStatement(node.params[1], this.context, false);
 	if (node.params[2] === null) {
 		this.elseStatement = null;
@@ -248,19 +279,13 @@ function IfStatement(node, context) {
 	}
 }
 IfStatement.prototype.compileDeclarators = function(out) {
+	compileDeclaratorsFromExpression(this.testExpression, out);
 	this.thenStatement.compileDeclarators(out);
 	if (this.elseStatement !== null) {
 		this.elseStatement.compileDeclarators(out);
 	}
 };
 IfStatement.prototype.compile = function(out) {
-	var test = expressions.buildExpression(this.testExpressionNode, this.context, {
-		resultIsUsed: true,
-		resultIsOnlyUsedInBooleanContext: true,
-		isSubexpression: true
-	});
-	assert(types.equal(types.int, test.type));
-
 	var thenBodyStatements = [];
 	this.thenStatement.compile(thenBodyStatements);
 	assert.equal(1, thenBodyStatements.length);
@@ -275,7 +300,7 @@ IfStatement.prototype.compile = function(out) {
 	}
 
 	out.push(estree.IfStatement(
-		test.compile(),
+		this.testExpression.compile(),
 		thenStatementNode,
 		elseStatementNode
 	));
@@ -296,29 +321,29 @@ NullStatement.prototype.compile = function(out) {
 function ReturnStatement(node, context) {
 	this.context = context;
 	if (node.params.length) {
-		this.expressionNode = node.params[0];
+		var expressionNode = node.params[0];
+		this.expression = expressions.buildExpression(expressionNode, this.context, {
+			resultIsUsed: true,
+			resultIsOnlyUsedInBooleanContext: false,
+			isSubexpression: true
+		});
 	} else {
-		this.expressionNode = null;
+		this.expression = null;
 	}
 	/* do not construct an Expression object yet, as that may perform lookups
 		in the context for identifiers that are defined further down the file */
 }
 ReturnStatement.prototype.compileDeclarators = function(out) {
-	/* a ReturnStatement does not contain variable declarations */
+	if (this.expression !== null) compileDeclaratorsFromExpression(this.expression, out);
 };
 ReturnStatement.prototype.compile = function(out) {
 	var returnValueNode;
-	if (this.expressionNode === null) {
+	if (this.expression === null) {
 		assert(types.equal(this.context.returnType, types.void),
 			"Void return statement encountered in a non-void function");
 		returnValueNode = null;
 	} else {
-		var expr = expressions.buildExpression(this.expressionNode, this.context, {
-			resultIsUsed: true,
-			resultIsOnlyUsedInBooleanContext: false,
-			isSubexpression: true
-		});
-
+		var expr = this.expression;
 		switch(this.context.returnType.category) {
 			case 'signed':
 				if (expr.isConstant && types.satisfies(expr.type, types.signed)) {
@@ -358,25 +383,25 @@ ReturnStatement.prototype.compile = function(out) {
 
 function WhileStatement(node, context) {
 	this.context = context;
-	this.expressionNode = node.params[0];
-	this.body = buildStatement(node.params[1], this.context, false);
-}
-WhileStatement.prototype.compileDeclarators = function(out) {
-	this.body.compileDeclarators(out);
-};
-WhileStatement.prototype.compile = function(out) {
-	var test = expressions.buildExpression(this.expressionNode, this.context, {
+	testExpressionNode = node.params[0];
+	this.testExpression = expressions.buildExpression(testExpressionNode, this.context, {
 		resultIsUsed: true,
 		resultIsOnlyUsedInBooleanContext: true,
 		isSubexpression: true
 	});
-
+	this.body = buildStatement(node.params[1], this.context, false);
+}
+WhileStatement.prototype.compileDeclarators = function(out) {
+	compileDeclaratorsFromExpression(this.testExpression, out);
+	this.body.compileDeclarators(out);
+};
+WhileStatement.prototype.compile = function(out) {
 	var bodyStatements = [];
 	this.body.compile(bodyStatements);
 	assert.equal(1, bodyStatements.length);
 	var bodyStatement = bodyStatements[0];
 
-	out.push(estree.WhileStatement(expressions.coerce(test, types.int), bodyStatement));
+	out.push(estree.WhileStatement(expressions.coerce(this.testExpression, types.int), bodyStatement));
 };
 
 function buildStatement(statementNode, context, isSubexpression) {
@@ -442,7 +467,7 @@ function VariableDeclarator(node, varType, context) {
 		);
 	}
 }
-VariableDeclarator.prototype.compileAsDeclarator = function(out) {
+function compileVariableAsDeclarator(variable, initialValue, out) {
 	/*
 	Append zero or more VariableDeclarator nodes to 'out' which implement
 	the declaration for this variable, along with initial value assignment, if a
@@ -450,27 +475,30 @@ VariableDeclarator.prototype.compileAsDeclarator = function(out) {
 	int i = 42;
 	will produce the declarator 'i = 0'.
 	*/
-	if (this.initialValue === null || !this.initialValue.isConstant) {
+	if (initialValue === null || !initialValue.isConstant) {
 		/* Initial value is not given or is not constant - initialise to 0 */
-		if (types.satisfies(this.type, types.int)) {
+		if (types.satisfies(variable.type, types.int)) {
 			out.push(estree.VariableDeclarator(
-				estree.Identifier(this.variable.jsIdentifier),
+				estree.Identifier(variable.jsIdentifier),
 				estree.RawLiteral(0, '0')
 			));
-		} else if (types.satisfies(this.type, types.double)) {
+		} else if (types.satisfies(variable.type, types.double)) {
 			out.push(estree.VariableDeclarator(
-				estree.Identifier(this.variable.jsIdentifier),
+				estree.Identifier(variable.jsIdentifier),
 				estree.RawLiteral(0, '0.0')
 			));
 		} else {
-			throw "Unsupported declaration type: " + util.inspect(this.type);
+			throw "Unsupported declaration type: " + util.inspect(variable.type);
 		}
 	} else {
 		out.push(estree.VariableDeclarator(
-			estree.Identifier(this.variable.jsIdentifier),
-			expressions.coerce(this.initialValue, this.type)
+			estree.Identifier(variable.jsIdentifier),
+			expressions.coerce(initialValue, variable.type)
 		));
 	}
+}
+VariableDeclarator.prototype.compileAsDeclarator = function(out) {
+	compileVariableAsDeclarator(this.variable, this.initialValue, out);
 };
 VariableDeclarator.prototype.compileAsInitializer = function(out) {
 	/*
@@ -485,7 +513,7 @@ VariableDeclarator.prototype.compileAsInitializer = function(out) {
 	} else {
 		out.push(estree.AssignmentExpression('=',
 			estree.Identifier(this.variable.jsIdentifier),
-			expressions.coerce(this.initialValue, this.type)
+			expressions.coerce(this.initialValue, this.variable.type)
 		));
 	}
 };
