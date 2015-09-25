@@ -1,7 +1,10 @@
 int main(void)
 {
-    double i = 21.0;
+    double i = 10.5;
     int j;
     j = i + i;
-    return j;
+
+    int k = i + i;
+
+    return j + k;
 }

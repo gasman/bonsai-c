@@ -461,10 +461,6 @@ function VariableDeclarator(node, varType, context) {
 			resultIsOnlyUsedInBooleanContext: false,
 			isSubexpression: true
 		});
-		assert(
-			types.satisfies(this.initialValue.intendedType, this.type),
-			util.format("Incompatible types for init declarator: %s vs %s", util.inspect(this.type), util.inspect(this.initialValue.type))
-		);
 	}
 }
 function compileVariableAsDeclarator(variable, initialValue, out) {
