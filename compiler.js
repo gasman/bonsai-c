@@ -621,7 +621,14 @@ Parameter.prototype.compileTypeAnnotation = function(out) {
 function FunctionDefinition(node, parentContext) {
 	assert.equal('FunctionDefinition', node.type);
 	var declarationSpecifiers = new types.DeclarationSpecifiers(node.params[0]);
-	assert.equal(declarationSpecifiers.storageClass, null, "Storage class specifiers not supported");
+
+	if (declarationSpecifiers.storageClass == 'static') {
+		this.isExported = false;
+	} else if (declarationSpecifiers.storageClass === null) {
+		this.isExported = true;
+	} else {
+		throw "Unsupported storage class: " + declarationSpecifiers.storageClass;
+	}
 	this.returnType = declarationSpecifiers.type;
 
 	var functionDeclaratorNode = node.params[1];
@@ -736,11 +743,13 @@ Module.prototype.compileExportsTable = function(out) {
 	for (i = 0; i < this.functionDefinitions.length; i++) {
 		var fd = this.functionDefinitions[i];
 
-		exportsTable.push(estree.Property(
-			estree.Identifier(fd.name),
-			estree.Identifier(fd.variable.jsIdentifier),
-			'init'
-		));
+		if (fd.isExported) {
+			exportsTable.push(estree.Property(
+				estree.Identifier(fd.name),
+				estree.Identifier(fd.variable.jsIdentifier),
+				'init'
+			));
+		}
 	}
 
 	out.push(estree.ReturnStatement(
