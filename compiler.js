@@ -727,7 +727,14 @@ function Module(name, declarationNodes) {
 			case 'DeclarationStatement':
 				var declarationStatement = new DeclarationStatement(node, this.context);
 				for (var j = 0; j < declarationStatement.variableDeclarators.length; j++) {
-					this.globalDeclarators.push(declarationStatement.variableDeclarators[j]);
+					var declarator = declarationStatement.variableDeclarators[j];
+					if (declarator.initialValue === null || declarator.initialValue.isConstant) {
+						this.globalDeclarators.push(declarator);
+					} else {
+						throw "initializer element is not a compile-time constant";
+						/* TODO: support expressions that are compile-time constants but not
+						constant literals, e.g. '2 + 2' */
+					}
 				}
 				break;
 			case 'FunctionDefinition':
