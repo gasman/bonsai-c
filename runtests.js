@@ -26,6 +26,23 @@ function testCompile(filename, expectedResult, opts) {
 	} else {
 		assert.equal(expectedResult, module.main.apply(null, opts.params));
 	}
+
+	var i;
+	if (opts.shouldExport) {
+		for (i = 0; i < opts.shouldExport.length; i++) {
+			if (!(opts.shouldExport[i] in module)) {
+				throw "Expected to find export: " + opts.shouldExport[i];
+			}
+		}
+	}
+
+	if (opts.shouldNotExport) {
+		for (i = 0; i < opts.shouldNotExport.length; i++) {
+			if (opts.shouldNotExport[i] in module) {
+				throw "Name exported, but should not be: " + opts.shouldNotExport[i];
+			}
+		}
+	}
 }
 
 testCompile('tests/fortytwo.c', 42);
@@ -33,7 +50,7 @@ testCompile('tests/add.c', 42);
 testCompile('tests/var.c', 42);
 testCompile('tests/initvar.c', 42);
 testCompile('tests/param.c', 42, {params: [42]});
-testCompile('tests/call.c', 42);
+testCompile('tests/call.c', 42, {shouldExport: ['add']});
 testCompile('tests/inner_block.c', 42);
 testCompile('tests/while.c', 55);
 testCompile('tests/variable_shadowing.c', 65);
