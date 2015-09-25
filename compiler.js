@@ -712,6 +712,7 @@ function Module(name, declarationNodes) {
 	);
 
 	this.functionDefinitions = [];
+	this.globalDeclarators = [];
 	this.context = new Context();
 
 	/* reserve the variable names 'stdlib', 'foreign' and 'heap' */
@@ -723,6 +724,12 @@ function Module(name, declarationNodes) {
 		var node = declarationNodes[i];
 
 		switch (node.type) {
+			case 'DeclarationStatement':
+				var declarationStatement = new DeclarationStatement(node, this.context);
+				for (var j = 0; j < declarationStatement.variableDeclarators.length; j++) {
+					this.globalDeclarators.push(declarationStatement.variableDeclarators[j]);
+				}
+				break;
 			case 'FunctionDefinition':
 				var fd = new FunctionDefinition(node, this.context);
 				this.functionDefinitions.push(fd);
@@ -732,6 +739,15 @@ function Module(name, declarationNodes) {
 		}
 	}
 }
+Module.prototype.compileGlobalDeclarators = function(out) {
+	var declaratorList = [];
+	for (var i = 0; i < this.globalDeclarators.length; i++) {
+		this.globalDeclarators[i].compileAsDeclarator(declaratorList);
+	}
+	if (declaratorList.length > 0) {
+		out.push(estree.VariableDeclaration(declaratorList));
+	}
+};
 Module.prototype.compileFunctionDefinitions = function(out) {
 	for (var i = 0; i < this.functionDefinitions.length; i++) {
 		var fd = this.functionDefinitions[i];
@@ -761,6 +777,7 @@ Module.prototype.compile = function() {
 		estree.ExpressionStatement(estree.Literal("use asm"))
 	];
 
+	this.compileGlobalDeclarators(moduleBody);
 	this.compileFunctionDefinitions(moduleBody);
 	this.compileExportsTable(moduleBody);
 

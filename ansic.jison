@@ -554,7 +554,6 @@ translation_unit
 external_declaration
 	: function_definition
 	| declaration
-		{ throw("Unimplemented rule for external_declaration: " + yytext); }
 	;
 
 function_definition
