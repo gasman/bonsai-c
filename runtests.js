@@ -69,6 +69,7 @@ testCompile('tests/predecrement.c', 42);
 testCompile('tests/postincrement.c', 42);
 testCompile('tests/postdecrement.c', 42);
 testCompile('tests/int_mod.c', 42);
+testCompile('tests/double_mod.c', 42);
 // testCompile('tests/calc.c', 42);
 
 console.log("All tests passed");
