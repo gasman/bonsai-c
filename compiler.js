@@ -353,10 +353,15 @@ ReturnStatement.prototype.compile = function(out) {
 					/* expression provides its own type annotation - e.g. function call */
 					returnValueNode = expr.compile();
 				} else if (types.satisfies(expr.type, types.intish)) {
-					/* expr|0 */
+					/* coerce intish to signed using expr|0 */
 					returnValueNode = expressions.annotateAsSigned(expr.compile());
 				} else {
-					throw util.format("Cannot convert %s to a return type of 'signed'", util.inspect(expr.type));
+					/* coerce to intish (if possible - otherwise fail),
+					then annotate as signed using expr|0.
+					(This shouldn't result in |0 being applied twice, because coerce() only does that when
+					coercing intish to signed, and that'll be caught by the case above)
+					*/
+					returnValueNode = expressions.annotateAsSigned(expressions.coerce(expr, types.intish));
 				}
 				break;
 			case 'double':
