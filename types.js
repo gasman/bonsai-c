@@ -65,22 +65,26 @@ var satisfies = function(t, targetType) {
 };
 exports.satisfies = satisfies;
 
-exports.getTypeFromDeclarationSpecifiers = function(declarationSpecifiers) {
-	assert(Array.isArray(declarationSpecifiers),
-		util.format(
-			'getTypeFromDeclarationSpecifiers expected an array, got %s',
-			util.inspect(declarationSpecifiers)
-		)
-	);
+exports.getTypeFromDeclarationSpecifiers = function(node) {
+	assert.equal('DeclarationSpecifiers', node.type);
+	var storageClassSpecifiers = node.params[0];
+	var typeSpecifiers = node.params[1];
 
-	if (declarationSpecifiers.length != 1) {
+	if (storageClassSpecifiers.length !== 0) {
 		throw(util.format(
-			"Multi-token declaration specifiers are not yet supported - got %s",
-			util.inspect(declarationSpecifiers)
+			"Storage class specifiers are not yet supported - got %s",
+			util.inspect(storageClassSpecifiers)
 		));
 	}
 
-	var token = declarationSpecifiers[0];
+	if (typeSpecifiers.length !== 1) {
+		throw(util.format(
+			"Multi-token type specifiers are not yet supported - got %s",
+			util.inspect(typeSpecifiers)
+		));
+	}
+
+	var token = typeSpecifiers[0];
 	switch (token) {
 		case 'int':
 			// a C type of 'int' corresponds to the 'signed' type in asm.js

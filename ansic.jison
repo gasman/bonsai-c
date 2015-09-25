@@ -207,7 +207,7 @@ declaration_specifiers
 	| storage_class_specifier declaration_specifiers
 		{ throw("Unimplemented rule for declaration_specifiers: " + yytext); }
 	| type_specifier
-		{ $$ = [$1]; }
+		{ $$ = new yy.Node('DeclarationSpecifiers', [[], [$1]]); }
 	| type_specifier declaration_specifiers
 		{ throw("Unimplemented rule for declaration_specifiers: " + yytext); }
 	| type_qualifier
