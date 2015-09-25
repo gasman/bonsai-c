@@ -88,7 +88,7 @@ multiplicative_expression
 	| multiplicative_expression '/' cast_expression
 		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| multiplicative_expression '%' cast_expression
-		{ throw("Unimplemented rule for multiplicative_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 additive_expression

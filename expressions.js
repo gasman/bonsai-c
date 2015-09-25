@@ -149,7 +149,7 @@ function MultiplicativeExpression(op, left, right) {
 			[left, right]
 		);
 		*/
-	} else if (op == '/' && types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
+	} else if ((op == '/' || op == '%') && types.satisfies(left.intendedType, types.signed) && types.satisfies(right.intendedType, types.signed)) {
 		self.type = types.intish;
 		self.expectedLeftType = types.signed;
 		self.expectedRightType = types.signed;
@@ -411,6 +411,7 @@ function buildExpression(node, context, hints) {
 					return RelationalExpression(op, left, right);
 				case '*':
 				case '/':
+				case '%':
 					left = buildExpression(node.params[1], context, {
 						resultIsUsed: hints.resultIsUsed,
 						resultIsOnlyUsedInBooleanContext: false,
