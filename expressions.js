@@ -25,6 +25,11 @@ function coerce(expr, targetType) {
 	} else if (types.satisfies(expr.type, types.intish) && types.satisfies(types.signed, targetType)) {
 		// coerce intish to signed using expr|0
 		return annotateAsSigned(expr.compile());
+	} else if (types.satisfies(expr.type, types.double) && types.satisfies(types.signed, targetType)) {
+		// convert double to signed using ~~expr
+		return estree.UnaryExpression('~',
+			estree.UnaryExpression('~', expr.compile(), true),
+			true);
 	} else {
 		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
 	}
@@ -36,6 +41,8 @@ function typeAfterCoercion(expr, targetType) {
 	if (types.satisfies(expr.type, targetType)) {
 		return expr.type;
 	} else if (types.satisfies(expr.type, types.intish) && types.satisfies(types.signed, targetType)) {
+		return types.signed;
+	} else if (types.satisfies(expr.type, types.double) && types.satisfies(types.signed, targetType)) {
 		return types.signed;
 	} else {
 		throw util.format("Cannot coerce type %s to %s", util.inspect(expr.type), util.inspect(targetType));
