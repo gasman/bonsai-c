@@ -59,9 +59,10 @@ function parameterListIsVoid(parameterList) {
 	if (parameterList.length != 1) return false;
 	var parameter = parameterList[0];
 	if (parameter.type != 'TypeOnlyParameterDeclaration') return false;
-	var parameterTypeSpecifiers = parameter.params[0];
+	var declarationSpecifiers = new types.DeclarationSpecifiers(parameter.params[0]);
+	assert.equal(declarationSpecifiers.storageClass, null, "Storage class specifiers not supported");
 	if (!types.equal(
-		types.getTypeFromDeclarationSpecifiers(parameterTypeSpecifiers),
+		declarationSpecifiers.type,
 		types.void
 	)) {
 		return false;
@@ -146,8 +147,9 @@ function DeclarationStatement(node, context) {
 	/* Represents a C variable declaration line, e.g.
 		int i, *j, k = 42;
 	*/
-	var declarationSpecifiers = node.params[0];
-	this.type = types.getTypeFromDeclarationSpecifiers(declarationSpecifiers);
+	var declarationSpecifiers = new types.DeclarationSpecifiers(node.params[0]);
+	assert.equal(declarationSpecifiers.storageClass, null, "Storage class specifiers not supported");
+	this.type = declarationSpecifiers.type;
 
 	var initDeclaratorList = node.params[1];
 	assert(Array.isArray(initDeclaratorList));
@@ -571,7 +573,9 @@ BlockStatement.prototype.compile = function(out, includeDeclarators) {
 
 function Parameter(node, context) {
 	assert.equal('ParameterDeclaration', node.type);
-	this.intendedType = types.getTypeFromDeclarationSpecifiers(node.params[0]);
+	var declarationSpecifiers = new types.DeclarationSpecifiers(node.params[0]);
+	assert.equal(declarationSpecifiers.storageClass, null, "Storage class specifiers not supported");
+	this.intendedType = declarationSpecifiers.type;
 	if (types.satisfies(this.intendedType, types.int)) {
 		this.type = types.int;
 	} else if (types.satisfies(this.intendedType, types.double)) {
@@ -616,8 +620,9 @@ Parameter.prototype.compileTypeAnnotation = function(out) {
 
 function FunctionDefinition(node, parentContext) {
 	assert.equal('FunctionDefinition', node.type);
-	var returnTypeNodes = node.params[0];
-	this.returnType = types.getTypeFromDeclarationSpecifiers(returnTypeNodes);
+	var declarationSpecifiers = new types.DeclarationSpecifiers(node.params[0]);
+	assert.equal(declarationSpecifiers.storageClass, null, "Storage class specifiers not supported");
+	this.returnType = declarationSpecifiers.type;
 
 	var functionDeclaratorNode = node.params[1];
 	assert.equal('FunctionDeclarator', functionDeclaratorNode.type);

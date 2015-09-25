@@ -65,14 +65,18 @@ var satisfies = function(t, targetType) {
 };
 exports.satisfies = satisfies;
 
-exports.getTypeFromDeclarationSpecifiers = function(node) {
+exports.DeclarationSpecifiers = function(node) {
 	assert.equal('DeclarationSpecifiers', node.type);
 	var storageClassSpecifiers = node.params[0];
 	var typeSpecifiers = node.params[1];
 
-	if (storageClassSpecifiers.length !== 0) {
+	if (storageClassSpecifiers.length === 0) {
+		this.storageClass = null;
+	} else if (storageClassSpecifiers.length === 1) {
+		this.storageClass = storageClassSpecifiers[0];
+	} else {
 		throw(util.format(
-			"Storage class specifiers are not yet supported - got %s",
+			"Multi-token storage class specifiers are not yet supported - got %s",
 			util.inspect(storageClassSpecifiers)
 		));
 	}
@@ -88,11 +92,14 @@ exports.getTypeFromDeclarationSpecifiers = function(node) {
 	switch (token) {
 		case 'int':
 			// a C type of 'int' corresponds to the 'signed' type in asm.js
-			return exports.signed;
+			this.type = exports.signed;
+			break;
 		case 'double':
-			return exports.double;
+			this.type = exports.double;
+			break;
 		case 'void':
-			return exports.void;
+			this.type = exports.void;
+			break;
 		default:
 			throw('Unsupported type: ' + token);
 	}
