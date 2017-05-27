@@ -2,7 +2,14 @@ var assert = require('assert');
 util = require('util');
 
 function FunctionDefinition(node) {
+	this.declarationType = 'FunctionDefinition';
+	var declaratorNode = node.params[1];
+	var identifierNode = declaratorNode.params[0];
+	this.name = identifierNode.params[0];
 }
+FunctionDefinition.prototype.inspect = function() {
+	return "FunctionDefinition: " + this.name;
+};
 
 function Module(declarationNodes) {
 	assert(Array.isArray(declarationNodes),
