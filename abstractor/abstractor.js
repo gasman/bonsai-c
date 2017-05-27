@@ -1,14 +1,18 @@
 var assert = require('assert');
-util = require('util');
+var util = require('util');
+
+var statements = require('./statements')
 
 function FunctionDefinition(node) {
 	this.declarationType = 'FunctionDefinition';
 	var declaratorNode = node.params[1];
 	var identifierNode = declaratorNode.params[0];
 	this.name = identifierNode.params[0];
+
+	this.body = statements.constructStatement(node.params[3]);
 }
 FunctionDefinition.prototype.inspect = function() {
-	return "FunctionDefinition: " + this.name;
+	return "FunctionDefinition " + this.name + ": " + util.inspect(this.body);
 };
 
 function Module(declarationNodes) {

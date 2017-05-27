@@ -1,11 +1,50 @@
 var assert = require('assert');
 var estree = require('./estree');
 
+function compileExpression(expression) {
+	switch(expression.expressionType) {
+		case 'ConstExpression':
+			return estree.Literal(expression.value);
+		default:
+			throw "Unexpected expression type: " + expression.expressionType;
+	}
+}
+
+function compileStatement(statement, out) {
+	switch(statement.statementType) {
+		case 'BlockStatement':
+			var blockBody = [];
+			for (var i = 0; i < statement.statements.length; i++) {
+				compileStatement(statement.statements[i], blockBody);
+			}
+			out.push(estree.BlockStatement(blockBody));
+			return;
+		case 'ReturnStatement':
+			out.push(estree.ReturnStatement(
+				compileExpression(statement.expression)
+			));
+			return;
+		default:
+			throw "Unexpected statement type: " + statement.statementType;
+	}
+}
+
 function compileFunctionDefinition(functionDefinition) {
+	out = [];
+	compileStatement(functionDefinition.body, out);
+
+	var body;
+	/* body must be a single statement; wrap it in a BlockStatement if it isn't */
+	if (out.length == 1) {
+		body = out[0];
+	} else {
+		body = estree.BlockStatement(out);
+	}
+
 	return estree.FunctionDeclaration(
 		estree.Identifier(functionDefinition.name),
 		[],
-		estree.BlockStatement([])
+		body
 	);
 }
 
