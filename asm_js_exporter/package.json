@@ -1,0 +1,8 @@
+{
+  "name": "asm_js_exporter",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "escodegen": "^1.6.1"
+  }
+}

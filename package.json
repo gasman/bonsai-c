@@ -1,0 +1,9 @@
+{
+  "name": "bonsai-c",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "asm.js": "git+https://git@github.com/gasman/asm.js.git",
+    "escodegen": "^1.6.1"
+  }
+}
