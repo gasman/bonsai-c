@@ -29,6 +29,9 @@ function ReturnStatement(node) {
 
 	this.expression = expressions.constructExpression(node.params[0]);
 }
+ReturnStatement.prototype.inspect = function() {
+	return "Return " + util.inspect(this.expression);
+};
 
 function constructStatement(node) {
 	switch (node.type) {

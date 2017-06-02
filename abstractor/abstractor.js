@@ -1,10 +1,35 @@
 var assert = require('assert');
 var util = require('util');
 
-var statements = require('./statements')
+var statements = require('./statements');
 
 function FunctionDefinition(node) {
 	this.declarationType = 'FunctionDefinition';
+
+	var declarationSpecifiersNode = node.params[0];
+	var storageClassSpecifiers = declarationSpecifiersNode.params[0];
+	if (storageClassSpecifiers.length > 0) {
+		throw(util.format(
+			"Storage class specifiers are not yet supported - got %s",
+			util.inspect(storageClassSpecifiers)
+		));
+	}
+	var typeSpecifiers = declarationSpecifiersNode.params[1];
+	if (typeSpecifiers.length != 1) {
+		throw(util.format(
+			"Multi-token type specifiers are not yet supported - got %s",
+			util.inspect(typeSpecifiers)
+		));
+	}
+	var token = typeSpecifiers[0];
+	switch (token) {
+		case 'int':
+			this.returnType = 'int';
+			break;
+		default:
+			throw "Unrecognised data type: " + token;
+	}
+
 	var declaratorNode = node.params[1];
 	var identifierNode = declaratorNode.params[0];
 	this.name = identifierNode.params[0];
@@ -12,7 +37,7 @@ function FunctionDefinition(node) {
 	this.body = statements.constructStatement(node.params[3]);
 }
 FunctionDefinition.prototype.inspect = function() {
-	return "FunctionDefinition " + this.name + ": " + util.inspect(this.body);
+	return "FunctionDefinition <" + this.returnType + "> " + this.name + ": " + util.inspect(this.body);
 };
 
 function Module(declarationNodes) {

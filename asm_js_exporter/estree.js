@@ -1,5 +1,14 @@
 /* convenience constructors for syntax tree objects to be used by escodegen */
 
+exports.BinaryExpression = function(op, l, r) {
+	return {
+		'type': 'BinaryExpression',
+		'operator': op,
+		'left': l,
+		'right': r
+	};
+};
+
 exports.BlockStatement = function(body) {
 	return {'type': 'BlockStatement', 'body': body};
 };
