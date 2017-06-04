@@ -15,6 +15,13 @@ function compileExpression(expression) {
 			);
 		case 'ConstExpression':
 			return estree.Literal(expression.value);
+		case 'FunctionCallExpression':
+			var callee = compileExpression(expression.callee);
+			var args = [];
+			for (var i = 0; i < expression.parameters.length; i++) {
+				args.push(compileExpression(expression.parameters[i]));
+			}
+			return estree.CallExpression(callee, args);
 		case 'VariableExpression':
 			return estree.Identifier(expression.variable.name);
 		default:
@@ -49,7 +56,7 @@ function compileStatement(statement, out, context) {
 
 				var initialValueExpression;
 
-				switch (statement.type) {
+				switch (statement.type.category) {
 					case 'int':
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
@@ -63,7 +70,7 @@ function compileStatement(statement, out, context) {
 						}
 						break;
 					default:
-						throw "Don't know how to declare a local variable of type: " + localVariable.type;
+						throw "Don't know how to declare a local variable of type: " + util.inspect(statement.type);
 				}
 
 				context.localVariables.push({
@@ -82,7 +89,7 @@ function compileStatement(statement, out, context) {
 
 			/* add return type annotation to the expression, according to this function's
 			return type */
-			switch (context.returnType) {
+			switch (context.returnType.category) {
 				case 'int':
 					if (isIntegerLiteral(expr)) {
 						/* integer literals don't require additional type annotation */
@@ -92,7 +99,7 @@ function compileStatement(statement, out, context) {
 					}
 					break;
 				default:
-					throw "Don't know how to annotate a return value as type: " + context.returnType;
+					throw "Don't know how to annotate a return value as type: " + util.inspect(context.returnType);
 			}
 
 			out.push(estree.ReturnStatement(expr));
@@ -118,7 +125,7 @@ function compileFunctionDefinition(functionDefinition) {
 			estree.Identifier(param.name)
 		);
 
-		switch (param.type) {
+		switch (param.type.category) {
 			case 'int':
 				/* i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
@@ -134,7 +141,7 @@ function compileFunctionDefinition(functionDefinition) {
 				));
 				break;
 			default:
-				throw "Don't know how to annotate a parameter of type: " + param.type;
+				throw "Don't know how to annotate a parameter of type: " + util.inspect(param.type);
 		}
 	}
 

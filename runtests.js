@@ -50,5 +50,6 @@ testCompile('tests/add.c', 42);
 testCompile('tests/var.c', 42);
 testCompile('tests/initvar.c', 42);
 testCompile('tests/param.c', 42, {params: [42]});
+testCompile('tests/call.c', 42, {shouldExport: ['add']});
 
 console.log("All tests passed");

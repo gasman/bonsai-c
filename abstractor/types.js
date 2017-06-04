@@ -1,5 +1,25 @@
 var util = require('util');
 
+exports.int = {
+	'category': 'int',
+	'inspect': function() {return 'int';}
+};
+exports.void = {
+	'category': 'void',
+	'inspect': function() {return 'void';}
+};
+
+exports.func = function(returnType, paramTypes) {
+	return {
+		'category': 'function',
+		'returnType': returnType,
+		'paramTypes': paramTypes,
+		'inspect': function() {
+			return "function " + util.inspect(this.paramTypes) + " => " + util.inspect(this.returnType);
+		}
+	};
+};
+
 function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
 	var storageClassSpecifiers = declarationSpecifiersNode.params[0];
 	if (storageClassSpecifiers.length > 0) {
@@ -18,9 +38,9 @@ function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
 	var token = typeSpecifiers[0];
 	switch (token) {
 		case 'int':
-			return 'int';
+			return exports.int;
 		case 'void':
-			return 'void';
+			return exports.void;
 		default:
 			throw "Unrecognised data type: " + token;
 	}

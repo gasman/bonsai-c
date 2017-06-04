@@ -20,10 +20,9 @@ AssignmentExpression.prototype.inspect = function() {
 	return "Assignment: (" + util.inspect(this.left) + " = " + util.inspect(this.right) + ")";
 };
 
-function ConstExpression(node, context) {
+function ConstExpression(numString, context) {
 	this.expressionType = 'ConstExpression';
 
-	var numString = node.params[0];
 	if (numString.match(/^\d+$/)) {
 		this.value = parseInt(numString, 10);
 	} else {
@@ -34,10 +33,22 @@ ConstExpression.prototype.inspect = function() {
 	return "Const: " + this.value;
 };
 
-function VariableExpression(node, context) {
+function FunctionCallExpression(callee, params, context) {
+	this.expressionType = 'FunctionCallExpression';
+
+	this.callee = constructExpression(callee, context);
+	this.parameters = [];
+	for (var i = 0; i < params.length; i++) {
+		this.parameters.push(constructExpression(params[i], context));
+	}
+}
+FunctionCallExpression.prototype.inspect = function() {
+	return "FunctionCall: " + util.inspect(this.callee) + "(" + util.inspect(this.parameters) + ")";
+};
+
+function VariableExpression(variableName, context) {
 	this.expressionType = 'VariableExpression';
 
-	var variableName = node.params[0];
 	this.variable = context.get(variableName);
 	if (this.variable === null) {
 		throw "Variable not found: " + variableName;
@@ -70,9 +81,11 @@ function constructExpression(node, context) {
 			}
 			break;
 		case 'Const':
-			return new ConstExpression(node, context);
+			return new ConstExpression(node.params[0], context);
+		case 'FunctionCall':
+			return new FunctionCallExpression(node.params[0], node.params[1], context);
 		case 'Var':
-			return new VariableExpression(node, context);
+			return new VariableExpression(node.params[0], context);
 		default:
 			throw("Unrecognised expression node type: " + node.type);
 	}

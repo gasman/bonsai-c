@@ -10,7 +10,7 @@ function parameterDeclarationIsVoid(nodeList) {
 	if (nodeList.length != 1) return false;
 	if (nodeList[0].type != 'TypeOnlyParameterDeclaration') return false;
 	var declarationSpecifiersNode = nodeList[0].params[0];
-	return (types.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) == 'void');
+	return (types.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode).category == 'void');
 }
 
 function FunctionDefinition(node, parentContext) {
@@ -31,10 +31,10 @@ function FunctionDefinition(node, parentContext) {
 
 	var functionContext = parentContext.createChildContext();
 
-	if (parameterDeclarationNodes.length === 0 || parameterDeclarationIsVoid(parameterDeclarationNodes)) {
-		this.parameters = [];
-	} else {
-		this.parameters = [];
+	this.parameters = [];
+	this.parameterTypes = [];
+
+	if (parameterDeclarationNodes.length > 0 && !parameterDeclarationIsVoid(parameterDeclarationNodes)) {
 		for (var i = 0; i < parameterDeclarationNodes.length; i++) {
 			var paramDeclarationNode = parameterDeclarationNodes[i];
 			var paramDeclarationSpecifiersNode = paramDeclarationNode.params[0];
@@ -43,8 +43,11 @@ function FunctionDefinition(node, parentContext) {
 			var paramIdentifier = paramIdentifierNode.params[0];
 
 			this.parameters.push(functionContext.define(paramIdentifier, paramType));
+			this.parameterTypes.push(paramType);
 		}
 	}
+
+	parentContext.define(this.name, types.func(this.returnType, this.parameterTypes));
 
 	var body = statements.constructStatement(node.params[3], functionContext);
 	/* we want body to be a list of statements, so if it's a block statement, unwrap it;
@@ -56,7 +59,7 @@ function FunctionDefinition(node, parentContext) {
 	}
 }
 FunctionDefinition.prototype.inspect = function() {
-	return "FunctionDefinition <" + this.returnType + "> " + this.name + " (" + util.inspect(this.parameters) + "): " + util.inspect(this.body);
+	return "FunctionDefinition <" + util.inspect(this.returnType) + "> " + this.name + " (" + util.inspect(this.parameters) + "): " + util.inspect(this.body);
 };
 
 function Module(declarationNodes) {
