@@ -48,5 +48,6 @@ function testCompile(filename, expectedResult, opts) {
 testCompile('tests/fortytwo.c', 42);
 testCompile('tests/add.c', 42);
 testCompile('tests/var.c', 42);
+testCompile('tests/initvar.c', 42);
 
 console.log("All tests passed");

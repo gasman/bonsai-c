@@ -4,7 +4,9 @@ function Context(parentContext) {
 }
 var id = 0;
 Context.prototype.define = function(name, type) {
-	this.variables[name] = {'name': name, 'type': type, 'id': id++};
+	var definition = {'name': name, 'type': type, 'id': id++};
+	this.variables[name] = definition;
+	return definition;
 };
 Context.prototype.get = function(name) {
 	if (name in this.variables) {

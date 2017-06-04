@@ -46,9 +46,30 @@ function compileStatement(statement, out, context) {
 			declaring at the top of the function */
 			for (i = 0; i < statement.variableDeclarations.length; i++) {
 				var variableDeclaration = statement.variableDeclarations[i];
+
+				var initialValueExpression;
+
+				switch (statement.type) {
+					case 'int':
+						if (variableDeclaration.initialValueExpression === null) {
+							/* output: var i = 0 */
+							initialValueExpression = estree.Literal(0);
+						} else {
+							initialValueExpression = compileExpression(variableDeclaration.initialValueExpression);
+							assert(
+								isIntegerLiteral(initialValueExpression),
+								util.format('Initial value for int declaration must be an integer literal, not %s', util.inspect(initialValueExpression))
+							);
+						}
+						break;
+					default:
+						throw "Don't know how to declare a local variable of type: " + localVariable.type;
+				}
+
 				context.localVariables.push({
-					'name': variableDeclaration.name,
-					'type': statement.type
+					'name': variableDeclaration.variable.name,
+					'type': statement.type,
+					'initialValueExpression': initialValueExpression
 				});
 			}
 			return;
@@ -96,19 +117,12 @@ function compileFunctionDefinition(functionDefinition) {
 		var declarations = [];
 		for (i = 0; i < context.localVariables.length; i++) {
 			var localVariable = context.localVariables[i];
-			switch (localVariable.type) {
-				case 'int':
-					/* output: var i = 0 */
-					declarations.push(
-						estree.VariableDeclarator(
-							estree.Identifier(localVariable.name),
-							estree.Literal(0)
-						)
-					);
-					break;
-				default:
-					throw "Don't know how to declare a local variable of type: " + localVariable.type;
-			}
+			declarations.push(
+				estree.VariableDeclarator(
+					estree.Identifier(localVariable.name),
+					localVariable.initialValueExpression
+				)
+			);
 		}
 		out.unshift(estree.VariableDeclaration(declarations));
 	}

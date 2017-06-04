@@ -54,15 +54,19 @@ function DeclarationStatement(node, context) {
 		);
 		var identifier = identifierNode.params[0];
 
-		if (initDeclaratorNode.params[1] !== null) {
-			throw "Init declarators with initial values not supported yet";
+		var initialValueNode = initDeclaratorNode.params[1];
+		var initialValueExpression;
+		if (initialValueNode === null) {
+			initialValueExpression = null;
+		} else {
+			initialValueExpression = expressions.constructExpression(initialValueNode, context);
 		}
 
 		this.variableDeclarations.push({
-			'name': identifier
+			'variable': context.define(identifier, this.type),
+			'initialValueExpression': initialValueExpression
 		});
 
-		context.define(identifier, this.type);
 	}
 }
 DeclarationStatement.prototype.inspect = function() {
