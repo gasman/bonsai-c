@@ -8,8 +8,15 @@ function compileExpression(expression) {
 				compileExpression(expression.left),
 				compileExpression(expression.right)
 			);
+		case 'AssignmentExpression':
+			return estree.AssignmentExpression('=',
+				compileExpression(expression.left),
+				compileExpression(expression.right)
+			);
 		case 'ConstExpression':
 			return estree.Literal(expression.value);
+		case 'VariableExpression':
+			return estree.Identifier(expression.variable.name);
 		default:
 			throw "Unexpected expression type: " + expression.expressionType;
 	}
@@ -24,16 +31,33 @@ function isIntegerLiteral(expr) {
 }
 
 function compileStatement(statement, out, context) {
+	var i, expr;
+
 	switch(statement.statementType) {
 		case 'BlockStatement':
 			var blockBody = [];
-			for (var i = 0; i < statement.statements.length; i++) {
+			for (i = 0; i < statement.statements.length; i++) {
 				compileStatement(statement.statements[i], blockBody, context);
 			}
 			out.push(estree.BlockStatement(blockBody));
 			return;
+		case 'DeclarationStatement':
+			/* Don't generate any code, but add to the list of variables that need
+			declaring at the top of the function */
+			for (i = 0; i < statement.variableDeclarations.length; i++) {
+				var variableDeclaration = statement.variableDeclarations[i];
+				context.localVariables.push({
+					'name': variableDeclaration.name,
+					'type': statement.type
+				});
+			}
+			return;
+		case 'ExpressionStatement':
+			expr = compileExpression(statement.expression);
+			out.push(estree.ExpressionStatement(expr));
+			return;
 		case 'ReturnStatement':
-			var expr = compileExpression(statement.expression);
+			expr = compileExpression(statement.expression);
 
 			/* add return type annotation to the expression, according to this function's
 			return type */
@@ -60,22 +84,39 @@ function compileStatement(statement, out, context) {
 function compileFunctionDefinition(functionDefinition) {
 	var out = [];
 	var context = {
+		'localVariables': [],
 		'returnType': functionDefinition.returnType
 	};
-	compileStatement(functionDefinition.body, out, context);
+	var i;
+	for (i = 0; i < functionDefinition.body.length; i++) {
+		compileStatement(functionDefinition.body[i], out, context);
+	}
 
-	var body;
-	/* body must be a single statement; wrap it in a BlockStatement if it isn't */
-	if (out.length == 1) {
-		body = out[0];
-	} else {
-		body = estree.BlockStatement(out);
+	if (context.localVariables.length > 0) {
+		var declarations = [];
+		for (i = 0; i < context.localVariables.length; i++) {
+			var localVariable = context.localVariables[i];
+			switch (localVariable.type) {
+				case 'int':
+					/* output: var i = 0 */
+					declarations.push(
+						estree.VariableDeclarator(
+							estree.Identifier(localVariable.name),
+							estree.Literal(0)
+						)
+					);
+					break;
+				default:
+					throw "Don't know how to declare a local variable of type: " + localVariable.type;
+			}
+		}
+		out.unshift(estree.VariableDeclaration(declarations));
 	}
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(functionDefinition.name),
 		[],
-		body
+		estree.BlockStatement(out)
 	);
 }
 

@@ -1,5 +1,14 @@
 /* convenience constructors for syntax tree objects to be used by escodegen */
 
+exports.AssignmentExpression = function(op, l, r) {
+	return {
+		'type': 'AssignmentExpression',
+		'operator': op,
+		'left': l,
+		'right': r
+	};
+};
+
 exports.BinaryExpression = function(op, l, r) {
 	return {
 		'type': 'BinaryExpression',
@@ -58,5 +67,21 @@ exports.ReturnStatement = function(arg) {
 	return {
 		'type': 'ReturnStatement',
 		'argument': arg
+	};
+};
+
+exports.VariableDeclaration = function(declarations) {
+	return {
+		'type': 'VariableDeclaration',
+		'declarations': declarations,
+		'kind': 'var'
+	};
+};
+
+exports.VariableDeclarator = function(id, init) {
+	return {
+		'type': 'VariableDeclarator',
+		'id': id,
+		'init': init
 	};
 };

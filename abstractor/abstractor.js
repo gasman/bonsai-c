@@ -2,39 +2,29 @@ var assert = require('assert');
 var util = require('util');
 
 var statements = require('./statements');
+var context = require('./context');
+var types = require('./types');
 
-function FunctionDefinition(node) {
+function FunctionDefinition(node, parentContext) {
 	this.declarationType = 'FunctionDefinition';
 
 	var declarationSpecifiersNode = node.params[0];
-	var storageClassSpecifiers = declarationSpecifiersNode.params[0];
-	if (storageClassSpecifiers.length > 0) {
-		throw(util.format(
-			"Storage class specifiers are not yet supported - got %s",
-			util.inspect(storageClassSpecifiers)
-		));
-	}
-	var typeSpecifiers = declarationSpecifiersNode.params[1];
-	if (typeSpecifiers.length != 1) {
-		throw(util.format(
-			"Multi-token type specifiers are not yet supported - got %s",
-			util.inspect(typeSpecifiers)
-		));
-	}
-	var token = typeSpecifiers[0];
-	switch (token) {
-		case 'int':
-			this.returnType = 'int';
-			break;
-		default:
-			throw "Unrecognised data type: " + token;
-	}
+	this.returnType = types.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
 
 	var declaratorNode = node.params[1];
 	var identifierNode = declaratorNode.params[0];
 	this.name = identifierNode.params[0];
 
-	this.body = statements.constructStatement(node.params[3]);
+	var functionContext = parentContext.createChildContext();
+
+	var body = statements.constructStatement(node.params[3], functionContext);
+	/* we want body to be a list of statements, so if it's a block statement, unwrap it;
+	for any other statement type, wrap it as a singleton list */
+	if (body.statementType == 'BlockStatement') {
+		this.body = body.statements;
+	} else {
+		this.body = [body];
+	}
 }
 FunctionDefinition.prototype.inspect = function() {
 	return "FunctionDefinition <" + this.returnType + "> " + this.name + ": " + util.inspect(this.body);
@@ -47,12 +37,14 @@ function Module(declarationNodes) {
 
 	this.declarations = [];
 
+	var globalContext = new context.Context();
+
 	for (var i = 0; i < declarationNodes.length; i++) {
 		var node = declarationNodes[i];
 
 		switch (node.type) {
 			case 'FunctionDefinition':
-				this.declarations.push(new FunctionDefinition(node));
+				this.declarations.push(new FunctionDefinition(node, globalContext));
 				break;
 			default:
 				throw "Unexpected node type: " + node.type;
