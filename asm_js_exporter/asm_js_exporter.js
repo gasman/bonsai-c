@@ -103,15 +103,46 @@ function compileStatement(statement, out, context) {
 }
 
 function compileFunctionDefinition(functionDefinition) {
-	var out = [];
+	var body = [];
 	var context = {
 		'localVariables': [],
 		'returnType': functionDefinition.returnType
 	};
 	var i;
-	for (i = 0; i < functionDefinition.body.length; i++) {
-		compileStatement(functionDefinition.body[i], out, context);
+
+	var parameterIdentifiers = [];
+	var parameterDeclarations = [];
+	for (i = 0; i < functionDefinition.parameters.length; i++) {
+		var param = functionDefinition.parameters[i];
+		parameterIdentifiers.push(
+			estree.Identifier(param.name)
+		);
+
+		switch (param.type) {
+			case 'int':
+				/* i = i | 0 */
+				parameterDeclarations.push(estree.ExpressionStatement(
+					estree.AssignmentExpression(
+						'=',
+						estree.Identifier(param.name),
+						estree.BinaryExpression(
+							'|',
+							estree.Identifier(param.name),
+							estree.Literal(0)
+						)
+					)
+				));
+				break;
+			default:
+				throw "Don't know how to annotate a parameter of type: " + param.type;
+		}
 	}
+
+	for (i = 0; i < functionDefinition.body.length; i++) {
+		compileStatement(functionDefinition.body[i], body, context);
+	}
+
+	var variableDeclarations;
 
 	if (context.localVariables.length > 0) {
 		var declarations = [];
@@ -124,13 +155,17 @@ function compileFunctionDefinition(functionDefinition) {
 				)
 			);
 		}
-		out.unshift(estree.VariableDeclaration(declarations));
+		variableDeclarations = [estree.VariableDeclaration(declarations)];
+	} else {
+		variableDeclarations = [];
 	}
+
+	var output = parameterDeclarations.concat(variableDeclarations, body);
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(functionDefinition.name),
-		[],
-		estree.BlockStatement(out)
+		parameterIdentifiers,
+		estree.BlockStatement(output)
 	);
 }
 

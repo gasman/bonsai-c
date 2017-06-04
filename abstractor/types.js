@@ -19,6 +19,8 @@ function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
 	switch (token) {
 		case 'int':
 			return 'int';
+		case 'void':
+			return 'void';
 		default:
 			throw "Unrecognised data type: " + token;
 	}
