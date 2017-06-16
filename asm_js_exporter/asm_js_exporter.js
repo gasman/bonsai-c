@@ -34,16 +34,25 @@ function compileExpression(expression) {
 	}
 }
 
-var MIN_INT = 1<<31;
-var MAX_INT = ~MIN_INT;
+function getNumericLiteralValue(expr) {
+	/* Try to interpret expr as a numeric literal, possibly represented as a unary minus
+	expression. If successful, return its numeric value; if not, return null */
+	if (expr.type == 'Literal') {
+		return expr.value;
+	}
 
-function isIntegerLiteral(expr) {
-	if (expr.type != 'Literal') return false;
-	return (Number.isInteger(expr.value) && expr.value >= MIN_INT && expr.value <= MAX_INT);
+	if (expr.type == 'UnaryExpression' && expr.operator == '-' && expr.prefix) {
+		var negatedArg = expr.argument;
+		if (negatedArg.type == 'Literal') {
+			return -negatedArg.value;
+		}
+	}
+
+	return null;
 }
 
 function compileStatement(statement, out, context) {
-	var i, expr;
+	var i, expr, val;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
@@ -68,8 +77,9 @@ function compileStatement(statement, out, context) {
 							initialValueExpression = estree.Literal(0);
 						} else {
 							initialValueExpression = compileExpression(variableDeclaration.initialValueExpression);
+							val = getNumericLiteralValue(initialValueExpression);
 							assert(
-								isIntegerLiteral(initialValueExpression),
+								Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000,
 								util.format('Initial value for int declaration must be an integer literal, not %s', util.inspect(initialValueExpression))
 							);
 						}
@@ -96,10 +106,11 @@ function compileStatement(statement, out, context) {
 			return type */
 			switch (context.returnType.category) {
 				case 'int':
-					if (isIntegerLiteral(expr)) {
-						/* integer literals don't require additional type annotation */
+					val = getNumericLiteralValue(expr);
+					if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
+						/* no annotation required */
 					} else {
-						/* annotate expr as (expr | 0) */
+						/* for all other expressions, annotate as (expr | 0) */
 						expr = estree.BinaryExpression('|', expr, estree.Literal(0));
 					}
 					break;
