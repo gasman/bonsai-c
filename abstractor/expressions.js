@@ -46,6 +46,15 @@ FunctionCallExpression.prototype.inspect = function() {
 	return "FunctionCall: " + util.inspect(this.callee) + "(" + util.inspect(this.parameters) + ")";
 };
 
+function NegationExpression(argument, context) {
+	this.expressionType = 'NegationExpression';
+
+	this.argument = constructExpression(argument, context);
+}
+NegationExpression.prototype.inspect = function() {
+	return "Negation: (" + util.inspect(this.argument) + ")";
+};
+
 function VariableExpression(variableName, context) {
 	this.expressionType = 'VariableExpression';
 
@@ -84,6 +93,15 @@ function constructExpression(node, context) {
 			return new ConstExpression(node.params[0], context);
 		case 'FunctionCall':
 			return new FunctionCallExpression(node.params[0], node.params[1], context);
+		case 'UnaryOp':
+			operator = node.params[0];
+			switch (operator) {
+				case '-':
+					return new NegationExpression(node.params[1], context);
+				default:
+					throw("Unrecognised unary operator: " + operator);
+			}
+			break;
 		case 'Var':
 			return new VariableExpression(node.params[0], context);
 		default:

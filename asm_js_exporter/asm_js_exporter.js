@@ -22,6 +22,11 @@ function compileExpression(expression) {
 				args.push(compileExpression(expression.parameters[i]));
 			}
 			return estree.CallExpression(callee, args);
+		case 'NegationExpression':
+			return estree.UnaryExpression('-',
+				compileExpression(expression.argument),
+				true
+			);
 		case 'VariableExpression':
 			return estree.Identifier(expression.variable.name);
 		default:
