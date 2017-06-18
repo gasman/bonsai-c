@@ -47,7 +47,8 @@ function FunctionDefinition(node, parentContext) {
 		}
 	}
 
-	parentContext.define(this.name, types.func(this.returnType, this.parameterTypes));
+	this.type = types.func(this.returnType, this.parameterTypes);
+	this.variable = parentContext.define(this.name, this.type);
 
 	var body = statements.constructStatement(node.params[3], functionContext);
 	/* we want body to be a list of statements, so if it's a block statement, unwrap it;

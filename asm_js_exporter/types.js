@@ -25,3 +25,11 @@ exports.int = {
 		return targetType.category == 'int' || targetType.category == 'intish';
 	}
 };
+
+exports.func = function(returnType, paramTypes) {
+	return {
+		'category': 'function',
+		'returnType': returnType,
+		'paramTypes': paramTypes
+	};
+};

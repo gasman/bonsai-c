@@ -134,7 +134,7 @@ function compileStatement(statement, out, context) {
 	}
 }
 
-function compileFunctionDefinition(functionDefinition) {
+function compileFunctionDefinition(functionDefinition, globalContext) {
 	var returnType;
 
 	/* convert return type from AST to a recognised asm.js type */
@@ -147,13 +147,16 @@ function compileFunctionDefinition(functionDefinition) {
 	}
 
 	var context = {
+		'globalContext': globalContext,
 		'localVariablesById': {},
 		'returnType': returnType
 	};
-	var i;
+	var i, parameterType;
 
 	var parameterIdentifiers = [];
 	var parameterDeclarations = [];
+	var parameterTypes = [];
+
 	for (i = 0; i < functionDefinition.parameters.length; i++) {
 		var param = functionDefinition.parameters[i];
 		parameterIdentifiers.push(
@@ -163,10 +166,7 @@ function compileFunctionDefinition(functionDefinition) {
 		switch (param.type.category) {
 			case 'int':
 				/* register as a local var of type 'int' */
-				context.localVariablesById[param.id] = {
-					'name': param.name,
-					'type': types.int
-				};
+				parameterType = types.int;
 
 				/* annotate as i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
@@ -184,7 +184,18 @@ function compileFunctionDefinition(functionDefinition) {
 			default:
 				throw "Don't know how to annotate a parameter of type: " + util.inspect(param.type);
 		}
+
+		context.localVariablesById[param.id] = {
+			'name': param.name,
+			'type': parameterType
+		};
+		parameterTypes.push(parameterType);
 	}
+
+	globalContext.globalVariablesById[functionDefinition.variable.id] = {
+		'name': functionDefinition.variable.name,
+		'type': types.func(returnType, parameterTypes)
+	};
 
 	var output = {
 		'variableDeclarations': [],
@@ -220,12 +231,16 @@ function compileModule(module) {
 	var exportTable = [
 	];
 
+	var globalContext = {
+		'globalVariablesById': {}
+	};
+
 	for (var i = 0; i < module.declarations.length; i++) {
 		var declaration = module.declarations[i];
 		switch (declaration.declarationType) {
 			case 'FunctionDefinition':
 				moduleBodyStatements.push(
-					compileFunctionDefinition(declaration)
+					compileFunctionDefinition(declaration, globalContext)
 				);
 				exportTable.push(estree.Property(
 					estree.Identifier(declaration.name),
