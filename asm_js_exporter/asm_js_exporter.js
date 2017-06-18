@@ -1,5 +1,6 @@
 var assert = require('assert');
 var estree = require('./estree');
+var types = require('./types');
 
 function compileExpression(expression, context) {
 	switch(expression.expressionType) {
@@ -75,7 +76,7 @@ function compileStatement(statement, out, context) {
 						/* register as a local var of type 'int' */
 						context.localVariablesById[variableDeclaration.variable.id] = {
 							'name': variableDeclaration.variable.name,
-							'type': 'int'
+							'type': types.int
 						};
 
 						if (variableDeclaration.initialValueExpression === null) {
@@ -113,7 +114,7 @@ function compileStatement(statement, out, context) {
 			/* add return type annotation to the expression, according to this function's
 			return type */
 			switch (context.returnType.category) {
-				case 'int':
+				case 'signed':
 					val = getNumericLiteralValue(expr);
 					if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
 						/* no annotation required */
@@ -134,9 +135,20 @@ function compileStatement(statement, out, context) {
 }
 
 function compileFunctionDefinition(functionDefinition) {
+	var returnType;
+
+	/* convert return type from AST to a recognised asm.js type */
+	switch (functionDefinition.returnType.category) {
+		case 'int':
+			returnType = types.signed;
+			break;
+		default:
+			throw "Don't know how to handle return type: " + util.inspect(functionDefinition.returnType);
+	}
+
 	var context = {
 		'localVariablesById': {},
-		'returnType': functionDefinition.returnType
+		'returnType': returnType
 	};
 	var i;
 
@@ -153,7 +165,7 @@ function compileFunctionDefinition(functionDefinition) {
 				/* register as a local var of type 'int' */
 				context.localVariablesById[param.id] = {
 					'name': param.name,
-					'type': 'int'
+					'type': types.int
 				};
 
 				/* annotate as i = i | 0 */
