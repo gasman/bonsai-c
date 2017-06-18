@@ -29,7 +29,15 @@ function compileExpression(expression, context) {
 				true
 			);
 		case 'VariableExpression':
-			return estree.Identifier(expression.variable.name);
+			var variable = context.localVariablesById[expression.variable.id];
+			if (!variable) {
+				variable = context.globalContext.globalVariablesById[expression.variable.id];
+
+				if (!variable) {
+					throw "Variable not found: " + util.inspect(expression.variable);
+				}
+			}
+			return estree.Identifier(variable.name);
 		default:
 			throw "Unexpected expression type: " + expression.expressionType;
 	}
