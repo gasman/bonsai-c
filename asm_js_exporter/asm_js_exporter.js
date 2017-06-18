@@ -3,31 +3,40 @@ var estree = require('./estree');
 var types = require('./types');
 
 function compileExpression(expression, context) {
+	var left, right, arg;
+
 	switch(expression.expressionType) {
 		case 'AddExpression':
-			return estree.BinaryExpression('+',
-				compileExpression(expression.left, context),
-				compileExpression(expression.right, context)
-			);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
+			return {
+				'tree': estree.BinaryExpression('+', left.tree, right.tree)
+			};
 		case 'AssignmentExpression':
-			return estree.AssignmentExpression('=',
-				compileExpression(expression.left, context),
-				compileExpression(expression.right, context)
-			);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
+			return {
+				'tree': estree.AssignmentExpression('=', left.tree, right.tree)
+			};
 		case 'ConstExpression':
-			return estree.Literal(expression.value);
+			return {
+				'tree': estree.Literal(expression.value)
+			};
 		case 'FunctionCallExpression':
 			var callee = compileExpression(expression.callee, context);
-			var args = [];
+			var argTrees = [];
 			for (var i = 0; i < expression.parameters.length; i++) {
-				args.push(compileExpression(expression.parameters[i], context));
+				arg = compileExpression(expression.parameters[i], context);
+				argTrees.push(arg.tree);
 			}
-			return estree.CallExpression(callee, args);
+			return {
+				'tree': estree.CallExpression(callee.tree, argTrees)
+			};
 		case 'NegationExpression':
-			return estree.UnaryExpression('-',
-				compileExpression(expression.argument, context),
-				true
-			);
+			arg = compileExpression(expression.argument, context);
+			return {
+				'tree': estree.UnaryExpression('-', arg.tree, true)
+			};
 		case 'VariableExpression':
 			var variable = context.localVariablesById[expression.variable.id];
 			if (!variable) {
@@ -37,7 +46,9 @@ function compileExpression(expression, context) {
 					throw "Variable not found: " + util.inspect(expression.variable);
 				}
 			}
-			return estree.Identifier(variable.name);
+			return {
+				'tree': estree.Identifier(variable.name)
+			};
 		default:
 			throw "Unexpected expression type: " + expression.expressionType;
 	}
@@ -46,12 +57,12 @@ function compileExpression(expression, context) {
 function getNumericLiteralValue(expr) {
 	/* Try to interpret expr as a numeric literal, possibly represented as a unary minus
 	expression. If successful, return its numeric value; if not, return null */
-	if (expr.type == 'Literal') {
-		return expr.value;
+	if (expr.tree.type == 'Literal') {
+		return expr.tree.value;
 	}
 
-	if (expr.type == 'UnaryExpression' && expr.operator == '-' && expr.prefix) {
-		var negatedArg = expr.argument;
+	if (expr.tree.type == 'UnaryExpression' && expr.tree.operator == '-' && expr.tree.prefix) {
+		var negatedArg = expr.tree.argument;
 		if (negatedArg.type == 'Literal') {
 			return -negatedArg.value;
 		}
@@ -61,7 +72,7 @@ function getNumericLiteralValue(expr) {
 }
 
 function compileStatement(statement, out, context) {
-	var i, expr, val;
+	var i, expr, exprTree, val;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
@@ -89,7 +100,9 @@ function compileStatement(statement, out, context) {
 
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
-							initialValueExpression = estree.Literal(0);
+							initialValueExpression = {
+								'tree': estree.Literal(0)
+							};
 						} else {
 							initialValueExpression = compileExpression(variableDeclaration.initialValueExpression, context);
 							val = getNumericLiteralValue(initialValueExpression);
@@ -102,7 +115,7 @@ function compileStatement(statement, out, context) {
 						out.variableDeclarations.push(
 							estree.VariableDeclarator(
 								estree.Identifier(variableDeclaration.variable.name),
-								initialValueExpression
+								initialValueExpression.tree
 							)
 						);
 
@@ -114,7 +127,7 @@ function compileStatement(statement, out, context) {
 			return;
 		case 'ExpressionStatement':
 			expr = compileExpression(statement.expression, context);
-			out.body.push(estree.ExpressionStatement(expr));
+			out.body.push(estree.ExpressionStatement(expr.tree));
 			return;
 		case 'ReturnStatement':
 			expr = compileExpression(statement.expression, context);
@@ -126,16 +139,17 @@ function compileStatement(statement, out, context) {
 					val = getNumericLiteralValue(expr);
 					if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
 						/* no annotation required */
+						exprTree = expr.tree;
 					} else {
 						/* for all other expressions, annotate as (expr | 0) */
-						expr = estree.BinaryExpression('|', expr, estree.Literal(0));
+						exprTree = estree.BinaryExpression('|', expr.tree, estree.Literal(0));
 					}
 					break;
 				default:
 					throw "Don't know how to annotate a return value as type: " + util.inspect(context.returnType);
 			}
 
-			out.body.push(estree.ReturnStatement(expr));
+			out.body.push(estree.ReturnStatement(exprTree));
 			return;
 		default:
 			throw "Unexpected statement type: " + statement.statementType;
