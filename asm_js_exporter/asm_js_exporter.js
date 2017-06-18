@@ -1,30 +1,30 @@
 var assert = require('assert');
 var estree = require('./estree');
 
-function compileExpression(expression) {
+function compileExpression(expression, context) {
 	switch(expression.expressionType) {
 		case 'AddExpression':
 			return estree.BinaryExpression('+',
-				compileExpression(expression.left),
-				compileExpression(expression.right)
+				compileExpression(expression.left, context),
+				compileExpression(expression.right, context)
 			);
 		case 'AssignmentExpression':
 			return estree.AssignmentExpression('=',
-				compileExpression(expression.left),
-				compileExpression(expression.right)
+				compileExpression(expression.left, context),
+				compileExpression(expression.right, context)
 			);
 		case 'ConstExpression':
 			return estree.Literal(expression.value);
 		case 'FunctionCallExpression':
-			var callee = compileExpression(expression.callee);
+			var callee = compileExpression(expression.callee, context);
 			var args = [];
 			for (var i = 0; i < expression.parameters.length; i++) {
-				args.push(compileExpression(expression.parameters[i]));
+				args.push(compileExpression(expression.parameters[i], context));
 			}
 			return estree.CallExpression(callee, args);
 		case 'NegationExpression':
 			return estree.UnaryExpression('-',
-				compileExpression(expression.argument),
+				compileExpression(expression.argument, context),
 				true
 			);
 		case 'VariableExpression':
@@ -82,7 +82,7 @@ function compileStatement(statement, out, context) {
 							/* output: var i = 0 */
 							initialValueExpression = estree.Literal(0);
 						} else {
-							initialValueExpression = compileExpression(variableDeclaration.initialValueExpression);
+							initialValueExpression = compileExpression(variableDeclaration.initialValueExpression, context);
 							val = getNumericLiteralValue(initialValueExpression);
 							assert(
 								Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000,
@@ -104,11 +104,11 @@ function compileStatement(statement, out, context) {
 			}
 			return;
 		case 'ExpressionStatement':
-			expr = compileExpression(statement.expression);
+			expr = compileExpression(statement.expression, context);
 			out.body.push(estree.ExpressionStatement(expr));
 			return;
 		case 'ReturnStatement':
-			expr = compileExpression(statement.expression);
+			expr = compileExpression(statement.expression, context);
 
 			/* add return type annotation to the expression, according to this function's
 			return type */
