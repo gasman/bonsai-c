@@ -60,7 +60,7 @@ function compileStatement(statement, out, context) {
 			for (i = 0; i < statement.statements.length; i++) {
 				compileStatement(statement.statements[i], blockBody, context);
 			}
-			out.push(estree.BlockStatement(blockBody));
+			out.body.push(estree.BlockStatement(blockBody));
 			return;
 		case 'DeclarationStatement':
 			/* Don't generate any code, but add to the list of variables that need
@@ -83,21 +83,23 @@ function compileStatement(statement, out, context) {
 								util.format('Initial value for int declaration must be an integer literal, not %s', util.inspect(initialValueExpression))
 							);
 						}
+
+						out.variableDeclarations.push(
+							estree.VariableDeclarator(
+								estree.Identifier(variableDeclaration.variable.name),
+								initialValueExpression
+							)
+						);
+
 						break;
 					default:
 						throw "Don't know how to declare a local variable of type: " + util.inspect(statement.type);
 				}
-
-				context.localVariables.push({
-					'name': variableDeclaration.variable.name,
-					'type': statement.type,
-					'initialValueExpression': initialValueExpression
-				});
 			}
 			return;
 		case 'ExpressionStatement':
 			expr = compileExpression(statement.expression);
-			out.push(estree.ExpressionStatement(expr));
+			out.body.push(estree.ExpressionStatement(expr));
 			return;
 		case 'ReturnStatement':
 			expr = compileExpression(statement.expression);
@@ -118,7 +120,7 @@ function compileStatement(statement, out, context) {
 					throw "Don't know how to annotate a return value as type: " + util.inspect(context.returnType);
 			}
 
-			out.push(estree.ReturnStatement(expr));
+			out.body.push(estree.ReturnStatement(expr));
 			return;
 		default:
 			throw "Unexpected statement type: " + statement.statementType;
@@ -126,9 +128,7 @@ function compileStatement(statement, out, context) {
 }
 
 function compileFunctionDefinition(functionDefinition) {
-	var body = [];
 	var context = {
-		'localVariables': [],
 		'returnType': functionDefinition.returnType
 	};
 	var i;
@@ -161,34 +161,29 @@ function compileFunctionDefinition(functionDefinition) {
 		}
 	}
 
+	var output = {
+		'variableDeclarations': [],
+		'body': []
+	};
+
 	for (i = 0; i < functionDefinition.body.length; i++) {
-		compileStatement(functionDefinition.body[i], body, context);
+		compileStatement(functionDefinition.body[i], output, context);
 	}
 
-	var variableDeclarations;
-
-	if (context.localVariables.length > 0) {
-		var declarations = [];
-		for (i = 0; i < context.localVariables.length; i++) {
-			var localVariable = context.localVariables[i];
-			declarations.push(
-				estree.VariableDeclarator(
-					estree.Identifier(localVariable.name),
-					localVariable.initialValueExpression
-				)
-			);
-		}
-		variableDeclarations = [estree.VariableDeclaration(declarations)];
+	var outputNodes;
+	if (output.variableDeclarations.length) {
+		outputNodes = parameterDeclarations.concat(
+			[estree.VariableDeclaration(output.variableDeclarations)],
+			output.body
+		);
 	} else {
-		variableDeclarations = [];
+		outputNodes = parameterDeclarations.concat(output.body);
 	}
-
-	var output = parameterDeclarations.concat(variableDeclarations, body);
 
 	return estree.FunctionDeclaration(
 		estree.Identifier(functionDefinition.name),
 		parameterIdentifiers,
-		estree.BlockStatement(output)
+		estree.BlockStatement(outputNodes)
 	);
 }
 
