@@ -72,6 +72,12 @@ function compileStatement(statement, out, context) {
 
 				switch (statement.type.category) {
 					case 'int':
+						/* register as a local var of type 'int' */
+						context.localVariablesById[variableDeclaration.variable.id] = {
+							'name': variableDeclaration.variable.name,
+							'type': 'int'
+						};
+
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
 							initialValueExpression = estree.Literal(0);
@@ -129,6 +135,7 @@ function compileStatement(statement, out, context) {
 
 function compileFunctionDefinition(functionDefinition) {
 	var context = {
+		'localVariablesById': {},
 		'returnType': functionDefinition.returnType
 	};
 	var i;
@@ -143,7 +150,13 @@ function compileFunctionDefinition(functionDefinition) {
 
 		switch (param.type.category) {
 			case 'int':
-				/* i = i | 0 */
+				/* register as a local var of type 'int' */
+				context.localVariablesById[param.id] = {
+					'name': param.name,
+					'type': 'int'
+				};
+
+				/* annotate as i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
 					estree.AssignmentExpression(
 						'=',
