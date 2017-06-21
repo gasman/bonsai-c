@@ -11,7 +11,7 @@ exports.fixnum = {
 exports.signed = {
 	'category': 'signed',
 	'satisfies': function(targetType) {
-		return targetType.category == 'signed' || targetType.category == 'extern';
+		return ['signed', 'extern', 'int', 'intish'].includes(targetType.category);
 	},
 	'inspect': function() {return 'signed';}
 };
