@@ -1,3 +1,6 @@
+var assert = require('assert');
+var util = require('util');
+
 var estree = require('./estree');
 var types = require('./types');
 
@@ -24,9 +27,9 @@ function compileExpression(expression, context) {
 			};
 		case 'AssignmentExpression':
 			left = compileExpression(expression.left, context);
-			if (left.tree.type != 'Identifier') {
-				throw("Left hand side of an assignment must be an identifier - got " + left.tree.type);
-			}
+			assert(left.isValidAsLvalue,
+				"Left hand side of an assignment must be a valid lvalue - got " + util.inspect(left)
+			);
 
 			right = coerce(
 				compileExpression(expression.right, context),
@@ -53,14 +56,17 @@ function compileExpression(expression, context) {
 			}
 			return {
 				'tree': estree.Literal(expression.value),
-				'type': typ
+				'type': typ,
+				'isDirectNumericLiteral': true,
+				'isNumericLiteral': true,
+				'numericLiteralValue': expression.value
 			};
 		case 'FunctionCallExpression':
 			var callee = compileExpression(expression.callee, context);
 
-			if (callee.tree.type != 'Identifier') {
-				throw("Callee of a function call must be an identifier - got " + callee.tree.type);
-			}
+			assert(callee.isIdentifier,
+				"Callee of a function call must be an identifier - got " + util.inspect(callee)
+			);
 
 			var expectedParamTypes = callee.type.paramTypes;
 
@@ -87,10 +93,20 @@ function compileExpression(expression, context) {
 				throw("Can't handle a NegationExpression with arg type: " + util.inspect(arg.type));
 			}
 
-			return {
-				'tree': estree.UnaryExpression('-', arg.tree, true),
-				'type': typ
-			};
+			if (arg.isDirectNumericLiteral) {
+				return {
+					'tree': estree.UnaryExpression('-', arg.tree, true),
+					'type': typ,
+					'isNumericLiteral': true,
+					'numericLiteralValue': -(arg.numericLiteralValue)
+				};
+			} else {
+				return {
+					'tree': estree.UnaryExpression('-', arg.tree, true),
+					'type': typ
+				};
+			}
+			break;
 		case 'VariableExpression':
 			var variable = context.localVariablesById[expression.variable.id];
 			if (!variable) {
@@ -103,7 +119,9 @@ function compileExpression(expression, context) {
 			return {
 				'tree': estree.Identifier(variable.name),
 				'type': variable.type,
-				'intendedType': variable.intendedType
+				'intendedType': variable.intendedType,
+				'isIdentifier': true,
+				'isValidAsLvalue': true
 			};
 		default:
 			throw "Unexpected expression type: " + expression.expressionType;

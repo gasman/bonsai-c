@@ -4,23 +4,6 @@ var types = require('./types');
 var expressions = require('./expressions');
 
 
-function getNumericLiteralValue(expr) {
-	/* Try to interpret expr as a numeric literal, possibly represented as a unary minus
-	expression. If successful, return its numeric value; if not, return null */
-	if (expr.tree.type == 'Literal') {
-		return expr.tree.value;
-	}
-
-	if (expr.tree.type == 'UnaryExpression' && expr.tree.operator == '-' && expr.tree.prefix) {
-		var negatedArg = expr.tree.argument;
-		if (negatedArg.type == 'Literal') {
-			return -negatedArg.value;
-		}
-	}
-
-	return null;
-}
-
 function compileStatement(statement, out, context) {
 	var i, expr, exprTree, val;
 
@@ -56,7 +39,7 @@ function compileStatement(statement, out, context) {
 							};
 						} else {
 							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context);
-							val = getNumericLiteralValue(initialValueExpression);
+							val = initialValueExpression.numericLiteralValue;
 							assert(
 								Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000,
 								util.format('Initial value for int declaration must be an integer literal, not %s', util.inspect(initialValueExpression))
@@ -87,7 +70,7 @@ function compileStatement(statement, out, context) {
 			return type */
 			switch (context.returnType.category) {
 				case 'signed':
-					val = getNumericLiteralValue(expr);
+					val = expr.numericLiteralValue;
 					if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
 						/* no annotation required */
 						exprTree = expr.tree;
