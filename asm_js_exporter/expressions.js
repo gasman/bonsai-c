@@ -22,7 +22,10 @@ function compileExpression(expression, context) {
 				);
 			}
 			return {
-				'tree': estree.BinaryExpression('+', left.tree, right.tree),
+				'tree': estree.BinaryExpression('+',
+					wrapFunctionCall(left).tree,
+					wrapFunctionCall(right).tree
+				),
 				'type': typ
 			};
 		case 'AssignmentExpression':
@@ -37,7 +40,10 @@ function compileExpression(expression, context) {
 			);
 
 			return {
-				'tree': estree.AssignmentExpression('=', left.tree, right.tree),
+				'tree': estree.AssignmentExpression('=',
+					left.tree,
+					wrapFunctionCall(right).tree
+				),
 				'type': right.type
 			};
 		case 'ConstExpression':
@@ -72,15 +78,16 @@ function compileExpression(expression, context) {
 
 			var argTrees = [];
 			for (var i = 0; i < expression.parameters.length; i++) {
-				arg = coerce(
+				arg = wrapFunctionCall(coerce(
 					compileExpression(expression.parameters[i], context),
 					expectedParamTypes[i]
-				);
+				));
 				argTrees.push(arg.tree);
 			}
 			return {
 				'tree': estree.CallExpression(callee.tree, argTrees),
-				'type': callee.type.returnType
+				'type': callee.type.returnType,
+				'isFunctionCall': true
 			};
 		case 'NegationExpression':
 			arg = compileExpression(expression.argument, context);
@@ -102,7 +109,7 @@ function compileExpression(expression, context) {
 				};
 			} else {
 				return {
-					'tree': estree.UnaryExpression('-', arg.tree, true),
+					'tree': estree.UnaryExpression('-', wrapFunctionCall(arg).tree, true),
 					'type': typ
 				};
 			}
@@ -142,6 +149,26 @@ function coerce(expr, targetType) {
 			util.format("Don't know how to coerce expression %s to type %s",
 				util.inspect(expr),
 				util.inspect(targetType)
+			)
+		);
+	}
+}
+
+function wrapFunctionCall(expr) {
+	/* asm.js only allows function calls to be used in limited contexts, mostly ones that
+	look like coercion expressions (foo() | 0 etc). In the cases where they aren't allowed,
+	call this to wrap it in a suitable do-nothing coercion */
+	if (!expr.isFunctionCall) return expr;
+
+	if (expr.type.satisfies(types.signed)) {
+		return {
+			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
+			'type': types.signed
+		};
+	} else {
+		throw(
+			util.format("Don't know how to wrap function call of type %s",
+				util.inspect(expr.type)
 			)
 		);
 	}
