@@ -43,6 +43,18 @@ function AssignmentExpression(left, right) {
 }
 exports.AssignmentExpression = AssignmentExpression;
 
+function CommaExpression(left, right) {
+	return {
+		'tree': estree.SequenceExpression([
+			left.tree,
+			wrapFunctionCall(right).tree
+			/* FIXME: avoid wrapFunctionCall if this is a chained comma expression and this isn't the last one */
+		]),
+		'type': right.type
+	};
+}
+exports.CommaExpression = CommaExpression;
+
 function ConstExpression(value) {
 	var typ = null;
 	/* FIXME: Should infer type from the numeric form in the original source code;
@@ -150,6 +162,10 @@ function compileExpression(expression, context) {
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
 			return AssignmentExpression(left, right);
+		case 'CommaExpression':
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
+			return CommaExpression(left, right);
 		case 'ConstExpression':
 			return ConstExpression(expression.value);
 		case 'FunctionCallExpression':

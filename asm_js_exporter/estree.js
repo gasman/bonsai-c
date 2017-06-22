@@ -78,6 +78,13 @@ exports.ReturnStatement = function(arg) {
 	};
 };
 
+exports.SequenceExpression = function(expressions) {
+	return {
+		'type': 'SequenceExpression',
+		'expressions': expressions
+	};
+};
+
 exports.UnaryExpression = function(operator, argument, prefix) {
 	return {
 		'type': 'UnaryExpression',

@@ -20,6 +20,16 @@ AssignmentExpression.prototype.inspect = function() {
 	return "Assignment: (" + util.inspect(this.left) + " = " + util.inspect(this.right) + ")";
 };
 
+function CommaExpression(left, right, context) {
+	this.expressionType = 'CommaExpression';
+
+	this.left = constructExpression(left, context);
+	this.right = constructExpression(right, context);
+}
+CommaExpression.prototype.inspect = function() {
+	return "Comma: (" + util.inspect(this.left) + ", " + util.inspect(this.right) + ")";
+};
+
 function ConstExpression(numString, context) {
 	this.expressionType = 'ConstExpression';
 
@@ -131,6 +141,8 @@ function constructExpression(node, context) {
 					throw("Unrecognised postupdate operator: " + operator);
 			}
 			break;
+		case 'Sequence':
+			return new CommaExpression(node.params[0], node.params[1], context);
 		case 'UnaryOp':
 			operator = node.params[0];
 			switch (operator) {
