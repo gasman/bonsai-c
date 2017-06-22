@@ -55,6 +55,16 @@ NegationExpression.prototype.inspect = function() {
 	return "Negation: (" + util.inspect(this.argument) + ")";
 };
 
+function SubtractExpression(left, right, context) {
+	this.expressionType = 'SubtractExpression';
+
+	this.left = constructExpression(left, context);
+	this.right = constructExpression(right, context);
+}
+SubtractExpression.prototype.inspect = function() {
+	return "Subtract: (" + util.inspect(this.left) + ", " + util.inspect(this.right) + ")";
+};
+
 function VariableExpression(variableName, context) {
 	this.expressionType = 'VariableExpression';
 
@@ -85,6 +95,8 @@ function constructExpression(node, context) {
 			switch (operator) {
 				case '+':
 					return new AddExpression(node.params[1], node.params[2], context);
+				case '-':
+					return new SubtractExpression(node.params[1], node.params[2], context);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}

@@ -87,6 +87,28 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
+function SubtractExpression(left, right) {
+	var typ;
+	if (left.type.satisfies(types.int) && right.type.satisfies(types.int)) {
+		typ = types.intish;
+	} else {
+		throw(
+			util.format("Can't handle SubtractExpression with operand types %s and %s",
+				util.inspect(left.type),
+				util.inspect(right.type)
+			)
+		);
+	}
+	return {
+		'tree': estree.BinaryExpression('-',
+			wrapFunctionCall(left).tree,
+			wrapFunctionCall(right).tree
+		),
+		'type': typ
+	};
+}
+exports.SubtractExpression = SubtractExpression;
+
 function VariableExpression(variable) {
 	return {
 		'tree': estree.Identifier(variable.name),
@@ -144,6 +166,10 @@ function compileExpression(expression, context) {
 				};
 			}
 			break;
+		case 'SubtractExpression':
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
+			return SubtractExpression(left, right);
 		case 'VariableExpression':
 			var variable = context.localVariablesById[expression.variable.id];
 			if (!variable) {
