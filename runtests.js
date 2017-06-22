@@ -62,5 +62,6 @@ testCompile('tests/subtract.c', 42);
 testCompile('tests/simple_postdecrement.c', 42);
 testCompile('tests/simple_postincrement.c', 42);
 testCompile('tests/comma.c', 42);
+testCompile('tests/postincrement_result.c', 43);
 
 console.log("All tests passed");

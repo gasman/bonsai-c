@@ -40,7 +40,7 @@ function compileStatement(statement, out, context) {
 							/* output: var i = 0 */
 							initialValueExpression = expressions.ConstExpression(0);
 						} else {
-							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context);
+							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context, out);
 							val = initialValueExpression.numericLiteralValue;
 							if (Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000) {
 								/* initial value is a numeric literal in signed range - can use it directly
@@ -74,11 +74,11 @@ function compileStatement(statement, out, context) {
 			}
 			return;
 		case 'ExpressionStatement':
-			expr = expressions.compileExpression(statement.expression, context);
+			expr = expressions.compileExpression(statement.expression, context, out);
 			out.body.push(estree.ExpressionStatement(expr.tree));
 			return;
 		case 'ReturnStatement':
-			expr = expressions.compileExpression(statement.expression, context);
+			expr = expressions.compileExpression(statement.expression, context, out);
 
 			/* add return type annotation to the expression, according to this function's
 			return type */

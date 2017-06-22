@@ -59,7 +59,9 @@ function DeclarationStatement(node, context) {
 		if (initialValueNode === null) {
 			initialValueExpression = null;
 		} else {
-			initialValueExpression = expressions.constructExpression(initialValueNode, context);
+			initialValueExpression = expressions.constructExpression(initialValueNode, context, {
+				'resultIsUsed': true
+			});
 		}
 
 		this.variableDeclarations.push({
@@ -76,7 +78,9 @@ DeclarationStatement.prototype.inspect = function() {
 function ExpressionStatement(node, context) {
 	this.statementType = 'ExpressionStatement';
 
-	this.expression = expressions.constructExpression(node.params[0], context);
+	this.expression = expressions.constructExpression(node.params[0], context, {
+		'resultIsUsed': false
+	});
 }
 ExpressionStatement.prototype.inspect = function() {
 	return "Expression " + util.inspect(this.expression);
@@ -85,7 +89,9 @@ ExpressionStatement.prototype.inspect = function() {
 function ReturnStatement(node, context) {
 	this.statementType = 'ReturnStatement';
 
-	this.expression = expressions.constructExpression(node.params[0], context);
+	this.expression = expressions.constructExpression(node.params[0], context, {
+		'resultIsUsed': true
+	});
 }
 ReturnStatement.prototype.inspect = function() {
 	return "Return " + util.inspect(this.expression);

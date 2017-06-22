@@ -108,12 +108,43 @@ function PostdecrementExpression(arg) {
 }
 exports.PostdecrementExpression = PostdecrementExpression;
 
-function PostincrementExpression(arg) {
+function PostincrementExpression(arg, resultIsUsed, out) {
 	assert(arg.isIdentifier,
 		"Argument of a postincrement expression must be an identifier - got " + util.inspect(arg)
 	);
 
-	return AssignmentExpression(arg, AddExpression(arg, ConstExpression(1)));
+	if (resultIsUsed) {
+		/* (arg)++ is equivalent to ((arg) = (tmp = (arg)) + 1), tmp */
+		if (arg.type.satisfies(types.int)) {
+			/* register as a local var of type 'int' */
+			var tempVariable = {
+				'name': 'temp', /* FIXME: allocate an unused variable name */
+				'type': types.int,
+				'intendedType': arg.intendedType
+			};
+			out.variableDeclarations.push(
+				estree.VariableDeclarator(
+					estree.Identifier(tempVariable.name),
+					estree.Literal(0)
+				)
+			);
+			return CommaExpression(
+				AssignmentExpression(
+					arg,
+					AddExpression(
+						AssignmentExpression(VariableExpression(tempVariable), arg),
+						ConstExpression(1)
+					)
+				),
+				VariableExpression(tempVariable)
+			);
+		} else {
+			throw("Don't know how to define a temp var for type: " + util.inspect(arg.type));
+		}
+	} else {
+		/* (arg)++ is equivalent to (arg) = (arg) + 1 */
+		return AssignmentExpression(arg, AddExpression(arg, ConstExpression(1)));
+	}
 }
 exports.PostincrementExpression = PostincrementExpression;
 
@@ -150,33 +181,38 @@ function VariableExpression(variable) {
 }
 exports.VariableExpression = VariableExpression;
 
-function compileExpression(expression, context) {
+function compileExpression(expression, context, out) {
+	/* out = the output stream for the function currently being compiled.
+	compileExpression _must not_ write to out.body
+	(the expression estree should be returned in result.tree instead),
+	but _can_ write to out.variableDeclarations if it needs to declare a variable
+	for intermediate value storage */
 	var left, right, arg, typ;
 
 	switch(expression.expressionType) {
 		case 'AddExpression':
-			left = compileExpression(expression.left, context);
-			right = compileExpression(expression.right, context);
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
 			return AddExpression(left, right);
 		case 'AssignmentExpression':
-			left = compileExpression(expression.left, context);
-			right = compileExpression(expression.right, context);
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
 			return AssignmentExpression(left, right);
 		case 'CommaExpression':
-			left = compileExpression(expression.left, context);
-			right = compileExpression(expression.right, context);
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
 			return CommaExpression(left, right);
 		case 'ConstExpression':
 			return ConstExpression(expression.value);
 		case 'FunctionCallExpression':
-			var callee = compileExpression(expression.callee, context);
+			var callee = compileExpression(expression.callee, context, out);
 			var args = [];
 			for (var i = 0; i < expression.parameters.length; i++) {
-				args[i] = compileExpression(expression.parameters[i], context);
+				args[i] = compileExpression(expression.parameters[i], context, out);
 			}
 			return FunctionCallExpression(callee, args);
 		case 'NegationExpression':
-			arg = compileExpression(expression.argument, context);
+			arg = compileExpression(expression.argument, context, out);
 			typ = null;
 			if (arg.tree.type == 'Literal' && arg.tree.value > 0 && arg.tree.value <= 0x80000000) {
 				typ = types.signed;
@@ -201,14 +237,14 @@ function compileExpression(expression, context) {
 			}
 			break;
 		case 'PostdecrementExpression':
-			arg = compileExpression(expression.argument, context);
+			arg = compileExpression(expression.argument, context, out);
 			return PostdecrementExpression(arg);
 		case 'PostincrementExpression':
-			arg = compileExpression(expression.argument, context);
-			return PostincrementExpression(arg);
+			arg = compileExpression(expression.argument, context, out);
+			return PostincrementExpression(arg, expression.resultIsUsed, out);
 		case 'SubtractExpression':
-			left = compileExpression(expression.left, context);
-			right = compileExpression(expression.right, context);
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
 			return SubtractExpression(left, right);
 		case 'VariableExpression':
 			var variable = context.localVariablesById[expression.variable.id];
