@@ -60,5 +60,6 @@ testCompile('tests/computed_init.c', 42);
 testCompile('tests/inner_block.c', 42);
 testCompile('tests/subtract.c', 42);
 testCompile('tests/simple_postdecrement.c', 42);
+testCompile('tests/simple_postincrement.c', 42);
 
 console.log("All tests passed");

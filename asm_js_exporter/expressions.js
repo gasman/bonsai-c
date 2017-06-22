@@ -96,6 +96,15 @@ function PostdecrementExpression(arg) {
 }
 exports.PostdecrementExpression = PostdecrementExpression;
 
+function PostincrementExpression(arg) {
+	assert(arg.isIdentifier,
+		"Argument of a postincrement expression must be an identifier - got " + util.inspect(arg)
+	);
+
+	return AssignmentExpression(arg, AddExpression(arg, ConstExpression(1)));
+}
+exports.PostincrementExpression = PostincrementExpression;
+
 function SubtractExpression(left, right) {
 	var typ;
 	if (left.type.satisfies(types.int) && right.type.satisfies(types.int)) {
@@ -178,6 +187,9 @@ function compileExpression(expression, context) {
 		case 'PostdecrementExpression':
 			arg = compileExpression(expression.argument, context);
 			return PostdecrementExpression(arg);
+		case 'PostincrementExpression':
+			arg = compileExpression(expression.argument, context);
+			return PostincrementExpression(arg);
 		case 'SubtractExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);

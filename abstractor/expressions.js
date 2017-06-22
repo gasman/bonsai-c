@@ -62,6 +62,13 @@ function PostdecrementExpression(argument, context) {
 PostdecrementExpression.prototype.inspect = function() {
 	return "Postdecrement: (" + util.inspect(this.argument) + ")";
 };
+function PostincrementExpression(argument, context) {
+	this.expressionType = 'PostincrementExpression';
+	this.argument = constructExpression(argument, context);
+}
+PostdecrementExpression.prototype.inspect = function() {
+	return "Postincrement: (" + util.inspect(this.argument) + ")";
+};
 
 function SubtractExpression(left, right, context) {
 	this.expressionType = 'SubtractExpression';
@@ -118,6 +125,8 @@ function constructExpression(node, context) {
 			switch (operator) {
 				case '--':
 					return new PostdecrementExpression(node.params[1], context);
+				case '++':
+					return new PostincrementExpression(node.params[1], context);
 				default:
 					throw("Unrecognised postupdate operator: " + operator);
 			}
