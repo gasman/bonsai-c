@@ -56,5 +56,6 @@ testCompile('tests/initvar_negative.c', -42);
 testCompile('tests/type_coercion.c', 42);
 testCompile('tests/call_assign.c', 42);
 testCompile('tests/call_add.c', 42);
+testCompile('tests/computed_init.c', 42);
 
 console.log("All tests passed");

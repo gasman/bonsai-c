@@ -25,30 +25,41 @@ function compileStatement(statement, out, context) {
 
 				switch (statement.type.category) {
 					case 'int':
-						/* register as a local var of type 'int' */
-						context.localVariablesById[variableDeclaration.variable.id] = {
+						/* register as a local var of type 'int', to be treated as signed */
+						var variable = {
 							'name': variableDeclaration.variable.name,
 							'type': types.int,
 							'intendedType': types.signed
 						};
+						context.localVariablesById[variableDeclaration.variable.id] = variable;
 
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
-							initialValueExpression = {
-								'tree': estree.Literal(0)
-							};
+							initialValueExpression = expressions.ConstExpression(0);
 						} else {
 							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context);
 							val = initialValueExpression.numericLiteralValue;
-							assert(
-								Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000,
-								util.format('Initial value for int declaration must be an integer literal, not %s', util.inspect(initialValueExpression))
-							);
+							if (Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000) {
+								/* initial value is a numeric literal in signed range - can use it directly
+								in the variable declaration */
+							} else {
+								/* need to declare variable with a 'dummy' initial value of 0,
+								then initialise it properly within the function body */
+								out.body.push(
+									estree.ExpressionStatement(
+										expressions.AssignmentExpression(
+											expressions.VariableExpression(variable),
+											initialValueExpression
+										).tree
+									)
+								);
+								initialValueExpression = expressions.ConstExpression(0);
+							}
 						}
 
 						out.variableDeclarations.push(
 							estree.VariableDeclarator(
-								estree.Identifier(variableDeclaration.variable.name),
+								estree.Identifier(variable.name),
 								initialValueExpression.tree
 							)
 						);
