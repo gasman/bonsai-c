@@ -99,16 +99,17 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
-function PostdecrementExpression(arg) {
-	assert(arg.isIdentifier,
-		"Argument of a postdecrement expression must be an identifier - got " + util.inspect(arg)
-	);
+function PostincrementExpression(arg, resultIsUsed, out) {
+	return PostupdateExpression(AddExpression, arg, resultIsUsed, out);
+}
+exports.PostincrementExpression = PostincrementExpression;
 
-	return AssignmentExpression(arg, SubtractExpression(arg, ConstExpression(1)));
+function PostdecrementExpression(arg, resultIsUsed, out) {
+	return PostupdateExpression(SubtractExpression, arg, resultIsUsed, out);
 }
 exports.PostdecrementExpression = PostdecrementExpression;
 
-function PostincrementExpression(arg, resultIsUsed, out) {
+function PostupdateExpression(internalOp, arg, resultIsUsed, out) {
 	assert(arg.isIdentifier,
 		"Argument of a postincrement expression must be an identifier - got " + util.inspect(arg)
 	);
@@ -131,7 +132,7 @@ function PostincrementExpression(arg, resultIsUsed, out) {
 			return CommaExpression(
 				AssignmentExpression(
 					arg,
-					AddExpression(
+					internalOp(
 						AssignmentExpression(VariableExpression(tempVariable), arg),
 						ConstExpression(1)
 					)
@@ -143,10 +144,9 @@ function PostincrementExpression(arg, resultIsUsed, out) {
 		}
 	} else {
 		/* (arg)++ is equivalent to (arg) = (arg) + 1 */
-		return AssignmentExpression(arg, AddExpression(arg, ConstExpression(1)));
+		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1)));
 	}
 }
-exports.PostincrementExpression = PostincrementExpression;
 
 function SubtractExpression(left, right) {
 	var typ;
@@ -238,7 +238,7 @@ function compileExpression(expression, context, out) {
 			break;
 		case 'PostdecrementExpression':
 			arg = compileExpression(expression.argument, context, out);
-			return PostdecrementExpression(arg);
+			return PostdecrementExpression(arg, expression.resultIsUsed, out);
 		case 'PostincrementExpression':
 			arg = compileExpression(expression.argument, context, out);
 			return PostincrementExpression(arg, expression.resultIsUsed, out);
