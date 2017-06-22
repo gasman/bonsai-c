@@ -97,6 +97,18 @@ ReturnStatement.prototype.inspect = function() {
 	return "Return " + util.inspect(this.expression);
 };
 
+function WhileStatement(node, context) {
+	this.statementType = 'WhileStatement';
+	this.condition = expressions.constructExpression(node.params[0], context, {
+		'resultIsUsed': true
+	});
+	this.body = constructStatement(node.params[1], context);
+}
+WhileStatement.prototype.inspect = function() {
+	return "While (" + util.inspect(this.condition) + ") " + util.inspect(this.body);
+};
+
+
 function constructStatement(node, context) {
 	switch (node.type) {
 		case 'Block':
@@ -107,6 +119,8 @@ function constructStatement(node, context) {
 			return new ExpressionStatement(node, context);
 		case 'Return':
 			return new ReturnStatement(node, context);
+		case 'While':
+			return new WhileStatement(node, context);
 		default:
 			throw("Unrecognised statement node type: " + node.type);
 	}

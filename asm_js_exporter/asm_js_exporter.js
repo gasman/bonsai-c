@@ -99,6 +99,20 @@ function compileStatement(statement, out, context) {
 
 			out.body.push(estree.ReturnStatement(exprTree));
 			return;
+		case 'WhileStatement':
+			condition = expressions.compileExpression(statement.condition, context, out);
+			bodyOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
+			compileStatement(statement.body, bodyOutput, context);
+			assert.equal(1, bodyOutput.body.length);
+
+			out.body.push(estree.WhileStatement(
+				condition.tree,
+				bodyOutput.body[0]
+			));
+			return;
 		default:
 			throw "Unexpected statement type: " + statement.statementType;
 	}
