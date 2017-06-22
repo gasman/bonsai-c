@@ -9,11 +9,14 @@ function compileStatement(statement, out, context) {
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
-			var blockBody = [];
+			var blockOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
 			for (i = 0; i < statement.statements.length; i++) {
-				compileStatement(statement.statements[i], blockBody, context);
+				compileStatement(statement.statements[i], blockOutput, context);
 			}
-			out.body.push(estree.BlockStatement(blockBody));
+			out.body.push(estree.BlockStatement(blockOutput.body));
 			return;
 		case 'DeclarationStatement':
 			/* Don't generate any code, but add to the list of variables that need
