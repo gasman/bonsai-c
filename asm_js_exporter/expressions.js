@@ -55,20 +55,26 @@ function CommaExpression(left, right) {
 }
 exports.CommaExpression = CommaExpression;
 
-function ConstExpression(value) {
+function ConstExpression(value, originalType) {
 	var typ = null;
-	/* FIXME: Should infer type from the numeric form in the original source code;
-	e.g. 10.0 should be treated as a float/double, not an integer */
-	if (Number.isInteger(value)) {
+	if (originalType.satisfies(types.signed)) {
+		if (value >= 0 && value < 0x80000000) {
+			typ = types.fixnum;
+		} else {
+			throw("Numeric literal out of range for signed int: %d" % value);
+		}
+	} else if (originalType.satisfies(types.unsigned)) {
 		if (value >= 0 && value < 0x80000000) {
 			typ = types.fixnum;
 		} else if (value >= 0x80000000 && value < 0x100000000) {
 			typ = types.unsigned;
+		} else {
+			throw("Numeric literal out of range for unsigned int: %d" % value);
 		}
-	}
-	if (typ === null) {
+	} else {
 		throw("Can't determine type of numeric literal: " + value);
 	}
+
 	return {
 		'tree': estree.Literal(value),
 		'type': typ,
@@ -134,7 +140,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out) {
 					arg,
 					internalOp(
 						AssignmentExpression(VariableExpression(tempVariable), arg),
-						ConstExpression(1)
+						ConstExpression(1, types.fixnum)
 					)
 				),
 				VariableExpression(tempVariable)
@@ -144,7 +150,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out) {
 		}
 	} else {
 		/* (arg)++ is equivalent to (arg) = (arg) + 1 */
-		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1)));
+		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1, types.fixnum)));
 	}
 }
 
@@ -181,6 +187,16 @@ function VariableExpression(variable) {
 }
 exports.VariableExpression = VariableExpression;
 
+function getAsmJsType(typ) {
+	/* get asm.js type corresponding to the given abstract type */
+	if (typ.category == 'int') return types.signed;
+
+	throw util.format(
+		"Don't know how to convert abstract type %s to asm.js type",
+		util.inspect(typ)
+	);
+}
+
 function compileExpression(expression, context, out) {
 	/* out = the output stream for the function currently being compiled.
 	compileExpression _must not_ write to out.body
@@ -203,7 +219,7 @@ function compileExpression(expression, context, out) {
 			right = compileExpression(expression.right, context, out);
 			return CommaExpression(left, right);
 		case 'ConstExpression':
-			return ConstExpression(expression.value);
+			return ConstExpression(expression.value, getAsmJsType(expression.type));
 		case 'FunctionCallExpression':
 			var callee = compileExpression(expression.callee, context, out);
 			var args = [];

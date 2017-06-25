@@ -38,7 +38,7 @@ function compileStatement(statement, out, context) {
 
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
-							initialValueExpression = expressions.ConstExpression(0);
+							initialValueExpression = expressions.ConstExpression(0, types.fixnum);
 						} else {
 							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context, out);
 							val = initialValueExpression.numericLiteralValue;
@@ -56,7 +56,7 @@ function compileStatement(statement, out, context) {
 										).tree
 									)
 								);
-								initialValueExpression = expressions.ConstExpression(0);
+								initialValueExpression = expressions.ConstExpression(0, types.fixnum);
 							}
 						}
 
