@@ -1,5 +1,8 @@
 var util = require('util');
 
+var types = require('./types');
+
+
 function AddExpression(left, right, context, hints) {
 	this.expressionType = 'AddExpression';
 	this.resultIsUsed = hints.resultIsUsed;
@@ -10,9 +13,23 @@ function AddExpression(left, right, context, hints) {
 	this.right = constructExpression(right, context, {
 		'resultIsUsed': this.resultIsUsed
 	});
+
+	if (this.left.type == types.int && this.right.type == types.int) {
+		this.type = types.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle AddExpression with types: %s, %s",
+				util.inspect(this.left.type),
+				util.inspect(this.right.type)
+			)
+		);
+	}
 }
 AddExpression.prototype.inspect = function() {
-	return "Add: (" + util.inspect(this.left) + ", " + util.inspect(this.right) + ")";
+	return util.format(
+		"Add: (%s, %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
 };
 
 function AssignmentExpression(left, right, context, hints) {
@@ -25,9 +42,13 @@ function AssignmentExpression(left, right, context, hints) {
 	this.right = constructExpression(right, context, {
 		'resultIsUsed': true
 	});
+	this.type = this.left.type;
 }
 AssignmentExpression.prototype.inspect = function() {
-	return "Assignment: (" + util.inspect(this.left) + " = " + util.inspect(this.right) + ")";
+	return util.format(
+		"Assignment: (%s = %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
 };
 
 function CommaExpression(left, right, context, hints) {
@@ -40,9 +61,13 @@ function CommaExpression(left, right, context, hints) {
 	this.right = constructExpression(right, context, {
 		'resultIsUsed': this.resultIsUsed
 	});
+	this.type = this.right.type;
 }
 CommaExpression.prototype.inspect = function() {
-	return "Comma: (" + util.inspect(this.left) + ", " + util.inspect(this.right) + ")";
+	return util.format(
+		"Comma: (%s, %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
 };
 
 function ConstExpression(numString, context, hints) {
@@ -51,12 +76,19 @@ function ConstExpression(numString, context, hints) {
 
 	if (numString.match(/^\d+$/)) {
 		this.value = parseInt(numString, 10);
+		if (this.value >= -0x80000000 && this.value <= 0x7fffffff) {
+			this.type = types.int;
+		} else {
+			throw("Integer out of range: " + numString);
+		}
 	} else {
 		throw("Unrecognised numeric constant: " + numString);
 	}
 }
 ConstExpression.prototype.inspect = function() {
-	return "Const: " + this.value;
+	return util.format(
+		"Const: %s <%s>", this.value, util.inspect(this.type)
+	);
 };
 
 function FunctionCallExpression(callee, params, context, hints) {
@@ -72,9 +104,13 @@ function FunctionCallExpression(callee, params, context, hints) {
 			'resultIsUsed': true
 		}));
 	}
+	this.type = this.callee.type.returnType;
 }
 FunctionCallExpression.prototype.inspect = function() {
-	return "FunctionCall: " + util.inspect(this.callee) + "(" + util.inspect(this.parameters) + ")";
+	return util.format(
+		"FunctionCall: %s(%s) <%s>",
+		util.inspect(this.callee), util.inspect(this.parameters), util.inspect(this.type)
+	);
 };
 
 function NegationExpression(argument, context, hints) {
@@ -84,9 +120,22 @@ function NegationExpression(argument, context, hints) {
 	this.argument = constructExpression(argument, context, {
 		'resultIsUsed': this.resultIsUsed
 	});
+
+	if (this.argument.type == types.int) {
+		this.type = types.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle NegationExpression with type: %s",
+				util.inspect(this.argument.type)
+			)
+		);
+	}
 }
 NegationExpression.prototype.inspect = function() {
-	return "Negation: (" + util.inspect(this.argument) + ")";
+	return util.format(
+		"Negation: (%s) <%s>",
+		util.inspect(this.argument), util.inspect(this.type)
+	);
 };
 
 function PostdecrementExpression(argument, context, hints) {
@@ -95,9 +144,22 @@ function PostdecrementExpression(argument, context, hints) {
 	this.argument = constructExpression(argument, context, {
 		'resultIsUsed': true
 	});
+
+	if (this.argument.type == types.int) {
+		this.type = types.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle PostdecrementExpression with type: %s",
+				util.inspect(this.argument.type)
+			)
+		);
+	}
 }
 PostdecrementExpression.prototype.inspect = function() {
-	return "Postdecrement: (" + util.inspect(this.argument) + ")";
+	return util.format(
+		"Postdecrement: (%s) <%s>",
+		util.inspect(this.argument), util.inspect(this.type)
+	);
 };
 function PostincrementExpression(argument, context, hints) {
 	this.expressionType = 'PostincrementExpression';
@@ -105,9 +167,22 @@ function PostincrementExpression(argument, context, hints) {
 	this.argument = constructExpression(argument, context, {
 		'resultIsUsed': true
 	});
+
+	if (this.argument.type == types.int) {
+		this.type = types.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle PostincrementExpression with type: %s",
+				util.inspect(this.argument.type)
+			)
+		);
+	}
 }
 PostdecrementExpression.prototype.inspect = function() {
-	return "Postincrement: (" + util.inspect(this.argument) + ")";
+	return util.format(
+		"Postdecrement: (%s) <%s>",
+		util.inspect(this.argument), util.inspect(this.type)
+	);
 };
 
 function SubtractExpression(left, right, context, hints) {
@@ -120,9 +195,22 @@ function SubtractExpression(left, right, context, hints) {
 	this.right = constructExpression(right, context, {
 		'resultIsUsed': this.resultIsUsed
 	});
+	if (this.left.type == types.int && this.right.type == types.int) {
+		this.type = types.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle SubtractExpression with types: %s, %s",
+				util.inspect(this.left.type),
+				util.inspect(this.right.type)
+			)
+		);
+	}
 }
 SubtractExpression.prototype.inspect = function() {
-	return "Subtract: (" + util.inspect(this.left) + ", " + util.inspect(this.right) + ")";
+	return util.format(
+		"Subtract: (%s, %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
 };
 
 function VariableExpression(variableName, context, hints) {
@@ -133,9 +221,13 @@ function VariableExpression(variableName, context, hints) {
 	if (this.variable === null) {
 		throw "Variable not found: " + variableName;
 	}
+	this.type = this.variable.type;
 }
 VariableExpression.prototype.inspect = function() {
-	return "Var: " + util.inspect(this.variable);
+	return util.format(
+		"Var: %s#%d <%s>",
+		this.variable.name, this.variable.id, util.inspect(this.type)
+	);
 };
 
 function constructExpression(node, context, hints) {
