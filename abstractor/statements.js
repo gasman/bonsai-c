@@ -14,9 +14,11 @@ function BlockStatement(node, context) {
 
 	this.statements = [];
 
+	var childContext = context.createChildContext();
+
 	for (var i = 0; i < statementNodes.length; i++) {
 		this.statements.push(
-			constructStatement(statementNodes[i], context)
+			constructStatement(statementNodes[i], childContext)
 		);
 	}
 }
