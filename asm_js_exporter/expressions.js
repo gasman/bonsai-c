@@ -105,17 +105,17 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
-function PostincrementExpression(arg, resultIsUsed, out) {
-	return PostupdateExpression(AddExpression, arg, resultIsUsed, out);
+function PostincrementExpression(arg, resultIsUsed, out, context) {
+	return PostupdateExpression(AddExpression, arg, resultIsUsed, out, context);
 }
 exports.PostincrementExpression = PostincrementExpression;
 
-function PostdecrementExpression(arg, resultIsUsed, out) {
-	return PostupdateExpression(SubtractExpression, arg, resultIsUsed, out);
+function PostdecrementExpression(arg, resultIsUsed, out, context) {
+	return PostupdateExpression(SubtractExpression, arg, resultIsUsed, out, context);
 }
 exports.PostdecrementExpression = PostdecrementExpression;
 
-function PostupdateExpression(internalOp, arg, resultIsUsed, out) {
+function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 	assert(arg.isIdentifier,
 		"Argument of a postincrement expression must be an identifier - got " + util.inspect(arg)
 	);
@@ -123,12 +123,8 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out) {
 	if (resultIsUsed) {
 		/* (arg)++ is equivalent to ((arg) = (tmp = (arg)) + 1), tmp */
 		if (arg.type.satisfies(types.int)) {
-			/* register as a local var of type 'int' */
-			var tempVariable = {
-				'name': 'temp', /* FIXME: allocate an unused variable name */
-				'type': types.int,
-				'intendedType': arg.intendedType
-			};
+			/* register a temp local var of type 'int' */
+			var tempVariable = context.allocateLocalVariable('temp', types.int, arg.intendedType);
 			out.variableDeclarations.push(
 				estree.VariableDeclarator(
 					estree.Identifier(tempVariable.name),
@@ -254,22 +250,18 @@ function compileExpression(expression, context, out) {
 			break;
 		case 'PostdecrementExpression':
 			arg = compileExpression(expression.argument, context, out);
-			return PostdecrementExpression(arg, expression.resultIsUsed, out);
+			return PostdecrementExpression(arg, expression.resultIsUsed, out, context);
 		case 'PostincrementExpression':
 			arg = compileExpression(expression.argument, context, out);
-			return PostincrementExpression(arg, expression.resultIsUsed, out);
+			return PostincrementExpression(arg, expression.resultIsUsed, out, context);
 		case 'SubtractExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return SubtractExpression(left, right);
 		case 'VariableExpression':
-			var variable = context.localVariablesById[expression.variable.id];
+			var variable = context.get(expression.variable.id);
 			if (!variable) {
-				variable = context.globalContext.globalVariablesById[expression.variable.id];
-
-				if (!variable) {
-					throw "Variable not found: " + util.inspect(expression.variable);
-				}
+				throw "Variable not found: " + util.inspect(expression.variable);
 			}
 			return VariableExpression(variable);
 		default:

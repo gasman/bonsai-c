@@ -29,12 +29,11 @@ function compileStatement(statement, out, context) {
 				switch (statement.type.category) {
 					case 'int':
 						/* register as a local var of type 'int', to be treated as signed */
-						var variable = {
-							'name': variableDeclaration.variable.name,
-							'type': types.int,
-							'intendedType': types.signed
-						};
-						context.localVariablesById[variableDeclaration.variable.id] = variable;
+						var variable = context.allocateLocalVariable(
+							variableDeclaration.variable.name,
+							types.int, types.signed,
+							variableDeclaration.variable.id
+						);
 
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
@@ -118,6 +117,42 @@ function compileStatement(statement, out, context) {
 	}
 }
 
+function FunctionContext(globalContext, returnType) {
+	this.globalContext = globalContext;
+	this.returnType = returnType;
+	this.localVariablesById = {};
+	this.localVariablesByName = {};
+}
+FunctionContext.prototype.get = function(id) {
+	var variable = this.globalContext.globalVariablesById[id];
+	if (variable) {
+		return variable;
+	} else {
+		return this.localVariablesById[id];
+	}
+};
+FunctionContext.prototype.allocateLocalVariable = function(suggestedName, typ, intendedType, id) {
+	var suffixIndex = 0;
+	var candidateName = suggestedName;
+	while (
+		candidateName in this.globalContext.globalVariablesByName ||
+		candidateName in this.localVariablesByName
+	) {
+		candidateName = suggestedName + '_' + suffixIndex;
+		suffixIndex++;
+	}
+	var variable = {
+		'name': candidateName,
+		'type': typ,
+		'intendedType': intendedType
+	};
+	this.localVariablesByName[candidateName] = variable;
+	if (id !== null) {
+		this.localVariablesById[id] = variable;
+	}
+	return variable;
+};
+
 function compileFunctionDefinition(functionDefinition, globalContext) {
 	var returnType;
 
@@ -130,11 +165,7 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 			throw "Don't know how to handle return type: " + util.inspect(functionDefinition.returnType);
 	}
 
-	var context = {
-		'globalContext': globalContext,
-		'localVariablesById': {},
-		'returnType': returnType
-	};
+	var context = new FunctionContext(globalContext, returnType);
 	var i, parameterType, intendedParameterType;
 
 	var parameterIdentifiers = [];
@@ -170,18 +201,16 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 				throw "Don't know how to annotate a parameter of type: " + util.inspect(param.type);
 		}
 
-		context.localVariablesById[param.id] = {
-			'name': param.name,
-			'type': parameterType,
-			'intendedType': intendedParameterType
-		};
+		context.allocateLocalVariable(param.name, parameterType, intendedParameterType, param.id);
 		parameterTypes.push(parameterType);
 	}
 
-	globalContext.globalVariablesById[functionDefinition.variable.id] = {
+	var functionVariable = {
 		'name': functionDefinition.variable.name,
 		'type': types.func(returnType, parameterTypes)
 	};
+	globalContext.globalVariablesById[functionDefinition.variable.id] = functionVariable;
+	globalContext.globalVariablesByName[functionDefinition.variable.name] = functionVariable;
 
 	var output = {
 		'variableDeclarations': [],
@@ -218,7 +247,8 @@ function compileModule(module) {
 	];
 
 	var globalContext = {
-		'globalVariablesById': {}
+		'globalVariablesById': {},
+		'globalVariablesByName': {}
 	};
 
 	for (var i = 0; i < module.declarations.length; i++) {
