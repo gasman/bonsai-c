@@ -1,6 +1,7 @@
 var assert = require('assert');
 var estree = require('./estree');
 var asmJsTypes = require('./asm_js_types');
+var cTypes = require('../abstractor/c_types');
 var expressions = require('./expressions');
 
 
@@ -31,13 +32,13 @@ function compileStatement(statement, out, context) {
 						/* register as a local var of type 'int', to be treated as signed */
 						var variable = context.allocateLocalVariable(
 							variableDeclaration.variable.name,
-							asmJsTypes.int, asmJsTypes.signed,
+							asmJsTypes.int, statement.type,
 							variableDeclaration.variable.id
 						);
 
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
-							initialValueExpression = expressions.ConstExpression(0, asmJsTypes.fixnum);
+							initialValueExpression = expressions.ConstExpression(0, cTypes.int);
 						} else {
 							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context, out);
 							val = initialValueExpression.numericLiteralValue;
@@ -55,7 +56,7 @@ function compileStatement(statement, out, context) {
 										).tree
 									)
 								);
-								initialValueExpression = expressions.ConstExpression(0, asmJsTypes.fixnum);
+								initialValueExpression = expressions.ConstExpression(0, cTypes.int);
 							}
 						}
 
@@ -166,48 +167,48 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 	}
 
 	var context = new FunctionContext(globalContext, returnType);
-	var i, parameterType, intendedParameterType;
+	var i, parameterType;
 
 	var parameterIdentifiers = [];
 	var parameterDeclarations = [];
 	var parameterTypes = [];
 
 	for (i = 0; i < functionDefinition.parameters.length; i++) {
-		var param = functionDefinition.parameters[i];
+		var originalParam = functionDefinition.parameters[i];
 		parameterIdentifiers.push(
-			estree.Identifier(param.name)
+			estree.Identifier(originalParam.name)
 		);
 
-		switch (param.type.category) {
+		switch (originalParam.type.category) {
 			case 'int':
 				/* register as a local var of type 'int' */
 				parameterType = asmJsTypes.int;
-				intendedParameterType = asmJsTypes.signed;
 
 				/* annotate as i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
 					estree.AssignmentExpression(
 						'=',
-						estree.Identifier(param.name),
+						estree.Identifier(originalParam.name),
 						estree.BinaryExpression(
 							'|',
-							estree.Identifier(param.name),
+							estree.Identifier(originalParam.name),
 							estree.Literal(0)
 						)
 					)
 				));
 				break;
 			default:
-				throw "Don't know how to annotate a parameter of type: " + util.inspect(param.type);
+				throw "Don't know how to annotate a parameter of type: " + util.inspect(originalParam.type);
 		}
 
-		context.allocateLocalVariable(param.name, parameterType, intendedParameterType, param.id);
+		context.allocateLocalVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
 		parameterTypes.push(parameterType);
 	}
 
 	var functionVariable = {
 		'name': functionDefinition.variable.name,
-		'type': asmJsTypes.func(returnType, parameterTypes)
+		'type': asmJsTypes.func(returnType, parameterTypes),
+		'intendedType': functionDefinition.type
 	};
 	globalContext.globalVariablesById[functionDefinition.variable.id] = functionVariable;
 	globalContext.globalVariablesByName[functionDefinition.variable.name] = functionVariable;

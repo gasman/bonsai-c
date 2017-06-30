@@ -3,6 +3,7 @@ var util = require('util');
 
 var estree = require('./estree');
 var asmJsTypes = require('./asm_js_types');
+var cTypes = require('../abstractor/c_types');
 
 function AddExpression(left, right) {
 	var typ;
@@ -57,12 +58,13 @@ exports.CommaExpression = CommaExpression;
 
 function ConstExpression(value, originalType) {
 	var typ = null;
-	if (originalType.satisfies(asmJsTypes.signed)) {
+	if (originalType.category == 'int') {
 		if (value >= 0 && value < 0x80000000) {
 			typ = asmJsTypes.fixnum;
 		} else {
 			throw("Numeric literal out of range for signed int: %d" % value);
 		}
+	/* // TODO: reinstate when c_types has a concept of unsigned int...
 	} else if (originalType.satisfies(asmJsTypes.unsigned)) {
 		if (value >= 0 && value < 0x80000000) {
 			typ = asmJsTypes.fixnum;
@@ -71,13 +73,19 @@ function ConstExpression(value, originalType) {
 		} else {
 			throw("Numeric literal out of range for unsigned int: %d" % value);
 		}
+	*/
 	} else {
-		throw("Can't determine type of numeric literal: " + value);
+		throw(
+			util.format("Can't determine type of numeric literal: %s (reported: %s)",
+				value, util.inspect(originalType)
+			)
+		);
 	}
 
 	return {
 		'tree': estree.Literal(value),
 		'type': typ,
+		'intendedType': originalType,
 		'isDirectNumericLiteral': true,
 		'isNumericLiteral': true,
 		'numericLiteralValue': value
@@ -90,16 +98,17 @@ function FunctionCallExpression(callee, args) {
 		"Callee of a function call must be an identifier - got " + util.inspect(callee)
 	);
 
-	var expectedParamTypes = callee.type.paramTypes;
+	var intendedParamTypes = callee.intendedType.paramTypes;
 
 	var argTrees = [];
 	for (var i = 0; i < args.length; i++) {
-		var arg = wrapFunctionCall(coerce(args[i], expectedParamTypes[i]));
+		var arg = wrapFunctionCall(coerce(args[i], intendedParamTypes[i]));
 		argTrees.push(arg.tree);
 	}
 	return {
 		'tree': estree.CallExpression(callee.tree, argTrees),
 		'type': callee.type.returnType,
+		'intendedType': callee.intendedType.returnType,
 		'isFunctionCall': true
 	};
 }
@@ -136,7 +145,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 					arg,
 					internalOp(
 						AssignmentExpression(VariableExpression(tempVariable), arg),
-						ConstExpression(1, asmJsTypes.fixnum)
+						ConstExpression(1, cTypes.int)
 					)
 				),
 				VariableExpression(tempVariable)
@@ -146,7 +155,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 		}
 	} else {
 		/* (arg)++ is equivalent to (arg) = (arg) + 1 */
-		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1, asmJsTypes.fixnum)));
+		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1, cTypes.int)));
 	}
 }
 
@@ -215,7 +224,7 @@ function compileExpression(expression, context, out) {
 			right = compileExpression(expression.right, context, out);
 			return CommaExpression(left, right);
 		case 'ConstExpression':
-			return ConstExpression(expression.value, getAsmJsType(expression.type));
+			return ConstExpression(expression.value, expression.type);
 		case 'FunctionCallExpression':
 			var callee = compileExpression(expression.callee, context, out);
 			var args = [];
@@ -269,22 +278,28 @@ function compileExpression(expression, context, out) {
 	}
 }
 
-function coerce(expr, targetType) {
-	if (expr.type.satisfies(targetType)) {
-		return expr;
-	} else if (expr.type.satisfies(asmJsTypes.intish) && asmJsTypes.signed.satisfies(targetType)) {
-		/* coerce intish to signed using x | 0 */
-		return {
-			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
-			'type': asmJsTypes.signed
-		};
-	} else {
-		throw(
-			util.format("Don't know how to coerce expression %s to type %s",
-				util.inspect(expr),
-				util.inspect(targetType)
-			)
-		);
+function coerce(expr, intendedType) {
+	switch (intendedType.category) {
+		case 'int': /* signed */
+			if (expr.type.satisfies(asmJsTypes.signed)) {
+				/* no coercion necessary */
+				return expr;
+			} else if (expr.type.satisfies(asmJsTypes.intish)) {
+				/* coerce intish to signed using x | 0 */
+				return {
+					'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
+					'type': asmJsTypes.signed,
+					'intendedType': intendedType
+				};
+			}
+			break;
+		default:
+			throw(
+				util.format("Don't know how to coerce expression %s to type %s",
+					util.inspect(expr),
+					util.inspect(targetType)
+				)
+			);
 	}
 }
 
