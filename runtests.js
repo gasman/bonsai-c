@@ -66,5 +66,7 @@ testCompile('tests/postincrement_result.c', 43);
 testCompile('tests/postdecrement_result.c', 41);
 testCompile('tests/while.c', 55);
 testCompile('tests/variable_shadowing.c', 65);
+testCompile('tests/chained_add.c', 42);
+testCompile('tests/chained_subtract.c', 42);
 
 console.log("All tests passed");

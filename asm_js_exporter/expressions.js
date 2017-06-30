@@ -6,26 +6,18 @@ var asmJsTypes = require('./asm_js_types');
 var cTypes = require('../abstractor/c_types');
 
 function AddExpression(left, right, intendedType) {
-	var typ;
 	assert(intendedType.category == 'int',
 		"Can't handle non-integer AddExpressions"
 	);
-	if (left.type.satisfies(asmJsTypes.int) && right.type.satisfies(asmJsTypes.int)) {
-		typ = asmJsTypes.intish;
-	} else {
-		throw(
-			util.format("Can't handle integer AddExpression with operand asmJsTypes %s and %s",
-				util.inspect(left.type),
-				util.inspect(right.type)
-			)
-		);
-	}
+
+	left = coerce(left, intendedType);
+	right = coerce(right, intendedType);
 	return {
 		'tree': estree.BinaryExpression('+',
 			wrapFunctionCall(left).tree,
 			wrapFunctionCall(right).tree
 		),
-		'type': typ,
+		'type': asmJsTypes.intish,
 		'intendedType': intendedType
 	};
 }
@@ -170,26 +162,19 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 }
 
 function SubtractExpression(left, right, intendedType) {
-	var typ;
 	assert(intendedType.category == 'int',
 		"Can't handle non-integer SubtractExpressions"
 	);
-	if (left.type.satisfies(asmJsTypes.int) && right.type.satisfies(asmJsTypes.int)) {
-		typ = asmJsTypes.intish;
-	} else {
-		throw(
-			util.format("Can't handle SubtractExpression with operand types %s and %s",
-				util.inspect(left.type),
-				util.inspect(right.type)
-			)
-		);
-	}
+
+	left = coerce(left, intendedType);
+	right = coerce(right, intendedType);
+
 	return {
 		'tree': estree.BinaryExpression('-',
 			wrapFunctionCall(left).tree,
 			wrapFunctionCall(right).tree
 		),
-		'type': typ,
+		'type': asmJsTypes.intish,
 		'intendedType': intendedType
 	};
 }
