@@ -10,15 +10,25 @@ function AddExpression(left, right, intendedType) {
 		"Can't handle non-integer AddExpressions"
 	);
 
-	left = coerce(left, intendedType);
-	right = coerce(right, intendedType);
+	if (left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish)) {
+		/* can skip coercion (integer addition supports chaining, despite the intermediate
+			results being intish in principle) */
+	} else {
+		left = coerce(left, intendedType);
+	}
+	if (right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish)) {
+		/* can skip coercion */
+	} else {
+		right = coerce(right, intendedType);
+	}
 	return {
 		'tree': estree.BinaryExpression('+',
 			wrapFunctionCall(left).tree,
 			wrapFunctionCall(right).tree
 		),
 		'type': asmJsTypes.intish,
-		'intendedType': intendedType
+		'intendedType': intendedType,
+		'isAdditiveExpression': true
 	};
 }
 exports.AddExpression = AddExpression;
@@ -166,8 +176,17 @@ function SubtractExpression(left, right, intendedType) {
 		"Can't handle non-integer SubtractExpressions"
 	);
 
-	left = coerce(left, intendedType);
-	right = coerce(right, intendedType);
+	if (left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish)) {
+		/* can skip coercion (integer addition supports chaining, despite the intermediate
+			results being intish in principle) */
+	} else {
+		left = coerce(left, intendedType);
+	}
+	if (right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish)) {
+		/* can skip coercion */
+	} else {
+		right = coerce(right, intendedType);
+	}
 
 	return {
 		'tree': estree.BinaryExpression('-',
@@ -175,7 +194,8 @@ function SubtractExpression(left, right, intendedType) {
 			wrapFunctionCall(right).tree
 		),
 		'type': asmJsTypes.intish,
-		'intendedType': intendedType
+		'intendedType': intendedType,
+		'isAdditiveExpression': true
 	};
 }
 exports.SubtractExpression = SubtractExpression;
