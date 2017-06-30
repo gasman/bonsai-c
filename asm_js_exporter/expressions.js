@@ -161,6 +161,10 @@ function NotEqualExpression(left, right, intendedOperandType) {
 	return RelationalExpression('!=', left, right, intendedOperandType);
 }
 exports.NotEqualExpression = NotEqualExpression;
+function LessThanOrEqualExpression(left, right, intendedOperandType) {
+	return RelationalExpression('<=', left, right, intendedOperandType);
+}
+exports.LessThanOrEqualExpression = LessThanOrEqualExpression;
 function GreaterThanOrEqualExpression(left, right, intendedOperandType) {
 	return RelationalExpression('>=', left, right, intendedOperandType);
 }
@@ -317,6 +321,10 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return NotEqualExpression(left, right, expression.operandType);
+		case 'LessThanOrEqualExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return LessThanOrEqualExpression(left, right, expression.operandType);
 		case 'GreaterThanOrEqualExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);

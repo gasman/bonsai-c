@@ -73,5 +73,6 @@ testCompile('tests/greater_than.c', 1);
 testCompile('tests/equal.c', 2);
 testCompile('tests/not_equal.c', 1);
 testCompile('tests/greater_than_or_equal.c', 2);
+testCompile('tests/less_than_or_equal.c', 2);
 
 console.log("All tests passed");
