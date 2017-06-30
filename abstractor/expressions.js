@@ -1,6 +1,6 @@
 var util = require('util');
 
-var types = require('./types');
+var cTypes = require('./c_types');
 
 
 function AddExpression(left, right, context, hints) {
@@ -14,8 +14,8 @@ function AddExpression(left, right, context, hints) {
 		'resultIsUsed': this.resultIsUsed
 	});
 
-	if (this.left.type == types.int && this.right.type == types.int) {
-		this.type = types.int;
+	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+		this.type = cTypes.int;
 	} else {
 		throw(
 			util.format("Don't know how to handle AddExpression with types: %s, %s",
@@ -77,7 +77,7 @@ function ConstExpression(numString, context, hints) {
 	if (numString.match(/^\d+$/)) {
 		this.value = parseInt(numString, 10);
 		if (this.value >= -0x80000000 && this.value <= 0x7fffffff) {
-			this.type = types.int;
+			this.type = cTypes.int;
 		} else {
 			throw("Integer out of range: " + numString);
 		}
@@ -121,8 +121,8 @@ function NegationExpression(argument, context, hints) {
 		'resultIsUsed': this.resultIsUsed
 	});
 
-	if (this.argument.type == types.int) {
-		this.type = types.int;
+	if (this.argument.type == cTypes.int) {
+		this.type = cTypes.int;
 	} else {
 		throw(
 			util.format("Don't know how to handle NegationExpression with type: %s",
@@ -145,8 +145,8 @@ function PostdecrementExpression(argument, context, hints) {
 		'resultIsUsed': true
 	});
 
-	if (this.argument.type == types.int) {
-		this.type = types.int;
+	if (this.argument.type == cTypes.int) {
+		this.type = cTypes.int;
 	} else {
 		throw(
 			util.format("Don't know how to handle PostdecrementExpression with type: %s",
@@ -168,8 +168,8 @@ function PostincrementExpression(argument, context, hints) {
 		'resultIsUsed': true
 	});
 
-	if (this.argument.type == types.int) {
-		this.type = types.int;
+	if (this.argument.type == cTypes.int) {
+		this.type = cTypes.int;
 	} else {
 		throw(
 			util.format("Don't know how to handle PostincrementExpression with type: %s",
@@ -195,8 +195,8 @@ function SubtractExpression(left, right, context, hints) {
 	this.right = constructExpression(right, context, {
 		'resultIsUsed': this.resultIsUsed
 	});
-	if (this.left.type == types.int && this.right.type == types.int) {
-		this.type = types.int;
+	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+		this.type = cTypes.int;
 	} else {
 		throw(
 			util.format("Don't know how to handle SubtractExpression with types: %s, %s",

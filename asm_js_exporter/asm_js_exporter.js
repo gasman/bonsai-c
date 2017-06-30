@@ -1,6 +1,6 @@
 var assert = require('assert');
 var estree = require('./estree');
-var types = require('./types');
+var asmJsTypes = require('./asm_js_types');
 var expressions = require('./expressions');
 
 
@@ -31,13 +31,13 @@ function compileStatement(statement, out, context) {
 						/* register as a local var of type 'int', to be treated as signed */
 						var variable = context.allocateLocalVariable(
 							variableDeclaration.variable.name,
-							types.int, types.signed,
+							asmJsTypes.int, asmJsTypes.signed,
 							variableDeclaration.variable.id
 						);
 
 						if (variableDeclaration.initialValueExpression === null) {
 							/* output: var i = 0 */
-							initialValueExpression = expressions.ConstExpression(0, types.fixnum);
+							initialValueExpression = expressions.ConstExpression(0, asmJsTypes.fixnum);
 						} else {
 							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context, out);
 							val = initialValueExpression.numericLiteralValue;
@@ -55,7 +55,7 @@ function compileStatement(statement, out, context) {
 										).tree
 									)
 								);
-								initialValueExpression = expressions.ConstExpression(0, types.fixnum);
+								initialValueExpression = expressions.ConstExpression(0, asmJsTypes.fixnum);
 							}
 						}
 
@@ -159,7 +159,7 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 	/* convert return type from AST to a recognised asm.js type */
 	switch (functionDefinition.returnType.category) {
 		case 'int':
-			returnType = types.signed;
+			returnType = asmJsTypes.signed;
 			break;
 		default:
 			throw "Don't know how to handle return type: " + util.inspect(functionDefinition.returnType);
@@ -181,8 +181,8 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 		switch (param.type.category) {
 			case 'int':
 				/* register as a local var of type 'int' */
-				parameterType = types.int;
-				intendedParameterType = types.signed;
+				parameterType = asmJsTypes.int;
+				intendedParameterType = asmJsTypes.signed;
 
 				/* annotate as i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
@@ -207,7 +207,7 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 
 	var functionVariable = {
 		'name': functionDefinition.variable.name,
-		'type': types.func(returnType, parameterTypes)
+		'type': asmJsTypes.func(returnType, parameterTypes)
 	};
 	globalContext.globalVariablesById[functionDefinition.variable.id] = functionVariable;
 	globalContext.globalVariablesByName[functionDefinition.variable.name] = functionVariable;

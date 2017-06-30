@@ -2,15 +2,15 @@ var assert = require('assert');
 var util = require('util');
 
 var estree = require('./estree');
-var types = require('./types');
+var asmJsTypes = require('./asm_js_types');
 
 function AddExpression(left, right) {
 	var typ;
-	if (left.type.satisfies(types.int) && right.type.satisfies(types.int)) {
-		typ = types.intish;
+	if (left.type.satisfies(asmJsTypes.int) && right.type.satisfies(asmJsTypes.int)) {
+		typ = asmJsTypes.intish;
 	} else {
 		throw(
-			util.format("Can't handle AddExpression with operand types %s and %s",
+			util.format("Can't handle AddExpression with operand asmJsTypes %s and %s",
 				util.inspect(left.type),
 				util.inspect(right.type)
 			)
@@ -57,17 +57,17 @@ exports.CommaExpression = CommaExpression;
 
 function ConstExpression(value, originalType) {
 	var typ = null;
-	if (originalType.satisfies(types.signed)) {
+	if (originalType.satisfies(asmJsTypes.signed)) {
 		if (value >= 0 && value < 0x80000000) {
-			typ = types.fixnum;
+			typ = asmJsTypes.fixnum;
 		} else {
 			throw("Numeric literal out of range for signed int: %d" % value);
 		}
-	} else if (originalType.satisfies(types.unsigned)) {
+	} else if (originalType.satisfies(asmJsTypes.unsigned)) {
 		if (value >= 0 && value < 0x80000000) {
-			typ = types.fixnum;
+			typ = asmJsTypes.fixnum;
 		} else if (value >= 0x80000000 && value < 0x100000000) {
-			typ = types.unsigned;
+			typ = asmJsTypes.unsigned;
 		} else {
 			throw("Numeric literal out of range for unsigned int: %d" % value);
 		}
@@ -122,9 +122,9 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 
 	if (resultIsUsed) {
 		/* (arg)++ is equivalent to ((arg) = (tmp = (arg)) + 1), tmp */
-		if (arg.type.satisfies(types.int)) {
+		if (arg.type.satisfies(asmJsTypes.int)) {
 			/* register a temp local var of type 'int' */
-			var tempVariable = context.allocateLocalVariable('temp', types.int, arg.intendedType);
+			var tempVariable = context.allocateLocalVariable('temp', asmJsTypes.int, arg.intendedType);
 			out.variableDeclarations.push(
 				estree.VariableDeclarator(
 					estree.Identifier(tempVariable.name),
@@ -136,7 +136,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 					arg,
 					internalOp(
 						AssignmentExpression(VariableExpression(tempVariable), arg),
-						ConstExpression(1, types.fixnum)
+						ConstExpression(1, asmJsTypes.fixnum)
 					)
 				),
 				VariableExpression(tempVariable)
@@ -146,14 +146,14 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 		}
 	} else {
 		/* (arg)++ is equivalent to (arg) = (arg) + 1 */
-		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1, types.fixnum)));
+		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1, asmJsTypes.fixnum)));
 	}
 }
 
 function SubtractExpression(left, right) {
 	var typ;
-	if (left.type.satisfies(types.int) && right.type.satisfies(types.int)) {
-		typ = types.intish;
+	if (left.type.satisfies(asmJsTypes.int) && right.type.satisfies(asmJsTypes.int)) {
+		typ = asmJsTypes.intish;
 	} else {
 		throw(
 			util.format("Can't handle SubtractExpression with operand types %s and %s",
@@ -185,7 +185,7 @@ exports.VariableExpression = VariableExpression;
 
 function getAsmJsType(typ) {
 	/* get asm.js type corresponding to the given abstract type */
-	if (typ.category == 'int') return types.signed;
+	if (typ.category == 'int') return asmJsTypes.signed;
 
 	throw util.format(
 		"Don't know how to convert abstract type %s to asm.js type",
@@ -227,9 +227,9 @@ function compileExpression(expression, context, out) {
 			arg = compileExpression(expression.argument, context, out);
 			typ = null;
 			if (arg.tree.type == 'Literal' && arg.tree.value > 0 && arg.tree.value <= 0x80000000) {
-				typ = types.signed;
-			} else if (arg.type.satisfies(types.int)) {
-				typ = types.intish;
+				typ = asmJsTypes.signed;
+			} else if (arg.type.satisfies(asmJsTypes.int)) {
+				typ = asmJsTypes.intish;
 			} else {
 				throw("Can't handle a NegationExpression with arg type: " + util.inspect(arg.type));
 			}
@@ -272,11 +272,11 @@ function compileExpression(expression, context, out) {
 function coerce(expr, targetType) {
 	if (expr.type.satisfies(targetType)) {
 		return expr;
-	} else if (expr.type.satisfies(types.intish) && types.signed.satisfies(targetType)) {
+	} else if (expr.type.satisfies(asmJsTypes.intish) && asmJsTypes.signed.satisfies(targetType)) {
 		/* coerce intish to signed using x | 0 */
 		return {
 			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
-			'type': types.signed
+			'type': asmJsTypes.signed
 		};
 	} else {
 		throw(
@@ -294,10 +294,10 @@ function wrapFunctionCall(expr) {
 	call this to wrap it in a suitable do-nothing coercion */
 	if (!expr.isFunctionCall) return expr;
 
-	if (expr.type.satisfies(types.signed)) {
+	if (expr.type.satisfies(asmJsTypes.signed)) {
 		return {
 			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
-			'type': types.signed
+			'type': asmJsTypes.signed
 		};
 	} else {
 		throw(

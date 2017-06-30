@@ -2,7 +2,7 @@ var assert = require('assert');
 var util = require('util');
 
 var expressions = require('./expressions');
-var types = require('./types');
+var cTypes = require('./c_types');
 
 function BlockStatement(node, context) {
 	this.statementType = 'BlockStatement';
@@ -30,7 +30,7 @@ function DeclarationStatement(node, context) {
 	this.statementType = 'DeclarationStatement';
 
 	var declarationSpecifiersNode = node.params[0];
-	this.type = types.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
+	this.type = cTypes.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
 
 	this.variableDeclarations = [];
 	var initDeclaratorNodes = node.params[1];

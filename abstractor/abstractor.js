@@ -3,21 +3,21 @@ var util = require('util');
 
 var statements = require('./statements');
 var context = require('./context');
-var types = require('./types');
+var cTypes = require('./c_types');
 
 function parameterDeclarationIsVoid(nodeList) {
 	/* return true if the parameter declaration consists of "(void)" */
 	if (nodeList.length != 1) return false;
 	if (nodeList[0].type != 'TypeOnlyParameterDeclaration') return false;
 	var declarationSpecifiersNode = nodeList[0].params[0];
-	return (types.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode).category == 'void');
+	return (cTypes.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode).category == 'void');
 }
 
 function FunctionDefinition(node, parentContext) {
 	this.declarationType = 'FunctionDefinition';
 
 	var declarationSpecifiersNode = node.params[0];
-	this.returnType = types.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
+	this.returnType = cTypes.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
 
 	var declaratorNode = node.params[1];
 	var identifierNode = declaratorNode.params[0];
@@ -38,7 +38,7 @@ function FunctionDefinition(node, parentContext) {
 		for (var i = 0; i < parameterDeclarationNodes.length; i++) {
 			var paramDeclarationNode = parameterDeclarationNodes[i];
 			var paramDeclarationSpecifiersNode = paramDeclarationNode.params[0];
-			var paramType = types.getTypeFromDeclarationSpecifiers(paramDeclarationSpecifiersNode);
+			var paramType = cTypes.getTypeFromDeclarationSpecifiers(paramDeclarationSpecifiersNode);
 			var paramIdentifierNode = paramDeclarationNode.params[1];
 			var paramIdentifier = paramIdentifierNode.params[0];
 
@@ -47,7 +47,7 @@ function FunctionDefinition(node, parentContext) {
 		}
 	}
 
-	this.type = types.func(this.returnType, this.parameterTypes);
+	this.type = cTypes.func(this.returnType, this.parameterTypes);
 	this.variable = parentContext.define(this.name, this.type);
 
 	var body = statements.constructStatement(node.params[3], functionContext);
