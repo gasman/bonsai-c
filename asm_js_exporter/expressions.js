@@ -5,13 +5,16 @@ var estree = require('./estree');
 var asmJsTypes = require('./asm_js_types');
 var cTypes = require('../abstractor/c_types');
 
-function AddExpression(left, right) {
+function AddExpression(left, right, intendedType) {
 	var typ;
+	assert(intendedType.category == 'int',
+		"Can't handle non-integer AddExpressions"
+	);
 	if (left.type.satisfies(asmJsTypes.int) && right.type.satisfies(asmJsTypes.int)) {
 		typ = asmJsTypes.intish;
 	} else {
 		throw(
-			util.format("Can't handle AddExpression with operand asmJsTypes %s and %s",
+			util.format("Can't handle integer AddExpression with operand asmJsTypes %s and %s",
 				util.inspect(left.type),
 				util.inspect(right.type)
 			)
@@ -22,7 +25,8 @@ function AddExpression(left, right) {
 			wrapFunctionCall(left).tree,
 			wrapFunctionCall(right).tree
 		),
-		'type': typ
+		'type': typ,
+		'intendedType': intendedType
 	};
 }
 exports.AddExpression = AddExpression;
@@ -39,7 +43,8 @@ function AssignmentExpression(left, right) {
 			left.tree,
 			wrapFunctionCall(right).tree
 		),
-		'type': right.type
+		'type': right.type,
+		'intendedType': left.intendedType
 	};
 }
 exports.AssignmentExpression = AssignmentExpression;
@@ -51,7 +56,8 @@ function CommaExpression(left, right) {
 			wrapFunctionCall(right).tree
 			/* FIXME: avoid wrapFunctionCall if this is a chained comma expression and this isn't the last one */
 		]),
-		'type': right.type
+		'type': right.type,
+		'intendedType': right.intendedType
 	};
 }
 exports.CommaExpression = CommaExpression;
@@ -145,7 +151,8 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 					arg,
 					internalOp(
 						AssignmentExpression(VariableExpression(tempVariable), arg),
-						ConstExpression(1, cTypes.int)
+						ConstExpression(1, cTypes.int),
+						cTypes.int
 					)
 				),
 				VariableExpression(tempVariable)
@@ -155,12 +162,18 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 		}
 	} else {
 		/* (arg)++ is equivalent to (arg) = (arg) + 1 */
-		return AssignmentExpression(arg, internalOp(arg, ConstExpression(1, cTypes.int)));
+		return AssignmentExpression(
+			arg,
+			internalOp(arg, ConstExpression(1, cTypes.int), cTypes.int)
+		);
 	}
 }
 
-function SubtractExpression(left, right) {
+function SubtractExpression(left, right, intendedType) {
 	var typ;
+	assert(intendedType.category == 'int',
+		"Can't handle non-integer SubtractExpressions"
+	);
 	if (left.type.satisfies(asmJsTypes.int) && right.type.satisfies(asmJsTypes.int)) {
 		typ = asmJsTypes.intish;
 	} else {
@@ -176,7 +189,8 @@ function SubtractExpression(left, right) {
 			wrapFunctionCall(left).tree,
 			wrapFunctionCall(right).tree
 		),
-		'type': typ
+		'type': typ,
+		'intendedType': intendedType
 	};
 }
 exports.SubtractExpression = SubtractExpression;
@@ -214,7 +228,7 @@ function compileExpression(expression, context, out) {
 		case 'AddExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
-			return AddExpression(left, right);
+			return AddExpression(left, right, expression.type);
 		case 'AssignmentExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
@@ -266,7 +280,7 @@ function compileExpression(expression, context, out) {
 		case 'SubtractExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
-			return SubtractExpression(left, right);
+			return SubtractExpression(left, right, expression.type);
 		case 'VariableExpression':
 			var variable = context.get(expression.variable.id);
 			if (!variable) {
