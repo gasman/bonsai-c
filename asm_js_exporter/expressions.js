@@ -10,13 +10,19 @@ function AddExpression(left, right, intendedType) {
 		"Can't handle non-integer AddExpressions"
 	);
 
-	if (left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish)) {
+	if (
+		left.type.satisfies(asmJsTypes.int) ||
+		(left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish))
+	) {
 		/* can skip coercion (integer addition supports chaining, despite the intermediate
 			results being intish in principle) */
 	} else {
 		left = coerce(left, intendedType);
 	}
-	if (right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish)) {
+	if (
+		right.type.satisfies(asmJsTypes.int) ||
+		(right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish))
+	) {
 		/* can skip coercion */
 	} else {
 		right = coerce(right, intendedType);
@@ -122,6 +128,25 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
+function LessThanExpression(left, right, intendedOperandType) {
+	assert(intendedOperandType.category == 'int',
+		"Can't handle non-integer LessThanExpression"
+	);
+
+	left = coerce(left, intendedOperandType);
+	right = coerce(right, intendedOperandType);
+
+	return {
+		'tree': estree.BinaryExpression('<',
+			wrapFunctionCall(left).tree,
+			wrapFunctionCall(right).tree
+		),
+		'type': asmJsTypes.int,
+		'intendedType': cTypes.int,
+	};
+}
+exports.LessThanExpression = LessThanExpression;
+
 function PostincrementExpression(arg, resultIsUsed, out, context) {
 	return PostupdateExpression(AddExpression, arg, resultIsUsed, out, context);
 }
@@ -176,13 +201,19 @@ function SubtractExpression(left, right, intendedType) {
 		"Can't handle non-integer SubtractExpressions"
 	);
 
-	if (left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish)) {
+	if (
+		left.type.satisfies(asmJsTypes.int) ||
+		(left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish))
+	) {
 		/* can skip coercion (integer addition supports chaining, despite the intermediate
 			results being intish in principle) */
 	} else {
 		left = coerce(left, intendedType);
 	}
-	if (right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish)) {
+	if (
+		right.type.satisfies(asmJsTypes.int) ||
+		(right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish))
+	) {
 		/* can skip coercion */
 	} else {
 		right = coerce(right, intendedType);
@@ -251,6 +282,10 @@ function compileExpression(expression, context, out) {
 				args[i] = compileExpression(expression.parameters[i], context, out);
 			}
 			return FunctionCallExpression(callee, args);
+		case 'LessThanExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return LessThanExpression(left, right, expression.operandType);
 		case 'NegationExpression':
 			arg = compileExpression(expression.argument, context, out);
 			typ = null;
