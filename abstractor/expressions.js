@@ -154,6 +154,9 @@ function LessThanExpression(left, right, context, hints) {
 function GreaterThanExpression(left, right, context, hints) {
 	return new RelationalExpression('GreaterThanExpression', left, right, context, hints);
 }
+function EqualExpression(left, right, context, hints) {
+	return new RelationalExpression('EqualExpression', left, right, context, hints);
+}
 
 
 function NegationExpression(argument, context, hints) {
@@ -297,6 +300,8 @@ function constructExpression(node, context, hints) {
 					return new LessThanExpression(node.params[1], node.params[2], context, hints);
 				case '>':
 					return new GreaterThanExpression(node.params[1], node.params[2], context, hints);
+				case '==':
+					return new EqualExpression(node.params[1], node.params[2], context, hints);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}
