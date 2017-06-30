@@ -157,6 +157,10 @@ function EqualExpression(left, right, intendedOperandType) {
 	return RelationalExpression('==', left, right, intendedOperandType);
 }
 exports.EqualExpression = EqualExpression;
+function NotEqualExpression(left, right, intendedOperandType) {
+	return RelationalExpression('!=', left, right, intendedOperandType);
+}
+exports.NotEqualExpression = NotEqualExpression;
 
 function PostincrementExpression(arg, resultIsUsed, out, context) {
 	return PostupdateExpression(AddExpression, arg, resultIsUsed, out, context);
@@ -305,6 +309,10 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return EqualExpression(left, right, expression.operandType);
+		case 'NotEqualExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return NotEqualExpression(left, right, expression.operandType);
 		case 'NegationExpression':
 			arg = compileExpression(expression.argument, context, out);
 			typ = null;
