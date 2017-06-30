@@ -128,16 +128,16 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
-function LessThanExpression(left, right, intendedOperandType) {
+function RelationalExpression(operator, left, right, intendedOperandType) {
 	assert(intendedOperandType.category == 'int',
-		"Can't handle non-integer LessThanExpression"
+		"Can't handle non-integer RelationalExpression"
 	);
 
 	left = coerce(left, intendedOperandType);
 	right = coerce(right, intendedOperandType);
 
 	return {
-		'tree': estree.BinaryExpression('<',
+		'tree': estree.BinaryExpression(operator,
 			wrapFunctionCall(left).tree,
 			wrapFunctionCall(right).tree
 		),
@@ -145,7 +145,14 @@ function LessThanExpression(left, right, intendedOperandType) {
 		'intendedType': cTypes.int,
 	};
 }
+function LessThanExpression(left, right, intendedOperandType) {
+	return RelationalExpression('<', left, right, intendedOperandType);
+}
 exports.LessThanExpression = LessThanExpression;
+function GreaterThanExpression(left, right, intendedOperandType) {
+	return RelationalExpression('>', left, right, intendedOperandType);
+}
+exports.GreaterThanExpression = GreaterThanExpression;
 
 function PostincrementExpression(arg, resultIsUsed, out, context) {
 	return PostupdateExpression(AddExpression, arg, resultIsUsed, out, context);
@@ -286,6 +293,10 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return LessThanExpression(left, right, expression.operandType);
+		case 'GreaterThanExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return GreaterThanExpression(left, right, expression.operandType);
 		case 'NegationExpression':
 			arg = compileExpression(expression.argument, context, out);
 			typ = null;

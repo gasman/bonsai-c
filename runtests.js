@@ -69,5 +69,6 @@ testCompile('tests/variable_shadowing.c', 65);
 testCompile('tests/chained_add.c', 42);
 testCompile('tests/chained_subtract.c', 42);
 testCompile('tests/less_than.c', 2);
+testCompile('tests/greater_than.c', 1);
 
 console.log("All tests passed");

@@ -113,8 +113,9 @@ FunctionCallExpression.prototype.inspect = function() {
 	);
 };
 
-function LessThanExpression(left, right, context, hints) {
-	this.expressionType = 'LessThanExpression';
+
+function RelationalExpression(expressionType, left, right, context, hints) {
+	this.expressionType = expressionType;
 	this.resultIsUsed = hints.resultIsUsed;
 
 	this.type = cTypes.int;
@@ -130,20 +131,29 @@ function LessThanExpression(left, right, context, hints) {
 		this.operandType = cTypes.int;
 	} else {
 		throw(
-			util.format("Don't know how to handle LessThanExpression with types: %s, %s",
+			util.format("Don't know how to handle %s with types: %s, %s",
+				expressionType,
 				util.inspect(this.left.type),
 				util.inspect(this.right.type)
 			)
 		);
 	}
 }
-LessThanExpression.prototype.inspect = function() {
+RelationalExpression.prototype.inspect = function() {
 	return util.format(
-		"LessThan: (%s, %s) <%s> -> <%s>",
+		"%s: (%s, %s) <%s> -> <%s>",
+		this.expressionType,
 		util.inspect(this.left), util.inspect(this.right),
 		util.inspect(this.operandType), util.inspect(this.type)
 	);
 };
+
+function LessThanExpression(left, right, context, hints) {
+	return new RelationalExpression('LessThanExpression', left, right, context, hints);
+}
+function GreaterThanExpression(left, right, context, hints) {
+	return new RelationalExpression('GreaterThanExpression', left, right, context, hints);
+}
 
 
 function NegationExpression(argument, context, hints) {
@@ -285,6 +295,8 @@ function constructExpression(node, context, hints) {
 					return new SubtractExpression(node.params[1], node.params[2], context, hints);
 				case '<':
 					return new LessThanExpression(node.params[1], node.params[2], context, hints);
+				case '>':
+					return new GreaterThanExpression(node.params[1], node.params[2], context, hints);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}
