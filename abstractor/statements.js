@@ -33,6 +33,13 @@ BreakStatement.prototype.inspect = function() {
 	return "BreakStatement";
 };
 
+function ContinueStatement(node, context) {
+	this.statementType = 'ContinueStatement';
+}
+ContinueStatement.prototype.inspect = function() {
+	return "ContinueStatement";
+};
+
 function DeclarationStatement(node, context) {
 	this.statementType = 'DeclarationStatement';
 
@@ -184,6 +191,8 @@ function constructStatement(node, context) {
 			return new BlockStatement(node, context);
 		case 'Break':
 			return new BreakStatement(node, context);
+		case 'Continue':
+			return new ContinueStatement(node, context);
 		case 'DeclarationStatement':
 			return new DeclarationStatement(node, context);
 		case 'ExpressionStatement':

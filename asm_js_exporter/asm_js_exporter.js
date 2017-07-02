@@ -23,6 +23,9 @@ function compileStatement(statement, out, context) {
 		case 'BreakStatement':
 			out.body.push(estree.BreakStatement());
 			return;
+		case 'ContinueStatement':
+			out.body.push(estree.ContinueStatement());
+			return;
 		case 'DeclarationStatement':
 			/* Don't generate any code, but add to the list of variables that need
 			declaring at the top of the function */

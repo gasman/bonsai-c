@@ -34,6 +34,10 @@ exports.CallExpression = function(callee, args) {
 	};
 };
 
+exports.ContinueStatement = function(label) {
+	return {'type': 'ContinueStatement', 'label': label};
+};
+
 exports.ExpressionStatement = function(expr) {
 	return {
 		'type': 'ExpressionStatement',
