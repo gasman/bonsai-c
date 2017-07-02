@@ -189,13 +189,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 		/* (arg)++ is equivalent to ((arg) = (tmp = (arg)) + 1), tmp */
 		if (arg.type.satisfies(asmJsTypes.int)) {
 			/* register a temp local var of type 'int' */
-			var tempVariable = context.allocateLocalVariable('temp', asmJsTypes.int, arg.intendedType);
-			out.variableDeclarations.push(
-				estree.VariableDeclarator(
-					estree.Identifier(tempVariable.name),
-					estree.Literal(0)
-				)
-			);
+			var tempVariable = context.declareLocalVariable('temp', null, arg.intendedType, null, out);
 			return CommaExpression(
 				AssignmentExpression(
 					arg,
