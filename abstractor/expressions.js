@@ -32,6 +32,25 @@ AddExpression.prototype.inspect = function() {
 	);
 };
 
+function AddAssignmentExpression(left, right, context, hints) {
+	this.expressionType = 'AddAssignmentExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+
+	this.left = constructExpression(left, context, {
+		'resultIsUsed': true
+	});
+	this.right = constructExpression(right, context, {
+		'resultIsUsed': true
+	});
+	this.type = this.left.type;
+}
+AddAssignmentExpression.prototype.inspect = function() {
+	return util.format(
+		"AddAssignment: (%s += %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
+};
+
 function AssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'AssignmentExpression';
 	this.resultIsUsed = hints.resultIsUsed;
@@ -294,6 +313,8 @@ function constructExpression(node, context, hints) {
 			switch (operator) {
 				case '=':
 					return new AssignmentExpression(node.params[0], node.params[2], context, hints);
+				case '+=':
+					return new AddAssignmentExpression(node.params[0], node.params[2], context, hints);
 				default:
 					throw("Unrecognised assignment operator: " + operator);
 			}

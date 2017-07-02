@@ -39,6 +39,17 @@ function AddExpression(left, right, intendedType) {
 }
 exports.AddExpression = AddExpression;
 
+function AddAssignmentExpression(left, right, intendedType) {
+	assert(left.isRepeatable,
+		"Left hand side of an add-assignment must be a repeatable expression - got " + util.inspect(left)
+	);
+
+	return AssignmentExpression(left,
+		AddExpression(left, right, intendedType)
+	);
+}
+exports.AddAssignmentExpression = AddAssignmentExpression;
+
 function AssignmentExpression(left, right) {
 	assert(left.isValidAsLvalue,
 		"Left hand side of an assignment must be a valid lvalue - got " + util.inspect(left)
@@ -102,7 +113,8 @@ function ConstExpression(value, originalType) {
 		'intendedType': originalType,
 		'isDirectNumericLiteral': true,
 		'isNumericLiteral': true,
-		'numericLiteralValue': value
+		'numericLiteralValue': value,
+		'isRepeatable': true
 	};
 }
 exports.ConstExpression = ConstExpression;
@@ -254,7 +266,8 @@ function VariableExpression(variable) {
 		'type': variable.type,
 		'intendedType': variable.intendedType,
 		'isIdentifier': true,
-		'isValidAsLvalue': true
+		'isValidAsLvalue': true,
+		'isRepeatable': true
 	};
 }
 exports.VariableExpression = VariableExpression;
@@ -282,6 +295,10 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return AddExpression(left, right, expression.type);
+		case 'AddAssignmentExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return AddAssignmentExpression(left, right, expression.type);
 		case 'AssignmentExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
