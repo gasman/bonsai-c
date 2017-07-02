@@ -26,6 +26,13 @@ BlockStatement.prototype.inspect = function() {
 	return "Block " + util.inspect(this.statements);
 };
 
+function BreakStatement(node, context) {
+	this.statementType = 'BreakStatement';
+}
+BreakStatement.prototype.inspect = function() {
+	return "BreakStatement";
+};
+
 function DeclarationStatement(node, context) {
 	this.statementType = 'DeclarationStatement';
 
@@ -164,6 +171,8 @@ function constructStatement(node, context) {
 	switch (node.type) {
 		case 'Block':
 			return new BlockStatement(node, context);
+		case 'Break':
+			return new BreakStatement(node, context);
 		case 'DeclarationStatement':
 			return new DeclarationStatement(node, context);
 		case 'ExpressionStatement':

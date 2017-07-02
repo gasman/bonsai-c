@@ -20,6 +20,9 @@ function compileStatement(statement, out, context) {
 			}
 			out.body.push(estree.BlockStatement(blockOutput.body));
 			return;
+		case 'BreakStatement':
+			out.body.push(estree.BreakStatement());
+			return;
 		case 'DeclarationStatement':
 			/* Don't generate any code, but add to the list of variables that need
 			declaring at the top of the function */

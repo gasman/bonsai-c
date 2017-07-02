@@ -22,6 +22,10 @@ exports.BlockStatement = function(body) {
 	return {'type': 'BlockStatement', 'body': body};
 };
 
+exports.BreakStatement = function(label) {
+	return {'type': 'BreakStatement', 'label': label};
+};
+
 exports.CallExpression = function(callee, args) {
 	return {
 		'type': 'CallExpression',
