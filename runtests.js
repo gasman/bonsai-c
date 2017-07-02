@@ -74,5 +74,7 @@ testCompile('tests/equal.c', 2);
 testCompile('tests/not_equal.c', 1);
 testCompile('tests/greater_than_or_equal.c', 2);
 testCompile('tests/less_than_or_equal.c', 2);
+testCompile('tests/for.c', 45);
+testCompile('tests/for_with_declarator.c', 45);
 
 console.log("All tests passed");

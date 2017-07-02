@@ -88,6 +88,28 @@ ExpressionStatement.prototype.inspect = function() {
 	return "Expression " + util.inspect(this.expression);
 };
 
+function ForStatement(node, context) {
+	this.statementType = 'ForStatement';
+	/* TODO: see if we need to set up child contexts
+	(for the loop body, and the scope in which init / test / update is evaluated) */
+	this.init = constructStatement(node.params[0], context);
+	this.test = expressions.constructExpression(node.params[1], context, {
+		'resultIsUsed': true
+	});
+	this.update = expressions.constructExpression(node.params[2], context, {
+		'resultIsUsed': false
+	});
+	this.body = constructStatement(node.params[3], context);
+}
+ForStatement.prototype.inspect = function() {
+	return util.format(
+		"For (%s; %s; %s) %s",
+		util.inspect(this.init), util.inspect(this.test), util.inspect(this.update),
+		util.inspect(this.body)
+	);
+};
+
+
 function ReturnStatement(node, context) {
 	this.statementType = 'ReturnStatement';
 
@@ -119,6 +141,8 @@ function constructStatement(node, context) {
 			return new DeclarationStatement(node, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(node, context);
+		case 'For':
+			return new ForStatement(node, context);
 		case 'Return':
 			return new ReturnStatement(node, context);
 		case 'While':

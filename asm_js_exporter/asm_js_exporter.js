@@ -46,6 +46,46 @@ function compileStatement(statement, out, context) {
 			expr = expressions.compileExpression(statement.expression, context, out);
 			out.body.push(estree.ExpressionStatement(expr.tree));
 			return;
+		case 'ForStatement':
+			var initOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
+			compileStatement(statement.init, initOutput, context);
+
+			var initExpressionTree = null;
+
+			if (initOutput.body.length == 1) {
+				/* init clause can go inside the for statement */
+				assert(
+					initOutput.body[0].type == 'ExpressionStatement',
+					util.format("Expected ExpressionStatement to be generated as the init of a for loop - got %s",
+						util.inspect(initOutput.body[0])
+					)
+				);
+				initExpressionTree = initOutput.body[0].expression;
+			} else {
+				/* init clause has to go before the loop */
+				out.body.concat(initOutput.body);
+			}
+
+			var bodyOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
+			compileStatement(statement.body, bodyOutput, context);
+			assert(bodyOutput.body.length == 1,
+				"Expected for loop body to be a single statement, got " + util.inspect(bodyOutput.body)
+			)
+			var bodyStatement = bodyOutput.body[0];
+
+			var testExpression = expressions.compileExpression(statement.test, context, out);
+			var updateExpression = expressions.compileExpression(statement.update, context, out);
+			out.body.push(estree.ForStatement(
+				initExpressionTree, testExpression.tree, updateExpression.tree,
+				bodyStatement
+			));
+			return;
 		case 'ReturnStatement':
 			expr = expressions.compileExpression(statement.expression, context, out);
 
