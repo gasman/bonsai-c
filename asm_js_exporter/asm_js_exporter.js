@@ -5,6 +5,57 @@ var cTypes = require('../abstractor/c_types');
 var expressions = require('./expressions');
 
 
+function declareLocalVariable(context, suggestedName, id, intendedType, initialValueExpression, out) {
+	var actualType, canDeclareDirectly, val;
+
+	switch (intendedType.category) {
+		case 'int':
+			/* register as a local var of type 'int', to be treated as signed */
+			var variable = context.allocateLocalVariable(
+				suggestedName, asmJsTypes.int, intendedType, id
+			);
+
+			/* can declare directly if initialValueExpression is null
+			or a numeric literal in signed range */
+			if (initialValueExpression === null) {
+				/* output: var i = 0 */
+				initialValueExpression = expressions.ConstExpression(0, cTypes.int);
+			} else {
+				val = initialValueExpression.numericLiteralValue;
+
+				if (Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000) {
+					/* initial value is a numeric literal in signed range - can use it directly
+					in the variable declaration */
+				} else {
+					/* need to declare variable with a 'dummy' initial value of 0,
+					then initialise it properly within the function body */
+					out.body.push(
+						estree.ExpressionStatement(
+							expressions.AssignmentExpression(
+								expressions.VariableExpression(variable),
+								initialValueExpression
+							).tree
+						)
+					);
+					initialValueExpression = expressions.ConstExpression(0, cTypes.int);
+				}
+			}
+
+			break;
+		default:
+			throw "Don't know how to declare a local variable of type: " + util.inspect(statement.type);
+	}
+
+	out.variableDeclarations.push(
+		estree.VariableDeclarator(
+			estree.Identifier(variable.name),
+			initialValueExpression.tree
+		)
+	);
+
+	return variable;
+}
+
 function compileStatement(statement, out, context) {
 	var i, expr, exprTree, val;
 
@@ -25,52 +76,21 @@ function compileStatement(statement, out, context) {
 			for (i = 0; i < statement.variableDeclarations.length; i++) {
 				var variableDeclaration = statement.variableDeclarations[i];
 
-				var initialValueExpression;
+				var initialValueExpression = null;
 
-				switch (statement.type.category) {
-					case 'int':
-						/* register as a local var of type 'int', to be treated as signed */
-						var variable = context.allocateLocalVariable(
-							variableDeclaration.variable.name,
-							asmJsTypes.int, statement.type,
-							variableDeclaration.variable.id
-						);
-
-						if (variableDeclaration.initialValueExpression === null) {
-							/* output: var i = 0 */
-							initialValueExpression = expressions.ConstExpression(0, cTypes.int);
-						} else {
-							initialValueExpression = expressions.compileExpression(variableDeclaration.initialValueExpression, context, out);
-							val = initialValueExpression.numericLiteralValue;
-							if (Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000) {
-								/* initial value is a numeric literal in signed range - can use it directly
-								in the variable declaration */
-							} else {
-								/* need to declare variable with a 'dummy' initial value of 0,
-								then initialise it properly within the function body */
-								out.body.push(
-									estree.ExpressionStatement(
-										expressions.AssignmentExpression(
-											expressions.VariableExpression(variable),
-											initialValueExpression
-										).tree
-									)
-								);
-								initialValueExpression = expressions.ConstExpression(0, cTypes.int);
-							}
-						}
-
-						out.variableDeclarations.push(
-							estree.VariableDeclarator(
-								estree.Identifier(variable.name),
-								initialValueExpression.tree
-							)
-						);
-
-						break;
-					default:
-						throw "Don't know how to declare a local variable of type: " + util.inspect(statement.type);
+				if (variableDeclaration.initialValueExpression !== null) {
+					initialValueExpression = expressions.compileExpression(
+						variableDeclaration.initialValueExpression, context, out
+					);
 				}
+
+				declareLocalVariable(
+					context,
+					variableDeclaration.variable.name, variableDeclaration.variable.id,
+					statement.type,
+					initialValueExpression,
+					out
+				);
 			}
 			return;
 		case 'ExpressionStatement':
