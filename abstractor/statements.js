@@ -100,6 +100,7 @@ function ForStatement(node, context) {
 	/* TODO: see if we need to set up child contexts
 	(for the loop body, and the scope in which init / test / update is evaluated) */
 	this.init = constructStatement(node.params[0], context);
+
 	if (node.params[1] === null) {
 		this.test = null;
 	} else {
@@ -107,9 +108,15 @@ function ForStatement(node, context) {
 			'resultIsUsed': true
 		});
 	}
-	this.update = expressions.constructExpression(node.params[2], context, {
-		'resultIsUsed': false
-	});
+
+	if (node.params[2] === null) {
+		this.update = null;
+	} else {
+		this.update = expressions.constructExpression(node.params[2], context, {
+			'resultIsUsed': false
+		});
+	}
+
 	this.body = constructStatement(node.params[3], context);
 }
 ForStatement.prototype.inspect = function() {

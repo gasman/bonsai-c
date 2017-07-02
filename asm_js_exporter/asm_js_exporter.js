@@ -77,7 +77,12 @@ function compileStatement(statement, out, context) {
 				testExpression = expressions.compileExpression(statement.test, context, out);
 				testExpressionTree = testExpression.tree;
 			}
-			var updateExpression = expressions.compileExpression(statement.update, context, out);
+
+			var updateExpressionTree = null;
+			if (statement.update !== null) {
+				var updateExpression = expressions.compileExpression(statement.update, context, out);
+				updateExpressionTree = updateExpression.tree;
+			}
 
 			var bodyOutput = {
 				'variableDeclarations': out.variableDeclarations,
@@ -90,7 +95,7 @@ function compileStatement(statement, out, context) {
 			var bodyStatement = bodyOutput.body[0];
 
 			out.body.push(estree.ForStatement(
-				initExpressionTree, testExpressionTree, updateExpression.tree,
+				initExpressionTree, testExpressionTree, updateExpressionTree,
 				bodyStatement
 			));
 			return;
