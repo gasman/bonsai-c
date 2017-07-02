@@ -50,6 +50,24 @@ AddAssignmentExpression.prototype.inspect = function() {
 		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 	);
 };
+function SubtractAssignmentExpression(left, right, context, hints) {
+	this.expressionType = 'SubtractAssignmentExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+
+	this.left = constructExpression(left, context, {
+		'resultIsUsed': true
+	});
+	this.right = constructExpression(right, context, {
+		'resultIsUsed': true
+	});
+	this.type = this.left.type;
+}
+SubtractAssignmentExpression.prototype.inspect = function() {
+	return util.format(
+		"SubtractAssignment: (%s += %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
+};
 
 function AssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'AssignmentExpression';
@@ -315,6 +333,8 @@ function constructExpression(node, context, hints) {
 					return new AssignmentExpression(node.params[0], node.params[2], context, hints);
 				case '+=':
 					return new AddAssignmentExpression(node.params[0], node.params[2], context, hints);
+				case '-=':
+					return new SubtractAssignmentExpression(node.params[0], node.params[2], context, hints);
 				default:
 					throw("Unrecognised assignment operator: " + operator);
 			}

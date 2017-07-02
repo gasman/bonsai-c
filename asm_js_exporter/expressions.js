@@ -50,6 +50,17 @@ function AddAssignmentExpression(left, right, intendedType) {
 }
 exports.AddAssignmentExpression = AddAssignmentExpression;
 
+function SubtractAssignmentExpression(left, right, intendedType) {
+	assert(left.isRepeatable,
+		"Left hand side of an add-assignment must be a repeatable expression - got " + util.inspect(left)
+	);
+
+	return AssignmentExpression(left,
+		SubtractExpression(left, right, intendedType)
+	);
+}
+exports.SubtractAssignmentExpression = SubtractAssignmentExpression;
+
 function AssignmentExpression(left, right) {
 	assert(left.isValidAsLvalue,
 		"Left hand side of an assignment must be a valid lvalue - got " + util.inspect(left)
@@ -299,6 +310,10 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return AddAssignmentExpression(left, right, expression.type);
+		case 'SubtractAssignmentExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return SubtractAssignmentExpression(left, right, expression.type);
 		case 'AssignmentExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
