@@ -115,7 +115,11 @@ function IfStatement(node, context) {
 		'resultIsUsed': true
 	});
 	this.thenStatement = constructStatement(node.params[1], context);
-	this.elseStatement = constructStatement(node.params[2], context);
+	if (node.params[2] === null) {
+		this.elseStatement = null;
+	} else {
+		this.elseStatement = constructStatement(node.params[2], context);
+	}
 }
 IfStatement.prototype.inspect = function() {
 	return util.format(

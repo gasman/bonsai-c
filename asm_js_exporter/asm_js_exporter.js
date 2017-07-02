@@ -98,20 +98,23 @@ function compileStatement(statement, out, context) {
 			assert(thenOutput.body.length == 1,
 				"Expected if-then clause to be a single statement, got " + util.inspect(thenOutput.body)
 			);
+			var thenStatement = thenOutput.body[0];
 
-			var elseOutput = {
-				'variableDeclarations': out.variableDeclarations,
-				'body': []
-			};
-			compileStatement(statement.elseStatement, elseOutput, context);
-			assert(elseOutput.body.length == 1,
-				"Expected if-else clause to be a single statement, got " + util.inspect(elseOutput.body)
-			);
+			var elseStatement = null;
+			if (statement.elseStatement !== null) {
+				var elseOutput = {
+					'variableDeclarations': out.variableDeclarations,
+					'body': []
+				};
+				compileStatement(statement.elseStatement, elseOutput, context);
+				assert(elseOutput.body.length == 1,
+					"Expected if-else clause to be a single statement, got " + util.inspect(elseOutput.body)
+				);
+				elseStatement = elseOutput.body[0];
+			}
 
 			out.body.push(estree.IfStatement(
-				testExpression.tree,
-				thenOutput.body[0],
-				elseOutput.body[0]
+				testExpression.tree, thenStatement, elseStatement
 			));
 			return;
 		case 'NullStatement':
