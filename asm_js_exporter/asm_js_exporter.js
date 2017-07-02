@@ -76,7 +76,7 @@ function compileStatement(statement, out, context) {
 			compileStatement(statement.body, bodyOutput, context);
 			assert(bodyOutput.body.length == 1,
 				"Expected for loop body to be a single statement, got " + util.inspect(bodyOutput.body)
-			)
+			);
 			var bodyStatement = bodyOutput.body[0];
 
 			var testExpression = expressions.compileExpression(statement.test, context, out);
@@ -85,6 +85,8 @@ function compileStatement(statement, out, context) {
 				initExpressionTree, testExpression.tree, updateExpression.tree,
 				bodyStatement
 			));
+			return;
+		case 'NullStatement':
 			return;
 		case 'ReturnStatement':
 			expr = expressions.compileExpression(statement.expression, context, out);

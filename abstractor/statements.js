@@ -109,6 +109,12 @@ ForStatement.prototype.inspect = function() {
 	);
 };
 
+function NullStatement(node, context) {
+	this.statementType = 'NullStatement';
+}
+NullStatement.prototype.inspect = function() {
+	return "NullStatement";
+};
 
 function ReturnStatement(node, context) {
 	this.statementType = 'ReturnStatement';
@@ -143,6 +149,8 @@ function constructStatement(node, context) {
 			return new ExpressionStatement(node, context);
 		case 'For':
 			return new ForStatement(node, context);
+		case 'NullStatement':
+			return new NullStatement(node, context);
 		case 'Return':
 			return new ReturnStatement(node, context);
 		case 'While':
