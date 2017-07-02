@@ -60,6 +60,15 @@ exports.Identifier = function(name) {
 	return {'type': 'Identifier', 'name': name};
 };
 
+exports.IfStatement = function(test, consequent, alternate) {
+	return {
+		'type': 'IfStatement',
+		'test': test,
+		'consequent': consequent,
+		'alternate': alternate
+	};
+};
+
 exports.Literal = function(value) {
 	return {'type': 'Literal', 'value': value};
 };

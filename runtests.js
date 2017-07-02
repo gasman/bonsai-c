@@ -79,5 +79,6 @@ testCompile('tests/for_with_declarator.c', 45);
 testCompile('tests/add_assign.c', 42);
 testCompile('tests/subtract_assign.c', 42);
 testCompile('tests/for_without_init.c', 45);
+testCompile('tests/if.c', 42);
 
 console.log("All tests passed");

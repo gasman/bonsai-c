@@ -7,7 +7,7 @@ var contextModule = require('./context');
 
 
 function compileStatement(statement, out, context) {
-	var i, expr, exprTree, val;
+	var i, expr, exprTree, val, testExpression;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
@@ -69,6 +69,9 @@ function compileStatement(statement, out, context) {
 				out.body.concat(initOutput.body);
 			}
 
+			testExpression = expressions.compileExpression(statement.test, context, out);
+			var updateExpression = expressions.compileExpression(statement.update, context, out);
+
 			var bodyOutput = {
 				'variableDeclarations': out.variableDeclarations,
 				'body': []
@@ -79,11 +82,36 @@ function compileStatement(statement, out, context) {
 			);
 			var bodyStatement = bodyOutput.body[0];
 
-			var testExpression = expressions.compileExpression(statement.test, context, out);
-			var updateExpression = expressions.compileExpression(statement.update, context, out);
 			out.body.push(estree.ForStatement(
 				initExpressionTree, testExpression.tree, updateExpression.tree,
 				bodyStatement
+			));
+			return;
+		case 'IfStatement':
+			testExpression = expressions.compileExpression(statement.test, context, out);
+
+			var thenOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
+			compileStatement(statement.thenStatement, thenOutput, context);
+			assert(thenOutput.body.length == 1,
+				"Expected if-then clause to be a single statement, got " + util.inspect(thenOutput.body)
+			);
+
+			var elseOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
+			compileStatement(statement.elseStatement, elseOutput, context);
+			assert(elseOutput.body.length == 1,
+				"Expected if-else clause to be a single statement, got " + util.inspect(elseOutput.body)
+			);
+
+			out.body.push(estree.IfStatement(
+				testExpression.tree,
+				thenOutput.body[0],
+				elseOutput.body[0]
 			));
 			return;
 		case 'NullStatement':
@@ -195,6 +223,19 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 
 	for (i = 0; i < functionDefinition.body.length; i++) {
 		compileStatement(functionDefinition.body[i], output, context);
+	}
+
+	/* if function is non-void, and does not end with a return statement,
+	add a dummy one to serve as a type annotation */
+	var lastStatement = output.body[output.body.length - 1];
+	if (!lastStatement || lastStatement.type != 'ReturnStatement') {
+		if (returnType.satisfies(asmJsTypes.signed)) {
+			output.body.push(estree.ReturnStatement(
+				estree.Literal(0)
+			));
+		} else {
+			throw "Unsupported return type: " + util.inspect(returnType);
+		}
 	}
 
 	var outputNodes;

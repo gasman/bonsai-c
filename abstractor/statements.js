@@ -109,6 +109,23 @@ ForStatement.prototype.inspect = function() {
 	);
 };
 
+function IfStatement(node, context) {
+	this.statementType = 'IfStatement';
+	this.test = expressions.constructExpression(node.params[0], context, {
+		'resultIsUsed': true
+	});
+	this.thenStatement = constructStatement(node.params[1], context);
+	this.elseStatement = constructStatement(node.params[2], context);
+}
+IfStatement.prototype.inspect = function() {
+	return util.format(
+		"If (%s) %s else %s",
+		util.inspect(this.test),
+		util.inspect(this.thenStatement),
+		util.inspect(this.elseStatement)
+	);
+};
+
 function NullStatement(node, context) {
 	this.statementType = 'NullStatement';
 }
@@ -149,6 +166,8 @@ function constructStatement(node, context) {
 			return new ExpressionStatement(node, context);
 		case 'For':
 			return new ForStatement(node, context);
+		case 'If':
+			return new IfStatement(node, context);
 		case 'NullStatement':
 			return new NullStatement(node, context);
 		case 'Return':
