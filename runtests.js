@@ -85,5 +85,6 @@ testCompile('tests/break.c', 42);
 testCompile('tests/for_without_test.c', 45);
 testCompile('tests/for_without_update.c', 45);
 testCompile('tests/continue.c', 42);
+testCompile('tests/conditional.c', 42);
 
 console.log("All tests passed");

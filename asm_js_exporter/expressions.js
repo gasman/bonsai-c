@@ -92,6 +92,34 @@ function CommaExpression(left, right) {
 }
 exports.CommaExpression = CommaExpression;
 
+function ConditionalExpression(test, consequent, alternate, intendedType) {
+	assert(intendedType.category == 'int',
+		"Can't handle non-integer ConditionalExpression"
+	);
+	var resultType = asmJsTypes.int;
+
+	if (!test.type.satisfies(asmJsTypes.int)) {
+		test = coerce(test, cTypes.int);
+	}
+	if (!consequent.type.satisfies(resultType)) {
+		consequent = coerce(consequent, intendedType);
+	}
+	if (!alternate.type.satisfies(resultType)) {
+		alternate = coerce(alternate, intendedType);
+	}
+
+	return {
+		'tree': estree.ConditionalExpression(
+			wrapFunctionCall(test).tree,
+			wrapFunctionCall(consequent).tree,
+			wrapFunctionCall(alternate).tree
+		),
+		'type': resultType,
+		'intendedType': intendedType,
+	};
+}
+exports.ConditionalExpression = ConditionalExpression;
+
 function ConstExpression(value, originalType) {
 	var typ = null;
 	if (originalType.category == 'int') {
@@ -322,6 +350,11 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return CommaExpression(left, right);
+		case 'ConditionalExpression':
+			var test = compileExpression(expression.test, context, out);
+			var consequent = compileExpression(expression.consequent, context, out);
+			var alternate = compileExpression(expression.alternate, context, out);
+			return ConditionalExpression(test, consequent, alternate, expression.type);
 		case 'ConstExpression':
 			return ConstExpression(expression.value, expression.type);
 		case 'FunctionCallExpression':

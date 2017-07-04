@@ -107,6 +107,39 @@ CommaExpression.prototype.inspect = function() {
 	);
 };
 
+function ConditionalExpression(test, consequent, alternate, context, hints) {
+	this.expressionType = 'ConditionalExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+
+	this.test = constructExpression(test, context, {
+		'resultIsUsed': true
+	});
+	this.consequent = constructExpression(consequent, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+	this.alternate = constructExpression(alternate, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+
+	if (this.consequent.type == cTypes.int && this.alternate.type == cTypes.int) {
+		this.type = cTypes.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle ConditionalExpression with types: %s, %s",
+				util.inspect(this.consequent.type),
+				util.inspect(this.alternate.type)
+			)
+		);
+	}
+}
+ConditionalExpression.prototype.inspect = function() {
+	return util.format(
+		"ConditionalExpression: %s ? %s : %s -> <%s>",
+		util.inspect(this.test), util.inspect(this.consequent), util.inspect(this.alternate),
+		util.inspect(this.type)
+	);
+};
+
 function ConstExpression(numString, context, hints) {
 	this.expressionType = 'ConstExpression';
 	this.resultIsUsed = hints.resultIsUsed;
@@ -362,6 +395,8 @@ function constructExpression(node, context, hints) {
 					throw("Unrecognised binary operator: " + operator);
 			}
 			break;
+		case 'Conditional':
+			return new ConditionalExpression(node.params[0], node.params[1], node.params[2], context, hints);
 		case 'Const':
 			return new ConstExpression(node.params[0], context, hints);
 		case 'FunctionCall':

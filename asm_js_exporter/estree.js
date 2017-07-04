@@ -34,6 +34,15 @@ exports.CallExpression = function(callee, args) {
 	};
 };
 
+exports.ConditionalExpression = function(test, consequent, alternate) {
+	return {
+		'type': 'ConditionalExpression',
+		'test': test,
+		'alternate': alternate,
+		'consequent': consequent
+	};
+};
+
 exports.ContinueStatement = function(label) {
 	return {'type': 'ContinueStatement', 'label': label};
 };
