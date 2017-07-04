@@ -184,6 +184,32 @@ FunctionCallExpression.prototype.inspect = function() {
 };
 
 
+function LogicalNotExpression(argument, context, hints) {
+	this.expressionType = 'LogicalNotExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+
+	this.argument = constructExpression(argument, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+
+	if (this.argument.type == cTypes.int) {
+		this.type = cTypes.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle LogicalNotExpression with type: %s",
+				util.inspect(this.argument.type)
+			)
+		);
+	}
+}
+NegationExpression.prototype.inspect = function() {
+	return util.format(
+		"LogicalNot: (%s) <%s>",
+		util.inspect(this.argument), util.inspect(this.type)
+	);
+};
+
+
 function RelationalExpression(expressionType, left, right, context, hints) {
 	this.expressionType = expressionType;
 	this.resultIsUsed = hints.resultIsUsed;
@@ -419,6 +445,8 @@ function constructExpression(node, context, hints) {
 			switch (operator) {
 				case '-':
 					return new NegationExpression(node.params[1], context, hints);
+				case '!':
+					return new LogicalNotExpression(node.params[1], context, hints);
 				default:
 					throw("Unrecognised unary operator: " + operator);
 			}

@@ -179,6 +179,25 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
+function LogicalNotExpression(arg, intendedType) {
+	assert(intendedType.category == 'int',
+		"Can't handle non-integer LogicalNotExpressions"
+	);
+
+	if (!arg.type.satisfies(asmJsTypes.int)) {
+		arg = coerce(arg, intendedType);
+	}
+
+	return {
+		'tree': estree.UnaryExpression('!',
+			wrapFunctionCall(arg).tree
+		),
+		'type': asmJsTypes.int,
+		'intendedType': intendedType,
+	};
+}
+exports.LogicalNotExpression = LogicalNotExpression;
+
 function RelationalExpression(operator, left, right, intendedOperandType) {
 	assert(intendedOperandType.category == 'int',
 		"Can't handle non-integer RelationalExpression"
@@ -364,6 +383,9 @@ function compileExpression(expression, context, out) {
 				args[i] = compileExpression(expression.parameters[i], context, out);
 			}
 			return FunctionCallExpression(callee, args);
+		case 'LogicalNotExpression':
+			arg = compileExpression(expression.argument, context, out);
+			return LogicalNotExpression(arg, expression.type);
 		case 'LessThanExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
