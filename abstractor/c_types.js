@@ -1,5 +1,9 @@
 var util = require('util');
 
+exports.double = {
+	'category': 'double',
+	'inspect': function() {return 'double';}
+};
 exports.int = {
 	'category': 'int',
 	'inspect': function() {return 'int';}

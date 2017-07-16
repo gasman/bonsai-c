@@ -151,6 +151,12 @@ function ConstExpression(numString, context, hints) {
 		} else {
 			throw("Integer out of range: " + numString);
 		}
+	} else if (numString.match(/^\d+\.\d+$/)) {
+		this.value = parseFloat(numString);
+		this.type = cTypes.double;
+		if (isNaN(this.value)) {
+			throw("Not a number: " + numString);
+		}
 	} else {
 		throw("Unrecognised numeric constant: " + numString);
 	}
@@ -223,7 +229,9 @@ function RelationalExpression(expressionType, left, right, context, hints) {
 		'resultIsUsed': this.resultIsUsed
 	});
 
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+	if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
+		this.operandType = cTypes.double;
+	} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 		this.operandType = cTypes.int;
 	} else {
 		throw(

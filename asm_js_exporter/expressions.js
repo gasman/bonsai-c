@@ -138,6 +138,8 @@ function ConstExpression(value, originalType) {
 			throw("Numeric literal out of range for unsigned int: %d" % value);
 		}
 	*/
+	} else if (originalType.category == 'double') {
+		typ = asmJsTypes.double;
 	} else {
 		throw(
 			util.format("Can't determine type of numeric literal: %s (reported: %s)",
@@ -199,8 +201,10 @@ function LogicalNotExpression(arg, intendedType) {
 exports.LogicalNotExpression = LogicalNotExpression;
 
 function RelationalExpression(operator, left, right, intendedOperandType) {
-	assert(intendedOperandType.category == 'int',
-		"Can't handle non-integer RelationalExpression"
+	assert(intendedOperandType.category == 'int' || intendedOperandType.category == 'double',
+		util.format(
+			"Can't handle RelationalExpression of type: %s", util.inspect(intendedOperandType)
+		)
 	);
 
 	left = coerce(left, intendedOperandType);
@@ -471,11 +475,23 @@ function coerce(expr, intendedType) {
 				};
 			}
 			break;
+		case 'double':
+			if (expr.type.satisfies(asmJsTypes.double)) {
+				/* no coercion necessary */
+				return expr;
+			} else {
+				throw(
+					util.format("Don't know how to coerce expression %s to double",
+						util.inspect(expr)
+					)
+				);
+			}
+			break;
 		default:
 			throw(
 				util.format("Don't know how to coerce expression %s to type %s",
 					util.inspect(expr),
-					util.inspect(targetType)
+					util.inspect(intendedType)
 				)
 			);
 	}

@@ -40,6 +40,14 @@ exports.intish = {
 	'inspect': function() {return 'intish';}
 };
 
+exports.double = {
+	'category': 'double',
+	'satisfies': function(targetType) {
+		return ['double', 'doubleq', 'extern'].includes(targetType.category);
+	},
+	'inspect': function() {return 'double';}
+};
+
 exports.func = function(returnType, paramTypes) {
 	return {
 		'category': 'function',
