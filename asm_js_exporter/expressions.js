@@ -181,11 +181,22 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
-function LogicalNotExpression(arg, intendedType) {
-	assert(intendedType.category == 'int',
-		"Can't handle non-integer LogicalNotExpressions"
-	);
+function LogicalAndExpression(left, right) {
+	/* asm.js does not provide logical AND; fake it with a conditional instead.
+	a && b  is equivalent to:  a ? !!b : 0
+	*/
 
+	right = LogicalNotExpression(LogicalNotExpression(right));
+	return ConditionalExpression(
+		left,
+		right,
+		ConstExpression(0, cTypes.int),
+		cTypes.int
+	);
+}
+exports.LogicalAndExpression = LogicalAndExpression;
+
+function LogicalNotExpression(arg) {
 	if (!arg.type.satisfies(asmJsTypes.int)) {
 		arg = coerce(arg, intendedType);
 	}
@@ -195,7 +206,7 @@ function LogicalNotExpression(arg, intendedType) {
 			wrapFunctionCall(arg).tree
 		),
 		'type': asmJsTypes.int,
-		'intendedType': intendedType,
+		'intendedType': cTypes.int,
 	};
 }
 exports.LogicalNotExpression = LogicalNotExpression;
@@ -387,9 +398,13 @@ function compileExpression(expression, context, out) {
 				args[i] = compileExpression(expression.parameters[i], context, out);
 			}
 			return FunctionCallExpression(callee, args);
+		case 'LogicalAndExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return LogicalAndExpression(left, right);
 		case 'LogicalNotExpression':
 			arg = compileExpression(expression.argument, context, out);
-			return LogicalNotExpression(arg, expression.type);
+			return LogicalNotExpression(arg);
 		case 'LessThanExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);

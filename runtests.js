@@ -88,5 +88,6 @@ testCompile('tests/continue.c', 42);
 testCompile('tests/conditional.c', 42);
 testCompile('tests/logical_not.c', 0);
 testCompile('tests/double.c', 42);
+testCompile('tests/logical_and.c', 42);
 
 console.log("All tests passed");
