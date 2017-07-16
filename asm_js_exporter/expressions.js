@@ -211,6 +211,21 @@ function LogicalNotExpression(arg) {
 }
 exports.LogicalNotExpression = LogicalNotExpression;
 
+function LogicalOrExpression(left, right) {
+	/* asm.js does not provide logical OR; fake it with a conditional instead.
+	a || b  is equivalent to:  a ? 1 : !!b
+	*/
+
+	right = LogicalNotExpression(LogicalNotExpression(right));
+	return ConditionalExpression(
+		left,
+		ConstExpression(1, cTypes.int),
+		right,
+		cTypes.int
+	);
+}
+exports.LogicalOrExpression = LogicalOrExpression;
+
 function RelationalExpression(operator, left, right, intendedOperandType) {
 	assert(intendedOperandType.category == 'int' || intendedOperandType.category == 'double',
 		util.format(
@@ -405,6 +420,10 @@ function compileExpression(expression, context, out) {
 		case 'LogicalNotExpression':
 			arg = compileExpression(expression.argument, context, out);
 			return LogicalNotExpression(arg);
+		case 'LogicalOrExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return LogicalOrExpression(left, right);
 		case 'LessThanExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);

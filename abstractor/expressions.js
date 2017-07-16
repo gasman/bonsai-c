@@ -238,12 +238,42 @@ function LogicalNotExpression(argument, context, hints) {
 		);
 	}
 }
-NegationExpression.prototype.inspect = function() {
+LogicalNotExpression.prototype.inspect = function() {
 	return util.format(
 		"LogicalNot: (%s) <%s>",
 		util.inspect(this.argument), util.inspect(this.type)
 	);
 };
+
+function LogicalOrExpression(left, right, context, hints) {
+	this.expressionType = 'LogicalOrExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+
+	this.left = constructExpression(left, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+	this.right = constructExpression(right, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+
+	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+		this.type = cTypes.int;
+	} else {
+		throw(
+			util.format("Don't know how to handle LogicalOrExpression with types: %s, %s",
+				util.inspect(this.left.type),
+				util.inspect(this.right.type)
+			)
+		);
+	}
+}
+LogicalOrExpression.prototype.inspect = function() {
+	return util.format(
+		"LogicalOr: (%s, %s) <%s>",
+		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
+};
+
 
 
 function RelationalExpression(expressionType, left, right, context, hints) {
@@ -457,6 +487,8 @@ function constructExpression(node, context, hints) {
 					return new GreaterThanOrEqualExpression(node.params[1], node.params[2], context, hints);
 				case '&&':
 					return new LogicalAndExpression(node.params[1], node.params[2], context, hints);
+				case '||':
+					return new LogicalOrExpression(node.params[1], node.params[2], context, hints);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}
