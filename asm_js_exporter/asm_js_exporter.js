@@ -289,14 +289,16 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 
 	/* if function is non-void, and does not end with a return statement,
 	add a dummy one to serve as a type annotation */
-	var lastStatement = output.body[output.body.length - 1];
-	if (!lastStatement || lastStatement.type != 'ReturnStatement') {
-		if (returnType.satisfies(asmJsTypes.signed)) {
-			output.body.push(estree.ReturnStatement(
-				estree.Literal(0)
-			));
-		} else {
-			throw "Unsupported return type: " + util.inspect(returnType);
+	if (!returnType.satisfies(asmJsTypes.void)) {
+		var lastStatement = output.body[output.body.length - 1];
+		if (!lastStatement || lastStatement.type != 'ReturnStatement') {
+			if (returnType.satisfies(asmJsTypes.signed)) {
+				output.body.push(estree.ReturnStatement(
+					estree.Literal(0)
+				));
+			} else {
+				throw "Unsupported return type: " + util.inspect(returnType);
+			}
 		}
 	}
 
