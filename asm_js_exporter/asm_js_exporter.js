@@ -209,23 +209,22 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 
 	for (i = 0; i < functionDefinition.parameters.length; i++) {
 		var originalParam = functionDefinition.parameters[i];
-		parameterIdentifiers.push(
-			estree.Identifier(originalParam.name)
-		);
+		var paramVariable;
 
 		switch (originalParam.type.category) {
 			case 'int':
 				/* register as a local var of type 'int' */
 				parameterType = asmJsTypes.int;
+				paramVariable = context.allocateLocalVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
 
 				/* annotate as i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
 					estree.AssignmentExpression(
 						'=',
-						estree.Identifier(originalParam.name),
+						estree.Identifier(paramVariable.name),
 						estree.BinaryExpression(
 							'|',
-							estree.Identifier(originalParam.name),
+							estree.Identifier(paramVariable.name),
 							estree.Literal(0)
 						)
 					)
@@ -234,15 +233,16 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 			case 'double':
 				/* register as a local var of type 'double' */
 				parameterType = asmJsTypes.double;
+				paramVariable = context.allocateLocalVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
 
 				/* annotate as i = +i */
 				parameterDeclarations.push(estree.ExpressionStatement(
 					estree.AssignmentExpression(
 						'=',
-						estree.Identifier(originalParam.name),
+						estree.Identifier(paramVariable.name),
 						estree.UnaryExpression(
 							'+',
-							estree.Identifier(originalParam.name)
+							estree.Identifier(paramVariable.name)
 						)
 					)
 				));
@@ -251,7 +251,9 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 				throw "Don't know how to annotate a parameter of type: " + util.inspect(originalParam.type);
 		}
 
-		context.allocateLocalVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
+		parameterIdentifiers.push(
+			estree.Identifier(paramVariable.name)
+		);
 		parameterTypes.push(parameterType);
 	}
 
