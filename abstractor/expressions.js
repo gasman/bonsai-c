@@ -6,6 +6,7 @@ var cTypes = require('./c_types');
 function AddExpression(left, right, context, hints) {
 	this.expressionType = 'AddExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
 		'resultIsUsed': this.resultIsUsed
@@ -35,6 +36,7 @@ AddExpression.prototype.inspect = function() {
 function AddAssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'AddAssignmentExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
 		'resultIsUsed': true
@@ -53,6 +55,7 @@ AddAssignmentExpression.prototype.inspect = function() {
 function SubtractAssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'SubtractAssignmentExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
 		'resultIsUsed': true
@@ -72,6 +75,7 @@ SubtractAssignmentExpression.prototype.inspect = function() {
 function AssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'AssignmentExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
 		'resultIsUsed': true
@@ -91,12 +95,14 @@ AssignmentExpression.prototype.inspect = function() {
 function CommaExpression(left, right, context, hints) {
 	this.expressionType = 'CommaExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
 		'resultIsUsed': false
 	});
 	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
 	});
 	this.type = this.right.type;
 }
@@ -110,15 +116,19 @@ CommaExpression.prototype.inspect = function() {
 function ConditionalExpression(test, consequent, alternate, context, hints) {
 	this.expressionType = 'ConditionalExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.test = constructExpression(test, context, {
-		'resultIsUsed': true
+		'resultIsUsed': true,
+		'resultIsUsedAsBoolean': true
 	});
 	this.consequent = constructExpression(consequent, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
 	});
 	this.alternate = constructExpression(alternate, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
 	});
 
 	if (this.consequent.type == cTypes.int && this.alternate.type == cTypes.int) {
@@ -143,6 +153,7 @@ ConditionalExpression.prototype.inspect = function() {
 function ConstExpression(numString, context, hints) {
 	this.expressionType = 'ConstExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	if (numString.match(/^\d+$/)) {
 		this.value = parseInt(numString, 10);
@@ -170,6 +181,7 @@ ConstExpression.prototype.inspect = function() {
 function FunctionCallExpression(callee, params, context, hints) {
 	this.expressionType = 'FunctionCallExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.callee = constructExpression(callee, context, {
 		'resultIsUsed': true
@@ -193,12 +205,15 @@ FunctionCallExpression.prototype.inspect = function() {
 function LogicalAndExpression(left, right, context, hints) {
 	this.expressionType = 'LogicalAndExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': true
 	});
 	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': true
 	});
 
 	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
@@ -223,9 +238,11 @@ LogicalAndExpression.prototype.inspect = function() {
 function LogicalNotExpression(argument, context, hints) {
 	this.expressionType = 'LogicalNotExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.argument = constructExpression(argument, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': true
 	});
 
 	if (this.argument.type == cTypes.int) {
@@ -248,12 +265,15 @@ LogicalNotExpression.prototype.inspect = function() {
 function LogicalOrExpression(left, right, context, hints) {
 	this.expressionType = 'LogicalOrExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': true
 	});
 	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
+		'resultIsUsed': this.resultIsUsed,
+		'resultIsUsedAsBoolean': true
 	});
 
 	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
@@ -279,6 +299,7 @@ LogicalOrExpression.prototype.inspect = function() {
 function RelationalExpression(expressionType, left, right, context, hints) {
 	this.expressionType = expressionType;
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.type = cTypes.int;
 
@@ -335,6 +356,7 @@ function GreaterThanOrEqualExpression(left, right, context, hints) {
 function NegationExpression(argument, context, hints) {
 	this.expressionType = 'NegationExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.argument = constructExpression(argument, context, {
 		'resultIsUsed': this.resultIsUsed
@@ -360,6 +382,7 @@ NegationExpression.prototype.inspect = function() {
 function PostdecrementExpression(argument, context, hints) {
 	this.expressionType = 'PostdecrementExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 	this.argument = constructExpression(argument, context, {
 		'resultIsUsed': true
 	});
@@ -383,6 +406,7 @@ PostdecrementExpression.prototype.inspect = function() {
 function PostincrementExpression(argument, context, hints) {
 	this.expressionType = 'PostincrementExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 	this.argument = constructExpression(argument, context, {
 		'resultIsUsed': true
 	});
@@ -407,6 +431,7 @@ PostdecrementExpression.prototype.inspect = function() {
 function SubtractExpression(left, right, context, hints) {
 	this.expressionType = 'SubtractExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.left = constructExpression(left, context, {
 		'resultIsUsed': this.resultIsUsed
@@ -435,6 +460,7 @@ SubtractExpression.prototype.inspect = function() {
 function VariableExpression(variableName, context, hints) {
 	this.expressionType = 'VariableExpression';
 	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
 	this.variable = context.get(variableName);
 	if (this.variable === null) {

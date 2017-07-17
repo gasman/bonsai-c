@@ -74,7 +74,8 @@ function AssignmentExpression(left, right) {
 			wrapFunctionCall(right).tree
 		),
 		'type': right.type,
-		'intendedType': left.intendedType
+		'intendedType': left.intendedType,
+		'isPureBoolean': right.isPureBoolean
 	};
 }
 exports.AssignmentExpression = AssignmentExpression;
@@ -87,7 +88,8 @@ function CommaExpression(left, right) {
 			/* FIXME: avoid wrapFunctionCall if this is a chained comma expression and this isn't the last one */
 		]),
 		'type': right.type,
-		'intendedType': right.intendedType
+		'intendedType': right.intendedType,
+		'isPureBoolean': right.isPureBoolean
 	};
 }
 exports.CommaExpression = CommaExpression;
@@ -116,6 +118,7 @@ function ConditionalExpression(test, consequent, alternate, intendedType) {
 		),
 		'type': resultType,
 		'intendedType': intendedType,
+		'isPureBoolean': consequent.isPureBoolean && alternate.isPureBoolean
 	};
 }
 exports.ConditionalExpression = ConditionalExpression;
@@ -155,7 +158,8 @@ function ConstExpression(value, originalType) {
 		'isDirectNumericLiteral': true,
 		'isNumericLiteral': true,
 		'numericLiteralValue': value,
-		'isRepeatable': true
+		'isRepeatable': true,
+		'isPureBoolean': (value === 0 || value === 1)
 	};
 }
 exports.ConstExpression = ConstExpression;
@@ -181,12 +185,16 @@ function FunctionCallExpression(callee, args) {
 }
 exports.FunctionCallExpression = FunctionCallExpression;
 
-function LogicalAndExpression(left, right) {
+function LogicalAndExpression(left, right, resultIsUsed, resultIsUsedAsBoolean) {
 	/* asm.js does not provide logical AND; fake it with a conditional instead.
 	a && b  is equivalent to:  a ? !!b : 0
+	If b is known to be pure boolean, or the result will only be used in a boolean context,
+	the !! can be omitted
 	*/
 
-	right = LogicalNotExpression(LogicalNotExpression(right));
+	if (resultIsUsed && !resultIsUsedAsBoolean && !right.isPureBoolean) {
+		right = LogicalNotExpression(LogicalNotExpression(right));
+	}
 	return ConditionalExpression(
 		left,
 		right,
@@ -207,16 +215,19 @@ function LogicalNotExpression(arg) {
 		),
 		'type': asmJsTypes.int,
 		'intendedType': cTypes.int,
+		'isPureBoolean': true
 	};
 }
 exports.LogicalNotExpression = LogicalNotExpression;
 
-function LogicalOrExpression(left, right) {
+function LogicalOrExpression(left, right, resultIsUsed, resultIsUsedAsBoolean) {
 	/* asm.js does not provide logical OR; fake it with a conditional instead.
 	a || b  is equivalent to:  a ? 1 : !!b
 	*/
 
-	right = LogicalNotExpression(LogicalNotExpression(right));
+	if (resultIsUsed && !resultIsUsedAsBoolean && !right.isPureBoolean) {
+		right = LogicalNotExpression(LogicalNotExpression(right));
+	}
 	return ConditionalExpression(
 		left,
 		ConstExpression(1, cTypes.int),
@@ -243,6 +254,7 @@ function RelationalExpression(operator, left, right, intendedOperandType) {
 		),
 		'type': asmJsTypes.int,
 		'intendedType': cTypes.int,
+		'isPureBoolean': true
 	};
 }
 function LessThanExpression(left, right, intendedOperandType) {
@@ -416,14 +428,14 @@ function compileExpression(expression, context, out) {
 		case 'LogicalAndExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
-			return LogicalAndExpression(left, right);
+			return LogicalAndExpression(left, right, expression.resultIsUsed, expression.resultIsUsedAsBoolean);
 		case 'LogicalNotExpression':
 			arg = compileExpression(expression.argument, context, out);
 			return LogicalNotExpression(arg);
 		case 'LogicalOrExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
-			return LogicalOrExpression(left, right);
+			return LogicalOrExpression(left, right, expression.resultIsUsed, expression.resultIsUsedAsBoolean);
 		case 'LessThanExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
@@ -505,7 +517,8 @@ function coerce(expr, intendedType) {
 				return {
 					'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
 					'type': asmJsTypes.signed,
-					'intendedType': intendedType
+					'intendedType': intendedType,
+					'isPureBoolean': expr.isPureBoolean
 				};
 			}
 			break;
@@ -540,7 +553,8 @@ function wrapFunctionCall(expr) {
 	if (expr.type.satisfies(asmJsTypes.signed)) {
 		return {
 			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
-			'type': asmJsTypes.signed
+			'type': asmJsTypes.signed,
+			'isPureBoolean': expr.isPureBoolean
 		};
 	} else {
 		throw(

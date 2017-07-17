@@ -112,7 +112,8 @@ function ForStatement(node, context) {
 		this.test = null;
 	} else {
 		this.test = expressions.constructExpression(node.params[1], context, {
-			'resultIsUsed': true
+			'resultIsUsed': true,
+			'resultIsUsedAsBoolean': true
 		});
 	}
 
@@ -137,7 +138,8 @@ ForStatement.prototype.inspect = function() {
 function IfStatement(node, context) {
 	this.statementType = 'IfStatement';
 	this.test = expressions.constructExpression(node.params[0], context, {
-		'resultIsUsed': true
+		'resultIsUsed': true,
+		'resultIsUsedAsBoolean': true
 	});
 	this.thenStatement = constructStatement(node.params[1], context);
 	if (node.params[2] === null) {
@@ -176,7 +178,8 @@ ReturnStatement.prototype.inspect = function() {
 function WhileStatement(node, context) {
 	this.statementType = 'WhileStatement';
 	this.condition = expressions.constructExpression(node.params[0], context, {
-		'resultIsUsed': true
+		'resultIsUsed': true,
+		'resultIsUsedAsBoolean': true
 	});
 	this.body = constructStatement(node.params[1], context);
 }
