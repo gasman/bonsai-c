@@ -166,10 +166,13 @@ NullStatement.prototype.inspect = function() {
 
 function ReturnStatement(node, context) {
 	this.statementType = 'ReturnStatement';
-
-	this.expression = expressions.constructExpression(node.params[0], context, {
-		'resultIsUsed': true
-	});
+	if (node.params.length === 0) {
+		this.expression = null;
+	} else {
+		this.expression = expressions.constructExpression(node.params[0], context, {
+			'resultIsUsed': true
+		});
+	}
 }
 ReturnStatement.prototype.inspect = function() {
 	return "Return " + util.inspect(this.expression);

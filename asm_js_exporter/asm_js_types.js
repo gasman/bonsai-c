@@ -48,6 +48,14 @@ exports.double = {
 	'inspect': function() {return 'double';}
 };
 
+exports.void = {
+	'category': 'void',
+	'satisfies': function(targetType) {
+		return targetType.category == 'void';
+	},
+	'inspect': function() {return 'void';}
+};
+
 exports.func = function(returnType, paramTypes) {
 	return {
 		'category': 'function',

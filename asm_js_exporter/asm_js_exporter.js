@@ -135,33 +135,43 @@ function compileStatement(statement, out, context) {
 		case 'NullStatement':
 			return;
 		case 'ReturnStatement':
-			expr = expressions.compileExpression(statement.expression, context, out);
+			if (statement.expression === null) {
+				assert(
+					context.returnType.category == 'void',
+					util.format("Empty return statement encountered in context with return type: %s",
+						util.inspect(context.returnType)
+					)
+				);
+				exprTree = null;
+			} else {
+				expr = expressions.compileExpression(statement.expression, context, out);
 
-			/* add return type annotation to the expression, according to this function's
-			return type */
-			switch (context.returnType.category) {
-				case 'signed':
-					val = expr.numericLiteralValue;
-					if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
-						/* no annotation required */
-						exprTree = expr.tree;
-					} else {
-						/* for all other expressions, annotate as (expr | 0) */
-						exprTree = estree.BinaryExpression('|', expr.tree, estree.Literal(0));
-					}
-					break;
-				case 'double':
-					if ('numericLiteralValue' in expr && expr.numericLiteralValue !== null) {
-						/* numeric literal - no annotation required */
-						/* FIXME: ensure that output representation always contains a '.' */
-						exprTree = expr.tree;
-					} else {
-						/* annotate as (+expr) */
-						exprTree = estree.UnaryExpression('+', expr.tree);
-					}
-					break;
-				default:
-					throw "Don't know how to annotate a return value as type: " + util.inspect(context.returnType);
+				/* add return type annotation to the expression, according to this function's
+				return type */
+				switch (context.returnType.category) {
+					case 'signed':
+						val = expr.numericLiteralValue;
+						if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
+							/* no annotation required */
+							exprTree = expr.tree;
+						} else {
+							/* for all other expressions, annotate as (expr | 0) */
+							exprTree = estree.BinaryExpression('|', expr.tree, estree.Literal(0));
+						}
+						break;
+					case 'double':
+						if ('numericLiteralValue' in expr && expr.numericLiteralValue !== null) {
+							/* numeric literal - no annotation required */
+							/* FIXME: ensure that output representation always contains a '.' */
+							exprTree = expr.tree;
+						} else {
+							/* annotate as (+expr) */
+							exprTree = estree.UnaryExpression('+', expr.tree);
+						}
+						break;
+					default:
+						throw "Don't know how to annotate a return value as type: " + util.inspect(context.returnType);
+				}
 			}
 
 			out.body.push(estree.ReturnStatement(exprTree));
@@ -195,6 +205,9 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 			break;
 		case 'double':
 			returnType = asmJsTypes.double;
+			break;
+		case 'void':
+			returnType = asmJsTypes.void;
 			break;
 		default:
 			throw "Don't know how to handle return type: " + util.inspect(functionDefinition.returnType);
