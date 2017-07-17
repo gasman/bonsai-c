@@ -150,6 +150,16 @@ function compileStatement(statement, out, context) {
 						exprTree = estree.BinaryExpression('|', expr.tree, estree.Literal(0));
 					}
 					break;
+				case 'double':
+					if ('numericLiteralValue' in expr && expr.numericLiteralValue !== null) {
+						/* numeric literal - no annotation required */
+						/* FIXME: ensure that output representation always contains a '.' */
+						exprTree = expr.tree;
+					} else {
+						/* annotate as (+expr) */
+						exprTree = estree.UnaryExpression('+', expr.tree);
+					}
+					break;
 				default:
 					throw "Don't know how to annotate a return value as type: " + util.inspect(context.returnType);
 			}
@@ -183,6 +193,9 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 		case 'int':
 			returnType = asmJsTypes.signed;
 			break;
+		case 'double':
+			returnType = asmJsTypes.double;
+			break;
 		default:
 			throw "Don't know how to handle return type: " + util.inspect(functionDefinition.returnType);
 	}
@@ -214,6 +227,22 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 							'|',
 							estree.Identifier(originalParam.name),
 							estree.Literal(0)
+						)
+					)
+				));
+				break;
+			case 'double':
+				/* register as a local var of type 'double' */
+				parameterType = asmJsTypes.double;
+
+				/* annotate as i = +i */
+				parameterDeclarations.push(estree.ExpressionStatement(
+					estree.AssignmentExpression(
+						'=',
+						estree.Identifier(originalParam.name),
+						estree.UnaryExpression(
+							'+',
+							estree.Identifier(originalParam.name)
 						)
 					)
 				));

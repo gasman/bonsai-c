@@ -125,12 +125,14 @@ exports.ConditionalExpression = ConditionalExpression;
 
 function ConstExpression(value, originalType) {
 	var typ = null;
+	var tree;
 	if (originalType.category == 'int') {
 		if (value >= 0 && value < 0x80000000) {
 			typ = asmJsTypes.fixnum;
 		} else {
 			throw("Numeric literal out of range for signed int: %d" % value);
 		}
+		tree = estree.Literal(value);
 	/* // TODO: reinstate when c_types has a concept of unsigned int...
 	} else if (originalType.satisfies(asmJsTypes.unsigned)) {
 		if (value >= 0 && value < 0x80000000) {
@@ -143,6 +145,11 @@ function ConstExpression(value, originalType) {
 	*/
 	} else if (originalType.category == 'double') {
 		typ = asmJsTypes.double;
+		var valueString = value.toString();
+		if (valueString.indexOf('.') == -1) {
+			valueString += '.0';
+		}
+		tree = estree.RawLiteral(value, valueString);
 	} else {
 		throw(
 			util.format("Can't determine type of numeric literal: %s (reported: %s)",
@@ -152,7 +159,7 @@ function ConstExpression(value, originalType) {
 	}
 
 	return {
-		'tree': estree.Literal(value),
+		'tree': tree,
 		'type': typ,
 		'intendedType': originalType,
 		'isDirectNumericLiteral': true,
@@ -555,6 +562,11 @@ function wrapFunctionCall(expr) {
 			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
 			'type': asmJsTypes.signed,
 			'isPureBoolean': expr.isPureBoolean
+		};
+	} else if (expr.type.satisfies(asmJsTypes.double)) {
+		return {
+			'tree': estree.UnaryExpression('+', expr.tree),
+			'type': asmJsTypes.double
 		};
 	} else {
 		throw(

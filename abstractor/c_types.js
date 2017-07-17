@@ -41,6 +41,8 @@ function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
 	}
 	var token = typeSpecifiers[0];
 	switch (token) {
+		case 'double':
+			return exports.double;
 		case 'int':
 			return exports.int;
 		case 'void':

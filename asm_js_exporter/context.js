@@ -39,12 +39,12 @@ FunctionContext.prototype.allocateLocalVariable = function(suggestedName, typ, i
 	return variable;
 };
 FunctionContext.prototype.declareLocalVariable = function(suggestedName, id, intendedType, initialValueExpression, out) {
-	var actualType, canDeclareDirectly, val;
+	var actualType, canDeclareDirectly, val, variable;
 
 	switch (intendedType.category) {
 		case 'int':
 			/* register as a local var of type 'int', to be treated as signed */
-			var variable = this.allocateLocalVariable(
+			variable = this.allocateLocalVariable(
 				suggestedName, asmJsTypes.int, intendedType, id
 			);
 
@@ -75,8 +75,37 @@ FunctionContext.prototype.declareLocalVariable = function(suggestedName, id, int
 			}
 
 			break;
+		case 'double':
+			/* register as a local var of type 'double' */
+			variable = this.allocateLocalVariable(
+				suggestedName, asmJsTypes.double, intendedType, id
+			);
+			/* can declare directly if initialValueExpression is null
+			or a numeric literal in signed range */
+			if (initialValueExpression === null) {
+				/* output: var i = 0.0 */
+				initialValueExpression = expressions.ConstExpression(0, cTypes.double);
+			} else {
+				if ('numericLiteralValue' in initialValueExpression && initialValueExpression.numericLiteralValue !== null) {
+					/* initial value is a numeric literal - can use it directly
+					in the variable declaration */
+				} else {
+					/* need to declare variable with a 'dummy' initial value of 0.0,
+					then initialise it properly within the function body */
+					out.body.push(
+						estree.ExpressionStatement(
+							expressions.AssignmentExpression(
+								expressions.VariableExpression(variable),
+								initialValueExpression
+							).tree
+						)
+					);
+					initialValueExpression = expressions.ConstExpression(0, cTypes.double);
+				}
+			}
+			break;
 		default:
-			throw "Don't know how to declare a local variable of type: " + util.inspect(statement.type);
+			throw "Don't know how to declare a local variable of type: " + util.inspect(intendedType);
 	}
 
 	out.variableDeclarations.push(
