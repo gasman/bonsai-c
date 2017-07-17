@@ -92,5 +92,6 @@ testCompile('tests/logical_and.c', 42);
 testCompile('tests/logical_or.c', 42);
 testCompile('tests/double_var.c', 42);
 testCompile('tests/double_add.c', 42);
+testCompile('tests/reserved_vars.c', 42);
 
 console.log("All tests passed");

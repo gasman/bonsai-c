@@ -315,6 +315,11 @@ function compileModule(module) {
 		'globalVariablesByName': {}
 	};
 
+	/* reserve the variable names 'stdlib', 'foreign' and 'heap' */
+	globalContext.globalVariablesByName['stdlib'] = null;
+	globalContext.globalVariablesByName['foreign'] = null;
+	globalContext.globalVariablesByName['heap'] = null;
+
 	for (var i = 0; i < module.declarations.length; i++) {
 		var declaration = module.declarations[i];
 		switch (declaration.declarationType) {
