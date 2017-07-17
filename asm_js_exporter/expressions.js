@@ -6,36 +6,50 @@ var asmJsTypes = require('./asm_js_types');
 var cTypes = require('../abstractor/c_types');
 
 function AddExpression(left, right, intendedType) {
-	assert(intendedType.category == 'int',
-		"Can't handle non-integer AddExpressions"
-	);
-
-	if (
-		left.type.satisfies(asmJsTypes.int) ||
-		(left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish))
-	) {
-		/* can skip coercion (integer addition supports chaining, despite the intermediate
-			results being intish in principle) */
-	} else {
+	if (intendedType.category == 'int') {
+		if (
+			left.type.satisfies(asmJsTypes.int) ||
+			(left.isAdditiveExpression && left.type.satisfies(asmJsTypes.intish))
+		) {
+			/* can skip coercion (integer addition supports chaining, despite the intermediate
+				results being intish in principle) */
+		} else {
+			left = coerce(left, intendedType);
+		}
+		if (
+			right.type.satisfies(asmJsTypes.int) ||
+			(right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish))
+		) {
+			/* can skip coercion */
+		} else {
+			right = coerce(right, intendedType);
+		}
+		return {
+			'tree': estree.BinaryExpression('+',
+				wrapFunctionCall(left).tree,
+				wrapFunctionCall(right).tree
+			),
+			'type': asmJsTypes.intish,
+			'intendedType': intendedType,
+			'isAdditiveExpression': true
+		};
+	} else if (intendedType.category == 'double') {
 		left = coerce(left, intendedType);
-	}
-	if (
-		right.type.satisfies(asmJsTypes.int) ||
-		(right.isAdditiveExpression && right.type.satisfies(asmJsTypes.intish))
-	) {
-		/* can skip coercion */
+		right = coerce(left, intendedType);
+		return {
+			'tree': estree.BinaryExpression('+',
+				wrapFunctionCall(left).tree,
+				wrapFunctionCall(right).tree
+			),
+			'type': asmJsTypes.double,
+			'intendedType': intendedType,
+			'isAdditiveExpression': true
+		};
 	} else {
-		right = coerce(right, intendedType);
+		throw(util.format(
+			"Can't handle AddExpressions of type %s", util.inspect(intendedType)
+		));
 	}
-	return {
-		'tree': estree.BinaryExpression('+',
-			wrapFunctionCall(left).tree,
-			wrapFunctionCall(right).tree
-		),
-		'type': asmJsTypes.intish,
-		'intendedType': intendedType,
-		'isAdditiveExpression': true
-	};
 }
 exports.AddExpression = AddExpression;
 

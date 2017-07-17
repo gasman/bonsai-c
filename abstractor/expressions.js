@@ -15,7 +15,9 @@ function AddExpression(left, right, context, hints) {
 		'resultIsUsed': this.resultIsUsed
 	});
 
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+	if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
+		this.type = cTypes.double;
+	} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 		this.type = cTypes.int;
 	} else {
 		throw(
