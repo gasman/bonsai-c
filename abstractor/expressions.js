@@ -47,6 +47,9 @@ function MultiplyExpression(left, right, context, hints) {
 function DivideExpression(left, right, context, hints) {
 	return new ArithmeticExpression('DivideExpression', left, right, context, hints);
 }
+function ModExpression(left, right, context, hints) {
+	return new ArithmeticExpression('ModExpression', left, right, context, hints);
+}
 
 function AddAssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'AddAssignmentExpression';
@@ -505,6 +508,8 @@ function constructExpression(node, context, hints) {
 					return new MultiplyExpression(node.params[1], node.params[2], context, hints);
 				case '/':
 					return new DivideExpression(node.params[1], node.params[2], context, hints);
+				case '%':
+					return new ModExpression(node.params[1], node.params[2], context, hints);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}
