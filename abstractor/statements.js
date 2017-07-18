@@ -91,6 +91,19 @@ DeclarationStatement.prototype.inspect = function() {
 	return "Declaration <" + util.inspect(this.type) + "> " + util.inspect(this.variableDeclarations);
 };
 
+function DoWhileStatement(node, context) {
+	this.statementType = 'DoWhileStatement';
+	this.body = constructStatement(node.params[0], context);
+	this.condition = expressions.constructExpression(node.params[1], context, {
+		'resultIsUsed': true,
+		'resultIsUsedAsBoolean': true
+	});
+}
+DoWhileStatement.prototype.inspect = function() {
+	return "Do " + util.inspect(this.body) + " While (" + util.inspect(this.condition) + ")";
+};
+
+
 function ExpressionStatement(node, context) {
 	this.statementType = 'ExpressionStatement';
 
@@ -201,6 +214,8 @@ function constructStatement(node, context) {
 			return new ContinueStatement(node, context);
 		case 'DeclarationStatement':
 			return new DeclarationStatement(node, context);
+		case 'DoWhile':
+			return new DoWhileStatement(node, context);
 		case 'ExpressionStatement':
 			return new ExpressionStatement(node, context);
 		case 'For':

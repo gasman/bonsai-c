@@ -48,6 +48,20 @@ function compileStatement(statement, out, context) {
 				);
 			}
 			return;
+		case 'DoWhileStatement':
+			bodyOutput = {
+				'variableDeclarations': out.variableDeclarations,
+				'body': []
+			};
+			compileStatement(statement.body, bodyOutput, context);
+			assert.equal(1, bodyOutput.body.length);
+			condition = expressions.compileExpression(statement.condition, context, out);
+
+			out.body.push(estree.DoWhileStatement(
+				bodyOutput.body[0],
+				condition.tree
+			));
+			return;
 		case 'ExpressionStatement':
 			expr = expressions.compileExpression(statement.expression, context, out);
 			out.body.push(estree.ExpressionStatement(expr.tree));

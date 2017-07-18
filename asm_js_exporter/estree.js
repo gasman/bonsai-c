@@ -48,6 +48,14 @@ exports.ContinueStatement = function(label) {
 	return {'type': 'ContinueStatement', 'label': label};
 };
 
+exports.DoWhileStatement = function(body, test) {
+	return {
+		'type': 'DoWhileStatement',
+		'body': body,
+		'test': test
+	};
+};
+
 exports.ExpressionStatement = function(expr) {
 	return {
 		'type': 'ExpressionStatement',
