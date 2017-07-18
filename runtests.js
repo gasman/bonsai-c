@@ -98,5 +98,6 @@ testCompile('tests/empty_params.c', 42);
 testCompile('tests/void_return.c', 42);
 testCompile('tests/void_function_without_return.c', 42);
 testCompile('tests/do_while.c', 55);
+testCompile('tests/logical_shortcuts.c', 42);
 
 console.log("All tests passed");
