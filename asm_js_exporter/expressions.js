@@ -290,6 +290,18 @@ function DivideExpression(left, right, intendedType) {
 			'type': asmJsTypes.double,
 			'intendedType': intendedType,
 		};
+	} else if (intendedType.category == 'int') {
+		/* NB signed vs unsigned is significant for coercion here; this case is signed */
+		left = coerce(left, intendedType);
+		right = coerce(right, intendedType);
+		return {
+			'tree': estree.BinaryExpression('/',
+				wrapFunctionCall(left).tree,
+				wrapFunctionCall(right).tree
+			),
+			'type': asmJsTypes.intish,
+			'intendedType': intendedType,
+		};
 	} else {
 		throw(util.format(
 			"Can't handle DivideExpressions of type %s", util.inspect(intendedType)
