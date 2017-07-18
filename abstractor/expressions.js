@@ -3,8 +3,8 @@ var util = require('util');
 var cTypes = require('./c_types');
 
 
-function AddExpression(left, right, context, hints) {
-	this.expressionType = 'AddExpression';
+function ArithmeticExpression(expressionType, left, right, context, hints) {
+	this.expressionType = expressionType;
 	this.resultIsUsed = hints.resultIsUsed;
 	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
@@ -30,10 +30,23 @@ function AddExpression(left, right, context, hints) {
 }
 AddExpression.prototype.inspect = function() {
 	return util.format(
-		"Add: (%s, %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		"%s: (%s, %s) <%s>",
+		this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 	);
 };
+
+function AddExpression(left, right, context, hints) {
+	return new ArithmeticExpression('AddExpression', left, right, context, hints);
+}
+function SubtractExpression(left, right, context, hints) {
+	return new ArithmeticExpression('SubtractExpression', left, right, context, hints);
+}
+function MultiplyExpression(left, right, context, hints) {
+	return new ArithmeticExpression('MultiplyExpression', left, right, context, hints);
+}
+function DivideExpression(left, right, context, hints) {
+	return new ArithmeticExpression('DivideExpression', left, right, context, hints);
+}
 
 function AddAssignmentExpression(left, right, context, hints) {
 	this.expressionType = 'AddAssignmentExpression';
@@ -430,35 +443,6 @@ PostdecrementExpression.prototype.inspect = function() {
 	);
 };
 
-function SubtractExpression(left, right, context, hints) {
-	this.expressionType = 'SubtractExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
-
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle SubtractExpression with types: %s, %s",
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
-		);
-	}
-}
-SubtractExpression.prototype.inspect = function() {
-	return util.format(
-		"Subtract: (%s, %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
-
 function VariableExpression(variableName, context, hints) {
 	this.expressionType = 'VariableExpression';
 	this.resultIsUsed = hints.resultIsUsed;
@@ -517,6 +501,10 @@ function constructExpression(node, context, hints) {
 					return new LogicalAndExpression(node.params[1], node.params[2], context, hints);
 				case '||':
 					return new LogicalOrExpression(node.params[1], node.params[2], context, hints);
+				case '*':
+					return new MultiplyExpression(node.params[1], node.params[2], context, hints);
+				case '/':
+					return new DivideExpression(node.params[1], node.params[2], context, hints);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}

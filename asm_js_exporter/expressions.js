@@ -35,7 +35,7 @@ function AddExpression(left, right, intendedType) {
 		};
 	} else if (intendedType.category == 'double') {
 		left = coerce(left, intendedType);
-		right = coerce(left, intendedType);
+		right = coerce(right, intendedType);
 		return {
 			'tree': estree.BinaryExpression('+',
 				wrapFunctionCall(left).tree,
@@ -258,6 +258,46 @@ function LogicalOrExpression(left, right, resultIsUsed, resultIsUsedAsBoolean) {
 }
 exports.LogicalOrExpression = LogicalOrExpression;
 
+function MultiplyExpression(left, right, intendedType) {
+	if (intendedType.category == 'double') {
+		left = coerce(left, intendedType);
+		right = coerce(right, intendedType);
+		return {
+			'tree': estree.BinaryExpression('*',
+				wrapFunctionCall(left).tree,
+				wrapFunctionCall(right).tree
+			),
+			'type': asmJsTypes.double,
+			'intendedType': intendedType,
+		};
+	} else {
+		throw(util.format(
+			"Can't handle MultiplyExpressions of type %s", util.inspect(intendedType)
+		));
+	}
+}
+exports.MultiplyExpression = MultiplyExpression;
+
+function DivideExpression(left, right, intendedType) {
+	if (intendedType.category == 'double') {
+		left = coerce(left, intendedType);
+		right = coerce(right, intendedType);
+		return {
+			'tree': estree.BinaryExpression('/',
+				wrapFunctionCall(left).tree,
+				wrapFunctionCall(right).tree
+			),
+			'type': asmJsTypes.double,
+			'intendedType': intendedType,
+		};
+	} else {
+		throw(util.format(
+			"Can't handle DivideExpressions of type %s", util.inspect(intendedType)
+		));
+	}
+}
+exports.DivideExpression = DivideExpression;
+
 function RelationalExpression(operator, left, right, intendedOperandType) {
 	assert(intendedOperandType.category == 'int' || intendedOperandType.category == 'double',
 		util.format(
@@ -439,6 +479,10 @@ function compileExpression(expression, context, out) {
 			return ConditionalExpression(test, consequent, alternate, expression.type);
 		case 'ConstExpression':
 			return ConstExpression(expression.value, expression.type);
+		case 'DivideExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return DivideExpression(left, right, expression.type);
 		case 'FunctionCallExpression':
 			var callee = compileExpression(expression.callee, context, out);
 			var args = [];
@@ -457,6 +501,10 @@ function compileExpression(expression, context, out) {
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
 			return LogicalOrExpression(left, right, expression.resultIsUsed, expression.resultIsUsedAsBoolean);
+		case 'MultiplyExpression':
+			left = compileExpression(expression.left, context, out);
+			right = compileExpression(expression.right, context, out);
+			return MultiplyExpression(left, right, expression.type);
 		case 'LessThanExpression':
 			left = compileExpression(expression.left, context, out);
 			right = compileExpression(expression.right, context, out);
