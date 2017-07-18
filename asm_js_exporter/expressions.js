@@ -637,6 +637,19 @@ function coerce(expr, intendedType) {
 					'intendedType': intendedType,
 					'isPureBoolean': expr.isPureBoolean
 				};
+			} else if (expr.type.satisfies(asmJsTypes.double)) {
+				/* coerce double to signed using ~~x */
+				return {
+					'tree': estree.UnaryExpression('~', estree.UnaryExpression('~', expr.tree)),
+					'type': asmJsTypes.signed,
+					'intendedType': intendedType
+				};
+			} else {
+				throw(
+					util.format("Don't know how to coerce expression %s to signed int",
+						util.inspect(expr)
+					)
+				);
 			}
 			break;
 		case 'double':
@@ -660,6 +673,7 @@ function coerce(expr, intendedType) {
 			);
 	}
 }
+exports.coerce = coerce;
 
 function wrapFunctionCall(expr) {
 	/* asm.js only allows function calls to be used in limited contexts, mostly ones that
@@ -671,12 +685,14 @@ function wrapFunctionCall(expr) {
 		return {
 			'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
 			'type': asmJsTypes.signed,
-			'isPureBoolean': expr.isPureBoolean
+			'isPureBoolean': expr.isPureBoolean,
+			'isAnnotatedAsSigned': true
 		};
 	} else if (expr.type.satisfies(asmJsTypes.double)) {
 		return {
 			'tree': estree.UnaryExpression('+', expr.tree),
-			'type': asmJsTypes.double
+			'type': asmJsTypes.double,
+			'isAnnotatedAsDouble': true
 		};
 	} else {
 		throw(

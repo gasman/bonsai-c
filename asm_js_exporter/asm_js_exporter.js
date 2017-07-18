@@ -7,7 +7,7 @@ var contextModule = require('./context');
 
 
 function compileStatement(statement, out, context) {
-	var i, expr, exprTree, val, testExpression;
+	var i, expr, exprTree, val, testExpression, coercedExpr;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
@@ -169,8 +169,14 @@ function compileStatement(statement, out, context) {
 							/* no annotation required */
 							exprTree = expr.tree;
 						} else {
-							/* for all other expressions, annotate as (expr | 0) */
-							exprTree = estree.BinaryExpression('|', expr.tree, estree.Literal(0));
+							/* for all other expressions, annotate as (expr | 0),
+							ensuring that expr is coerced to signed */
+							coercedExpr = expressions.coerce(expr, cTypes.int);
+							if (coercedExpr.isAnnotatedAsSigned) {
+								exprTree = coercedExpr.tree;
+							} else {
+								exprTree = estree.BinaryExpression('|', coercedExpr.tree, estree.Literal(0));
+							}
 						}
 						break;
 					case 'double':
@@ -180,7 +186,12 @@ function compileStatement(statement, out, context) {
 							exprTree = expr.tree;
 						} else {
 							/* annotate as (+expr) */
-							exprTree = estree.UnaryExpression('+', expr.tree);
+							coercedExpr = expressions.coerce(expr, cTypes.double);
+							if (coercedExpr.isAnnotatedAsDouble) {
+								exprTree = coercedExpr.tree;
+							} else {
+								exprTree = estree.UnaryExpression('+', expr.tree);
+							}
 						}
 						break;
 					default:

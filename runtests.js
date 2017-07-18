@@ -105,5 +105,6 @@ testCompile('tests/late_declaration.c', 52);
 testCompile('tests/nonconstant_declare.c', 42);
 testCompile('tests/int_mod.c', 42);
 testCompile('tests/double_mod.c', 42);
+testCompile('tests/double_to_signed.c', 42);
 
 console.log("All tests passed");
