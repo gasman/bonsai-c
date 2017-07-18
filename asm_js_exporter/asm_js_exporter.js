@@ -369,11 +369,13 @@ function compileModule(module) {
 				moduleBodyStatements.push(
 					compileFunctionDefinition(declaration, globalContext)
 				);
-				exportTable.push(estree.Property(
-					estree.Identifier(declaration.name),
-					estree.Identifier(declaration.name),
-					'init'
-				));
+				if (declaration.isExported) {
+					exportTable.push(estree.Property(
+						estree.Identifier(declaration.name),
+						estree.Identifier(declaration.name),
+						'init'
+					));
+				}
 				break;
 			default:
 				throw "Unexpected declaration type: " + declaration.declarationType;

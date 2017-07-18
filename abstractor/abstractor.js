@@ -17,7 +17,22 @@ function FunctionDefinition(node, parentContext) {
 	this.declarationType = 'FunctionDefinition';
 
 	var declarationSpecifiersNode = node.params[0];
-	this.returnType = cTypes.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
+	var storageClassSpecifiers = declarationSpecifiersNode.params[0];
+	var typeSpecifiers = declarationSpecifiersNode.params[1];
+
+	if (storageClassSpecifiers.length === 0) {
+		this.isExported = true;
+	} else if (storageClassSpecifiers.length === 1 && storageClassSpecifiers[0] == 'static') {
+		this.isExported = false;
+	} else {
+		throw(
+			util.format(
+				"Don't know how to handle storage class specifiers: %s",
+				util.inspect(storageClassSpecifiers)
+			)
+		);
+	}
+	this.returnType = cTypes.getTypeFromTypeSpecifiers(typeSpecifiers);
 
 	var declaratorNode = node.params[1];
 	var identifierNode = declaratorNode.params[0];

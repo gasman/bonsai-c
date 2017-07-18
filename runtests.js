@@ -106,5 +106,6 @@ testCompile('tests/nonconstant_declare.c', 42);
 testCompile('tests/int_mod.c', 42);
 testCompile('tests/double_mod.c', 42);
 testCompile('tests/double_to_signed.c', 42);
+testCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 
 console.log("All tests passed");

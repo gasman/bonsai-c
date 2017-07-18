@@ -24,15 +24,7 @@ exports.func = function(returnType, paramTypes) {
 	};
 };
 
-function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
-	var storageClassSpecifiers = declarationSpecifiersNode.params[0];
-	if (storageClassSpecifiers.length > 0) {
-		throw(util.format(
-			"Storage class specifiers are not yet supported - got %s",
-			util.inspect(storageClassSpecifiers)
-		));
-	}
-	var typeSpecifiers = declarationSpecifiersNode.params[1];
+function getTypeFromTypeSpecifiers(typeSpecifiers) {
 	if (typeSpecifiers.length != 1) {
 		throw(util.format(
 			"Multi-token type specifiers are not yet supported - got %s",
@@ -50,6 +42,19 @@ function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
 		default:
 			throw "Unrecognised data type: " + token;
 	}
+}
+
+exports.getTypeFromTypeSpecifiers = getTypeFromTypeSpecifiers;
+
+function getTypeFromDeclarationSpecifiers(declarationSpecifiersNode) {
+	var storageClassSpecifiers = declarationSpecifiersNode.params[0];
+	if (storageClassSpecifiers.length > 0) {
+		throw(util.format(
+			"Storage class specifiers are not yet supported - got %s",
+			util.inspect(storageClassSpecifiers)
+		));
+	}
+	return getTypeFromTypeSpecifiers(declarationSpecifiersNode.params[1]);
 }
 
 exports.getTypeFromDeclarationSpecifiers = getTypeFromDeclarationSpecifiers;
