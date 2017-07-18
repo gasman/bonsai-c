@@ -86,7 +86,7 @@ function compileStatement(statement, out, context) {
 				initExpressionTree = initOutput.body[0].expression;
 			} else {
 				/* init clause has to go before the loop */
-				out.body.concat(initOutput.body);
+				out.body = out.body.concat(initOutput.body);
 			}
 
 			var testExpressionTree = null;

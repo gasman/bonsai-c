@@ -101,5 +101,6 @@ testCompile('tests/do_while.c', 55);
 testCompile('tests/logical_shortcuts.c', 42);
 testCompile('tests/double_mul.c', 42);
 testCompile('tests/int_div.c', 42);
+testCompile('tests/late_declaration.c', 52);
 
 console.log("All tests passed");

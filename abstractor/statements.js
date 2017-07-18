@@ -117,14 +117,13 @@ ExpressionStatement.prototype.inspect = function() {
 
 function ForStatement(node, context) {
 	this.statementType = 'ForStatement';
-	/* TODO: see if we need to set up child contexts
-	(for the loop body, and the scope in which init / test / update is evaluated) */
-	this.init = constructStatement(node.params[0], context);
+	var statementContext = context.createChildContext();
+	this.init = constructStatement(node.params[0], statementContext);
 
 	if (node.params[1] === null) {
 		this.test = null;
 	} else {
-		this.test = expressions.constructExpression(node.params[1], context, {
+		this.test = expressions.constructExpression(node.params[1], statementContext, {
 			'resultIsUsed': true,
 			'resultIsUsedAsBoolean': true
 		});
@@ -133,12 +132,12 @@ function ForStatement(node, context) {
 	if (node.params[2] === null) {
 		this.update = null;
 	} else {
-		this.update = expressions.constructExpression(node.params[2], context, {
+		this.update = expressions.constructExpression(node.params[2], statementContext, {
 			'resultIsUsed': false
 		});
 	}
 
-	this.body = constructStatement(node.params[3], context);
+	this.body = constructStatement(node.params[3], statementContext);
 }
 ForStatement.prototype.inspect = function() {
 	return util.format(
