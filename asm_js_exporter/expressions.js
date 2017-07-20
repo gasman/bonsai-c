@@ -186,9 +186,6 @@ function ConstExpression(value, originalType) {
 		'tree': tree,
 		'type': typ,
 		'intendedType': originalType,
-		'isDirectNumericLiteral': true,
-		'isNumericLiteral': true,
-		'numericLiteralValue': value,
 		'isRepeatable': true,
 		'isPureBoolean': (value === 0 || value === 1)
 	};
@@ -598,20 +595,10 @@ function compileExpression(expression, context, out) {
 				throw("Can't handle a NegationExpression with arg type: " + util.inspect(arg.type));
 			}
 
-			if (arg.isDirectNumericLiteral) {
-				return {
-					'tree': estree.UnaryExpression('-', arg.tree, true),
-					'type': typ,
-					'isNumericLiteral': true,
-					'numericLiteralValue': -(arg.numericLiteralValue)
-				};
-			} else {
-				return {
-					'tree': estree.UnaryExpression('-', wrapFunctionCall(arg).tree, true),
-					'type': typ
-				};
-			}
-			break;
+			return {
+				'tree': estree.UnaryExpression('-', wrapFunctionCall(arg).tree, true),
+				'type': typ
+			};
 		case 'PostdecrementExpression':
 			arg = compileExpression(expression.argument, context, out);
 			return PostdecrementExpression(arg, expression.resultIsUsed, out, context);

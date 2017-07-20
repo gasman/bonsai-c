@@ -1,4 +1,6 @@
 int main(void)
 {
-    return 52 - 5 - 5;
+    int fiftytwo = 52;
+    int five = 5;
+    return fiftytwo - five - five;
 }

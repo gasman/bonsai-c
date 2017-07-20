@@ -1,4 +1,6 @@
 int main(void)
 {
-    return 20 + 20 + 2;
+    int twenty = 20;
+    int two = 2;
+    return twenty + twenty + two;
 }

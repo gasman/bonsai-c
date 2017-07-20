@@ -177,19 +177,18 @@ function compileStatement(statement, out, context) {
 				);
 				exprTree = null;
 			} else {
-				expr = expressions.compileExpression(statement.expression, context, out);
-
 				/* add return type annotation to the expression, according to this function's
 				return type */
 				switch (context.returnType.category) {
 					case 'signed':
-						val = expr.numericLiteralValue;
-						if (Number.isInteger(val) && val >= -0x80000000 && val < 0x80000000) {
-							/* no annotation required */
-							exprTree = expr.tree;
+						if (statement.expression.isCompileTimeConstant) {
+							exprTree = expressions.ConstExpression(
+								statement.expression.compileTimeConstantValue, cTypes.int
+							).tree;
 						} else {
 							/* for all other expressions, annotate as (expr | 0),
 							ensuring that expr is coerced to signed */
+							expr = expressions.compileExpression(statement.expression, context, out);
 							coercedExpr = expressions.coerce(expr, cTypes.int);
 							if (coercedExpr.isAnnotatedAsSigned) {
 								exprTree = coercedExpr.tree;
@@ -199,12 +198,13 @@ function compileStatement(statement, out, context) {
 						}
 						break;
 					case 'double':
-						if ('numericLiteralValue' in expr && expr.numericLiteralValue !== null) {
-							/* numeric literal - no annotation required */
-							/* FIXME: ensure that output representation always contains a '.' */
-							exprTree = expr.tree;
+						if (statement.expression.isCompileTimeConstant) {
+							exprTree = expressions.ConstExpression(
+								statement.expression.compileTimeConstantValue, cTypes.double
+							).tree;
 						} else {
 							/* annotate as (+expr) */
+							expr = expressions.compileExpression(statement.expression, context, out);
 							coercedExpr = expressions.coerce(expr, cTypes.double);
 							if (coercedExpr.isAnnotatedAsDouble) {
 								exprTree = coercedExpr.tree;
