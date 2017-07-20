@@ -265,7 +265,7 @@ function LogicalOrExpression(left, right, resultIsUsed, resultIsUsedAsBoolean) {
 }
 exports.LogicalOrExpression = LogicalOrExpression;
 
-function MultiplyExpression(left, right, intendedType) {
+function MultiplyExpression(left, right, intendedType, context) {
 	if (intendedType.category == 'double') {
 		left = coerce(left, intendedType);
 		right = coerce(right, intendedType);
@@ -277,6 +277,12 @@ function MultiplyExpression(left, right, intendedType) {
 			'type': asmJsTypes.double,
 			'intendedType': intendedType,
 		};
+	} else if (intendedType.category == 'int') {
+		/* compile as a call to stdlib.Math.imul */
+		var imul = context.globalContext.import('imul', ['stdlib', 'Math', 'imul']);
+		return FunctionCallExpression(
+			VariableExpression(imul), [left, right]
+		);
 	} else {
 		throw(util.format(
 			"Can't handle MultiplyExpressions of type %s", util.inspect(intendedType)
@@ -568,7 +574,7 @@ function compileExpression(expression, context) {
 		case 'MultiplyExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
-			return MultiplyExpression(left, right, expression.type);
+			return MultiplyExpression(left, right, expression.type, context);
 		case 'LessThanExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);

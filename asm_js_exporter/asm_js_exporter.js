@@ -352,9 +352,18 @@ function compileModule(module) {
 	var globalContext = new contextModule.Context();
 
 	/* reserve the variable names 'stdlib', 'foreign' and 'heap' */
-	globalContext.allocateVariable('stdlib');
-	globalContext.allocateVariable('foreign');
-	globalContext.allocateVariable('heap');
+	var RESERVED_WORDS = ['stdlib', 'foreign', 'heap'];
+	for (var w = 0; w < RESERVED_WORDS.length; w++) {
+		globalContext.allocateVariable(RESERVED_WORDS[w]);
+	}
+
+	/* reserve 'imul' as a global variable (although it will need to be imported via
+	globalContext.import('imul', ['stdlib', 'Math', 'imul']) to be valid to use in code)
+	*/
+	globalContext.allocateVariable('imul',
+		asmJsTypes.func(asmJsTypes.signed, [asmJsTypes.int, asmJsTypes.int]),
+		cTypes.func(cTypes.int, [cTypes.int, cTypes.int])
+	);
 
 	var functionDefinitionStatements = [];
 
@@ -419,7 +428,11 @@ function compileModule(module) {
 	return estree.Program([
 		estree.FunctionDeclaration(
 			estree.Identifier('Module'),
-			[],
+			[
+				estree.Identifier('stdlib'),
+				estree.Identifier('foreign'),
+				estree.Identifier('heap')
+			],
 			estree.BlockStatement(moduleBodyStatements)
 		)
 	]);

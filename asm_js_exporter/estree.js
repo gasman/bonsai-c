@@ -107,6 +107,15 @@ exports.RawLiteral = function(value, raw) {
 	};
 };
 
+exports.MemberExpression = function(obj, property, computed) {
+	return {
+		'type': 'MemberExpression',
+		'object': obj,
+		'property': property,
+		'computed': computed
+	};
+};
+
 exports.ObjectExpression = function(properties) {
 	return {'type': 'ObjectExpression', 'properties': properties};
 };

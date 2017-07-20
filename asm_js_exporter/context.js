@@ -1,3 +1,5 @@
+var assert = require('assert');
+
 var asmJsTypes = require('./asm_js_types');
 var expressions = require('./expressions');
 var cTypes = require('../abstractor/c_types');
@@ -5,9 +7,15 @@ var estree = require('./estree');
 
 function Context(parentContext) {
 	this.parentContext = parentContext;
+	if (this.parentContext) {
+		this.globalContext = this.parentContext.globalContext;
+	} else {
+		this.globalContext = this;
+	}
 	this.variablesById = {};
 	this.variablesByName = {};
 	this.variableDeclarations = [];
+	this.importedNames = {};
 }
 Context.prototype.get = function(id) {
 	var variable = this.variablesById[id];
@@ -17,19 +25,17 @@ Context.prototype.get = function(id) {
 		return this.parentContext.get(id);
 	}
 };
-Context.prototype.nameIsUsed = function(name) {
+Context.prototype.getByName = function(name) {
 	if (name in this.variablesByName) {
-		return true;
+		return this.variablesByName[name];
 	} else if (this.parentContext) {
-		return this.parentContext.nameIsUsed(name);
-	} else {
-		return false;
+		return this.parentContext.getByName(name);
 	}
 };
 Context.prototype.allocateVariable = function(suggestedName, typ, intendedType, id) {
 	var suffixIndex = 0;
 	var candidateName = suggestedName;
-	while (this.nameIsUsed(candidateName)) {
+	while (this.getByName(candidateName)) {
 		candidateName = suggestedName + '_' + suffixIndex;
 		suffixIndex++;
 	}
@@ -72,6 +78,35 @@ Context.prototype.declareVariable = function(suggestedName, id, intendedType, in
 	);
 
 	return variable;
+};
+
+Context.prototype.import = function(name, path) {
+	/* Add a variable declaration (if one does not exist already) for 'name',
+	pointing to the external reference 'path' (a list of path components such as
+	['stdlib', 'Math', 'imul']). The variable must have previously been allocated
+	via allocateVariable; we return that variable. */
+
+	if (name in this.importedNames) return;
+
+	var variable = this.getByName(name);
+	assert(variable, "Variable " + name + " has not been allocated");
+
+	/* convert a path into the estree representation for (e.g.) stdlib.Math.imul:
+	estree.MemberExpression(
+		estree.MemberExpression(estree.Identifier('stdlib'), estree.Identifier('Math')),
+		estree.Identifier('imul')
+	*/
+	exprTree = estree.Identifier(path[0]);
+	for (i = 1; i < path.length; i++) {
+		exprTree = estree.MemberExpression(exprTree, estree.Identifier(path[i]));
+	}
+
+	this.variableDeclarations.push(
+		estree.VariableDeclarator(estree.Identifier(name), exprTree)
+	);
+    this.importedNames[name] = true;
+
+    return variable;
 };
 
 exports.Context = Context;
