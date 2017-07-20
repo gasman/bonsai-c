@@ -513,6 +513,40 @@ PostdecrementExpression.prototype.inspect = function() {
 	);
 };
 
+function ShiftLeftExpression(left, right, context, hints) {
+	this.expressionType = 'ShiftLeftExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+	this.left = constructExpression(left, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+	this.right = constructExpression(right, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+
+	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+		this.type = cTypes.int;
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = (this.left.compileTimeConstantValue << this.right.compileTimeConstantValue) | 0;
+		}
+	} else {
+		throw(
+			util.format("Don't know how to handle AddExpression with types: %s, %s",
+				util.inspect(this.left.type),
+				util.inspect(this.right.type)
+			)
+		);
+	}
+}
+ShiftLeftExpression.prototype.inspect = function() {
+	return util.format(
+		"ShiftLeft: (%s, %s) <%s>",
+		this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+	);
+};
+
 function VariableExpression(variableName, context, hints) {
 	this.expressionType = 'VariableExpression';
 	this.resultIsUsed = hints.resultIsUsed;
@@ -577,6 +611,8 @@ function constructExpression(node, context, hints) {
 					return new DivideExpression(node.params[1], node.params[2], context, hints);
 				case '%':
 					return new ModExpression(node.params[1], node.params[2], context, hints);
+				case '<<':
+					return new ShiftLeftExpression(node.params[1], node.params[2], context, hints);
 				default:
 					throw("Unrecognised binary operator: " + operator);
 			}
