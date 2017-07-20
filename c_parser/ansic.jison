@@ -104,7 +104,7 @@ shift_expression
 	| shift_expression LEFT_OP additive_expression
 		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	| shift_expression RIGHT_OP additive_expression
-		{ throw("Unimplemented rule for shift_expression: " + yytext); }
+		{ $$ = new yy.Node('BinaryOp', [$2, $1, $3]); }
 	;
 
 relational_expression

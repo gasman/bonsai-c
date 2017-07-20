@@ -113,5 +113,6 @@ testCompile('tests/double_subtract.c', 42);
 testCompile('tests/int_mul.c', 42);
 testCompile('tests/global_array.c', 42);
 testCompile('tests/shift_left.c', 42);
+testCompile('tests/shift_right.c', 42);
 
 console.log("All tests passed");

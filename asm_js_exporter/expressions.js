@@ -500,6 +500,26 @@ function ShiftLeftExpression(left, right, intendedType) {
 }
 exports.ShiftLeftExpression = ShiftLeftExpression;
 
+function ShiftRightExpression(left, right, intendedType) {
+	if (intendedType.category == 'int') {
+		left = coerce(left, intendedType);
+		right = coerce(right, intendedType);
+		return {
+			'tree': estree.BinaryExpression('>>',
+				wrapFunctionCall(left).tree,
+				wrapFunctionCall(right).tree
+			),
+			'type': asmJsTypes.signed,
+			'intendedType': intendedType,
+		};
+	} else {
+		throw(util.format(
+			"Can't handle ShiftRightExpression of type %s", util.inspect(intendedType)
+		));
+	}
+}
+exports.ShiftRightExpression = ShiftRightExpression;
+
 function SubtractExpression(left, right, intendedType) {
 	if (intendedType.category == 'int') {
 		if (
@@ -684,6 +704,10 @@ function compileExpression(expression, context) {
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
 			return ShiftLeftExpression(left, right, expression.type);
+		case 'ShiftRightExpression':
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
+			return ShiftRightExpression(left, right, expression.type);
 		case 'SubtractExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
