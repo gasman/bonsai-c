@@ -11,19 +11,17 @@ function compileStatement(statement, out, context) {
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
-			var blockOutput = {
-				'body': []
-			};
+			var blockOutput = [];
 			for (i = 0; i < statement.statements.length; i++) {
 				compileStatement(statement.statements[i], blockOutput, context);
 			}
-			out.body.push(estree.BlockStatement(blockOutput.body));
+			out.push(estree.BlockStatement(blockOutput));
 			return;
 		case 'BreakStatement':
-			out.body.push(estree.BreakStatement());
+			out.push(estree.BreakStatement());
 			return;
 		case 'ContinueStatement':
-			out.body.push(estree.ContinueStatement());
+			out.push(estree.ContinueStatement());
 			return;
 		case 'DeclarationStatement':
 			for (i = 0; i < statement.variableDeclarations.length; i++) {
@@ -56,7 +54,7 @@ function compileStatement(statement, out, context) {
 				);
 
 				if (needsDynamicInitialisation) {
-					out.body.push(
+					out.push(
 						estree.ExpressionStatement(
 							expressions.AssignmentExpression(
 								expressions.VariableExpression(variable),
@@ -68,42 +66,40 @@ function compileStatement(statement, out, context) {
 			}
 			return;
 		case 'DoWhileStatement':
-			bodyOutput = {
-				'body': []
-			};
+			bodyOutput = [];
 			compileStatement(statement.body, bodyOutput, context);
-			assert.equal(1, bodyOutput.body.length);
+			assert.equal(1, bodyOutput.length);
 			condition = expressions.compileExpression(statement.condition, context);
 
-			out.body.push(estree.DoWhileStatement(
-				bodyOutput.body[0],
+			out.push(estree.DoWhileStatement(
+				bodyOutput[0],
 				condition.tree
 			));
 			return;
 		case 'ExpressionStatement':
 			expr = expressions.compileExpression(statement.expression, context);
-			out.body.push(estree.ExpressionStatement(expr.tree));
+			out.push(estree.ExpressionStatement(expr.tree));
 			return;
 		case 'ForStatement':
-			var initOutput = {
-				'body': []
-			};
+			var initOutput = [];
 			compileStatement(statement.init, initOutput, context);
 
 			var initExpressionTree = null;
 
-			if (initOutput.body.length == 1) {
+			if (initOutput.length == 1) {
 				/* init clause can go inside the for statement */
 				assert(
-					initOutput.body[0].type == 'ExpressionStatement',
+					initOutput[0].type == 'ExpressionStatement',
 					util.format("Expected ExpressionStatement to be generated as the init of a for loop - got %s",
-						util.inspect(initOutput.body[0])
+						util.inspect(initOutput[0])
 					)
 				);
-				initExpressionTree = initOutput.body[0].expression;
+				initExpressionTree = initOutput[0].expression;
 			} else {
 				/* init clause has to go before the loop */
-				out.body = out.body.concat(initOutput.body);
+				for (i = 0; i < initOutput.length; i++) {
+					out.push(initOutput[i]);
+				}
 			}
 
 			var testExpressionTree = null;
@@ -118,16 +114,14 @@ function compileStatement(statement, out, context) {
 				updateExpressionTree = updateExpression.tree;
 			}
 
-			var bodyOutput = {
-				'body': []
-			};
+			var bodyOutput = [];
 			compileStatement(statement.body, bodyOutput, context);
-			assert(bodyOutput.body.length == 1,
-				"Expected for loop body to be a single statement, got " + util.inspect(bodyOutput.body)
+			assert(bodyOutput.length == 1,
+				"Expected for loop body to be a single statement, got " + util.inspect(bodyOutput)
 			);
-			var bodyStatement = bodyOutput.body[0];
+			var bodyStatement = bodyOutput[0];
 
-			out.body.push(estree.ForStatement(
+			out.push(estree.ForStatement(
 				initExpressionTree, testExpressionTree, updateExpressionTree,
 				bodyStatement
 			));
@@ -135,28 +129,24 @@ function compileStatement(statement, out, context) {
 		case 'IfStatement':
 			testExpression = expressions.compileExpression(statement.test, context);
 
-			var thenOutput = {
-				'body': []
-			};
+			var thenOutput = [];
 			compileStatement(statement.thenStatement, thenOutput, context);
-			assert(thenOutput.body.length == 1,
-				"Expected if-then clause to be a single statement, got " + util.inspect(thenOutput.body)
+			assert(thenOutput.length == 1,
+				"Expected if-then clause to be a single statement, got " + util.inspect(thenOutput)
 			);
-			var thenStatement = thenOutput.body[0];
+			var thenStatement = thenOutput[0];
 
 			var elseStatement = null;
 			if (statement.elseStatement !== null) {
-				var elseOutput = {
-					'body': []
-				};
+				var elseOutput = [];
 				compileStatement(statement.elseStatement, elseOutput, context);
-				assert(elseOutput.body.length == 1,
-					"Expected if-else clause to be a single statement, got " + util.inspect(elseOutput.body)
+				assert(elseOutput.length == 1,
+					"Expected if-else clause to be a single statement, got " + util.inspect(elseOutput)
 				);
-				elseStatement = elseOutput.body[0];
+				elseStatement = elseOutput[0];
 			}
 
-			out.body.push(estree.IfStatement(
+			out.push(estree.IfStatement(
 				testExpression.tree, thenStatement, elseStatement
 			));
 			return;
@@ -213,19 +203,17 @@ function compileStatement(statement, out, context) {
 				}
 			}
 
-			out.body.push(estree.ReturnStatement(exprTree));
+			out.push(estree.ReturnStatement(exprTree));
 			return;
 		case 'WhileStatement':
 			condition = expressions.compileExpression(statement.condition, context);
-			bodyOutput = {
-				'body': []
-			};
+			bodyOutput = [];
 			compileStatement(statement.body, bodyOutput, context);
-			assert.equal(1, bodyOutput.body.length);
+			assert.equal(1, bodyOutput.length);
 
-			out.body.push(estree.WhileStatement(
+			out.push(estree.WhileStatement(
 				condition.tree,
-				bodyOutput.body[0]
+				bodyOutput[0]
 			));
 			return;
 		default:
@@ -315,9 +303,7 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 		functionDefinition.variable.id
 	);
 
-	var output = {
-		'body': []
-	};
+	var output = [];
 
 	for (i = 0; i < functionDefinition.body.length; i++) {
 		compileStatement(functionDefinition.body[i], output, context);
@@ -326,10 +312,10 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 	/* if function is non-void, and does not end with a return statement,
 	add a dummy one to serve as a type annotation */
 	if (!returnType.satisfies(asmJsTypes.void)) {
-		var lastStatement = output.body[output.body.length - 1];
+		var lastStatement = output[output.length - 1];
 		if (!lastStatement || lastStatement.type != 'ReturnStatement') {
 			if (returnType.satisfies(asmJsTypes.signed)) {
-				output.body.push(estree.ReturnStatement(
+				output.push(estree.ReturnStatement(
 					estree.Literal(0)
 				));
 			} else {
@@ -342,10 +328,10 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 	if (context.variableDeclarations.length) {
 		outputNodes = parameterDeclarations.concat(
 			[estree.VariableDeclaration(context.variableDeclarations)],
-			output.body
+			output
 		);
 	} else {
-		outputNodes = parameterDeclarations.concat(output.body);
+		outputNodes = parameterDeclarations.concat(output);
 	}
 
 	return estree.FunctionDeclaration(
