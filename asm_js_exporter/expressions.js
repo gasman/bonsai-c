@@ -215,7 +215,7 @@ function DereferenceExpression(arg, context) {
 
 			return {
 				'tree': tree,
-				'type': asmJsTypes.int,
+				'type': asmJsTypes.intish,
 				'intendedType': intendedTargetType,
 				'isValidAsLvalue': true
 			};
