@@ -32,20 +32,39 @@ function compileStatement(statement, out, context) {
 			for (i = 0; i < statement.variableDeclarations.length; i++) {
 				var variableDeclaration = statement.variableDeclarations[i];
 
-				var initialValueExpression = null;
+				var initialValue;
+				var needsDynamicInitialisation = false;
+				var dynamicInitialiserExpression;
 
-				if (variableDeclaration.initialValueExpression !== null) {
-					initialValueExpression = expressions.compileExpression(
+				if (variableDeclaration.initialValueExpression === null) {
+					initialValue = 0;
+				} else if (variableDeclaration.initialValueExpression.isCompileTimeConstant) {
+					initialValue = variableDeclaration.initialValueExpression.compileTimeConstantValue;
+				} else {
+					initialValue = 0;
+					needsDynamicInitialisation = true;
+					dynamicInitialiserExpression = expressions.compileExpression(
 						variableDeclaration.initialValueExpression, context, out
 					);
 				}
 
-				context.declareLocalVariable(
+				var variable = context.declareLocalVariable(
 					variableDeclaration.variable.name, variableDeclaration.variable.id,
 					statement.type,
-					initialValueExpression,
+					initialValue,
 					out
 				);
+
+				if (needsDynamicInitialisation) {
+					out.body.push(
+						estree.ExpressionStatement(
+							expressions.AssignmentExpression(
+								expressions.VariableExpression(variable),
+								dynamicInitialiserExpression
+							).tree
+						)
+					);
+				}
 			}
 			return;
 		case 'DoWhileStatement':
@@ -253,7 +272,7 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 			case 'int':
 				/* register as a local var of type 'int' */
 				parameterType = asmJsTypes.int;
-				paramVariable = context.allocateLocalVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
+				paramVariable = context.allocateVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
 
 				/* annotate as i = i | 0 */
 				parameterDeclarations.push(estree.ExpressionStatement(
@@ -271,7 +290,7 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 			case 'double':
 				/* register as a local var of type 'double' */
 				parameterType = asmJsTypes.double;
-				paramVariable = context.allocateLocalVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
+				paramVariable = context.allocateVariable(originalParam.name, parameterType, originalParam.type, originalParam.id);
 
 				/* annotate as i = +i */
 				parameterDeclarations.push(estree.ExpressionStatement(
@@ -295,13 +314,12 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 		parameterTypes.push(parameterType);
 	}
 
-	var functionVariable = {
-		'name': functionDefinition.variable.name,
-		'type': asmJsTypes.func(returnType, parameterTypes),
-		'intendedType': functionDefinition.type
-	};
-	globalContext.globalVariablesById[functionDefinition.variable.id] = functionVariable;
-	globalContext.globalVariablesByName[functionDefinition.variable.name] = functionVariable;
+	var functionVariable = globalContext.allocateVariable(
+		functionDefinition.variable.name,
+		asmJsTypes.func(returnType, parameterTypes),
+		functionDefinition.type,
+		functionDefinition.variable.id
+	)
 
 	var output = {
 		'variableDeclarations': [],
@@ -352,15 +370,12 @@ function compileModule(module) {
 	var exportTable = [
 	];
 
-	var globalContext = {
-		'globalVariablesById': {},
-		'globalVariablesByName': {}
-	};
+	var globalContext = new contextModule.Context();
 
 	/* reserve the variable names 'stdlib', 'foreign' and 'heap' */
-	globalContext.globalVariablesByName['stdlib'] = null;
-	globalContext.globalVariablesByName['foreign'] = null;
-	globalContext.globalVariablesByName['heap'] = null;
+	globalContext.allocateVariable('stdlib');
+	globalContext.allocateVariable('foreign');
+	globalContext.allocateVariable('heap');
 
 	for (var i = 0; i < module.declarations.length; i++) {
 		var declaration = module.declarations[i];
@@ -375,6 +390,26 @@ function compileModule(module) {
 						estree.Identifier(declaration.name),
 						'init'
 					));
+				}
+				break;
+			case 'VariableDeclaration':
+				for (i = 0; i < declaration.variableDeclarations.length; i++) {
+					var variableDeclaration = statement.variableDeclarations[i];
+
+					var initialValueExpression = null;
+
+					if (variableDeclaration.initialValueExpression !== null) {
+						initialValueExpression = expressions.compileExpression(
+							variableDeclaration.initialValueExpression, context, out
+						);
+					}
+
+					globalContext.declareLocalVariable(
+						variableDeclaration.variable.name, variableDeclaration.variable.id,
+						declaration.type,
+						initialValueExpression,
+						out
+					);
 				}
 				break;
 			default:

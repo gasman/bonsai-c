@@ -1,6 +1,7 @@
 var assert = require('assert');
 var util = require('util');
 
+var declaration = require('./declaration');
 var statements = require('./statements');
 var context = require('./context');
 var cTypes = require('./c_types');
@@ -93,6 +94,9 @@ function Module(declarationNodes) {
 		switch (node.type) {
 			case 'FunctionDefinition':
 				this.declarations.push(new FunctionDefinition(node, globalContext));
+				break;
+			case 'Declaration':
+				this.declarations.push(new declaration.Declaration(node, globalContext));
 				break;
 			default:
 				throw "Unexpected node type: " + node.type;

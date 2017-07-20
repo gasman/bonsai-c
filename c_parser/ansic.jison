@@ -198,7 +198,7 @@ declaration
 	: declaration_specifiers ';'
 		{ throw("Unimplemented rule for declaration: " + yytext); }
 	| declaration_specifiers init_declarator_list ';'
-		{ $$ = new yy.Node('DeclarationStatement', [$1, $2]); }
+		{ $$ = new yy.Node('Declaration', [$1, $2]); }
 	;
 
 declaration_specifiers

@@ -3,7 +3,7 @@ var util = require('util');
 var cTypes = require('./c_types');
 
 
-function ArithmeticExpression(expressionType, left, right, context, hints) {
+function ArithmeticExpression(expressionType, calcFunction, left, right, context, hints) {
 	this.expressionType = expressionType;
 	this.resultIsUsed = hints.resultIsUsed;
 	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
@@ -17,8 +17,20 @@ function ArithmeticExpression(expressionType, left, right, context, hints) {
 
 	if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
 		this.type = cTypes.double;
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = +calcFunction(
+				+this.left.compileTimeConstantValue, +this.right.compileTimeConstantValue
+			);
+		}
 	} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 		this.type = cTypes.int;
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = calcFunction(
+				this.left.compileTimeConstantValue | 0, this.right.compileTimeConstantValue | 0
+			) | 0;
+		}
 	} else {
 		throw(
 			util.format("Don't know how to handle AddExpression with types: %s, %s",
@@ -36,19 +48,19 @@ AddExpression.prototype.inspect = function() {
 };
 
 function AddExpression(left, right, context, hints) {
-	return new ArithmeticExpression('AddExpression', left, right, context, hints);
+	return new ArithmeticExpression('AddExpression', function(a, b) {return a + b;}, left, right, context, hints);
 }
 function SubtractExpression(left, right, context, hints) {
-	return new ArithmeticExpression('SubtractExpression', left, right, context, hints);
+	return new ArithmeticExpression('SubtractExpression', function(a, b) {return a - b;}, left, right, context, hints);
 }
 function MultiplyExpression(left, right, context, hints) {
-	return new ArithmeticExpression('MultiplyExpression', left, right, context, hints);
+	return new ArithmeticExpression('MultiplyExpression', function(a, b) {return a * b;}, left, right, context, hints);
 }
 function DivideExpression(left, right, context, hints) {
-	return new ArithmeticExpression('DivideExpression', left, right, context, hints);
+	return new ArithmeticExpression('DivideExpression', function(a, b) {return a / b;}, left, right, context, hints);
 }
 function ModExpression(left, right, context, hints) {
-	return new ArithmeticExpression('ModExpression', left, right, context, hints);
+	return new ArithmeticExpression('ModExpression', function(a, b) {return a % b;}, left, right, context, hints);
 }
 
 function AddAssignmentExpression(left, right, context, hints) {
@@ -123,6 +135,8 @@ function CommaExpression(left, right, context, hints) {
 		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
 	});
 	this.type = this.right.type;
+	this.isCompileTimeConstant = this.right.isCompileTimeConstant;
+	this.compileTimeConstantValue = this.right.compileTimeConstantValue;
 }
 CommaExpression.prototype.inspect = function() {
 	return util.format(
@@ -159,6 +173,11 @@ function ConditionalExpression(test, consequent, alternate, context, hints) {
 			)
 		);
 	}
+
+	if (this.test.isCompileTimeConstant && this.consequent.isCompileTimeConstant && this.alternate.isCompileTimeConstant) {
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = (this.test.compileTimeConstantValue ? this.consequent.compileTimeConstantValue : this.alternate.compileTimeConstantValue)
+	}
 }
 ConditionalExpression.prototype.inspect = function() {
 	return util.format(
@@ -189,6 +208,9 @@ function ConstExpression(numString, context, hints) {
 	} else {
 		throw("Unrecognised numeric constant: " + numString);
 	}
+
+	this.isCompileTimeConstant = true;
+	this.compileTimeConstantValue = this.value;
 }
 ConstExpression.prototype.inspect = function() {
 	return util.format(
@@ -244,6 +266,11 @@ function LogicalAndExpression(left, right, context, hints) {
 			)
 		);
 	}
+
+	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = +!!(this.left.compileTimeConstantValue && this.right.compileTimeConstantValue);
+	}
 }
 LogicalAndExpression.prototype.inspect = function() {
 	return util.format(
@@ -271,6 +298,11 @@ function LogicalNotExpression(argument, context, hints) {
 				util.inspect(this.argument.type)
 			)
 		);
+	}
+
+	if (this.argument.isCompileTimeConstant) {
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = +!this.argument.compileTimeConstantValue;
 	}
 }
 LogicalNotExpression.prototype.inspect = function() {
@@ -304,6 +336,11 @@ function LogicalOrExpression(left, right, context, hints) {
 			)
 		);
 	}
+
+	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = +!!(this.left.compileTimeConstantValue || this.right.compileTimeConstantValue);
+	}
 }
 LogicalOrExpression.prototype.inspect = function() {
 	return util.format(
@@ -314,7 +351,7 @@ LogicalOrExpression.prototype.inspect = function() {
 
 
 
-function RelationalExpression(expressionType, left, right, context, hints) {
+function RelationalExpression(expressionType, calcFunction, left, right, context, hints) {
 	this.expressionType = expressionType;
 	this.resultIsUsed = hints.resultIsUsed;
 	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
@@ -341,6 +378,11 @@ function RelationalExpression(expressionType, left, right, context, hints) {
 			)
 		);
 	}
+
+	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = +calcFunction(this.left.compileTimeConstantValue, this.right.compileTimeConstantValue);
+	}
 }
 RelationalExpression.prototype.inspect = function() {
 	return util.format(
@@ -352,22 +394,22 @@ RelationalExpression.prototype.inspect = function() {
 };
 
 function LessThanExpression(left, right, context, hints) {
-	return new RelationalExpression('LessThanExpression', left, right, context, hints);
+	return new RelationalExpression('LessThanExpression', function(a, b) {return a < b;}, left, right, context, hints);
 }
 function GreaterThanExpression(left, right, context, hints) {
-	return new RelationalExpression('GreaterThanExpression', left, right, context, hints);
+	return new RelationalExpression('GreaterThanExpression', function(a, b) {return a > b;}, left, right, context, hints);
 }
 function EqualExpression(left, right, context, hints) {
-	return new RelationalExpression('EqualExpression', left, right, context, hints);
+	return new RelationalExpression('EqualExpression', function(a, b) {return a == b;}, left, right, context, hints);
 }
 function NotEqualExpression(left, right, context, hints) {
-	return new RelationalExpression('NotEqualExpression', left, right, context, hints);
+	return new RelationalExpression('NotEqualExpression', function(a, b) {return a != b;}, left, right, context, hints);
 }
 function LessThanOrEqualExpression(left, right, context, hints) {
-	return new RelationalExpression('LessThanOrEqualExpression', left, right, context, hints);
+	return new RelationalExpression('LessThanOrEqualExpression', function(a, b) {return a <= b;}, left, right, context, hints);
 }
 function GreaterThanOrEqualExpression(left, right, context, hints) {
-	return new RelationalExpression('GreaterThanOrEqualExpression', left, right, context, hints);
+	return new RelationalExpression('GreaterThanOrEqualExpression', function(a, b) {return a >= b;}, left, right, context, hints);
 }
 
 
@@ -382,6 +424,10 @@ function NegationExpression(argument, context, hints) {
 
 	if (this.argument.type == cTypes.int) {
 		this.type = cTypes.int;
+		if (this.argument.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = -this.argument.compileTimeConstantValue;
+		}
 	} else {
 		throw(
 			util.format("Don't know how to handle NegationExpression with type: %s",

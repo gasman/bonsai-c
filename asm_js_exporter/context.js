@@ -3,27 +3,32 @@ var expressions = require('./expressions');
 var cTypes = require('../abstractor/c_types');
 var estree = require('./estree');
 
-function FunctionContext(globalContext, returnType) {
-	this.globalContext = globalContext;
-	this.returnType = returnType;
-	this.localVariablesById = {};
-	this.localVariablesByName = {};
+function Context(parentContext) {
+	this.parentContext = parentContext;
+	this.variablesById = {};
+	this.variablesByName = {};
 }
-FunctionContext.prototype.get = function(id) {
-	var variable = this.globalContext.globalVariablesById[id];
+Context.prototype.get = function(id) {
+	var variable = this.variablesById[id];
 	if (variable) {
 		return variable;
-	} else {
-		return this.localVariablesById[id];
+	} else if (this.parentContext) {
+		return this.parentContext.get(id);
 	}
 };
-FunctionContext.prototype.allocateLocalVariable = function(suggestedName, typ, intendedType, id) {
+Context.prototype.nameIsUsed = function(name) {
+	if (name in this.variablesByName) {
+		return true;
+	} else if (this.parentContext) {
+		return this.parentContext.nameIsUsed(name);
+	} else {
+		return false;
+	}
+};
+Context.prototype.allocateVariable = function(suggestedName, typ, intendedType, id) {
 	var suffixIndex = 0;
 	var candidateName = suggestedName;
-	while (
-		candidateName in this.globalContext.globalVariablesByName ||
-		candidateName in this.localVariablesByName
-	) {
+	while (this.nameIsUsed(candidateName)) {
 		candidateName = suggestedName + '_' + suffixIndex;
 		suffixIndex++;
 	}
@@ -32,90 +37,48 @@ FunctionContext.prototype.allocateLocalVariable = function(suggestedName, typ, i
 		'type': typ,
 		'intendedType': intendedType
 	};
-	this.localVariablesByName[candidateName] = variable;
+	this.variablesByName[candidateName] = variable;
 	if (id !== null) {
-		this.localVariablesById[id] = variable;
+		this.variablesById[id] = variable;
 	}
 	return variable;
 };
-FunctionContext.prototype.declareLocalVariable = function(suggestedName, id, intendedType, initialValueExpression, out) {
-	var actualType, canDeclareDirectly, val, variable;
+Context.prototype.declareLocalVariable = function(suggestedName, id, intendedType, initialValue, out) {
+	var variable, assignedType;
 
 	switch (intendedType.category) {
 		case 'int':
 			/* register as a local var of type 'int', to be treated as signed */
-			variable = this.allocateLocalVariable(
-				suggestedName, asmJsTypes.int, intendedType, id
-			);
-
-			/* can declare directly if initialValueExpression is null
-			or a numeric literal in signed range */
-			if (initialValueExpression === null) {
-				/* output: var i = 0 */
-				initialValueExpression = expressions.ConstExpression(0, cTypes.int);
-			} else {
-				val = initialValueExpression.numericLiteralValue;
-
-				if (Number.isInteger(val) && val >= -0x80000000 && val < 0x100000000) {
-					/* initial value is a numeric literal in signed range - can use it directly
-					in the variable declaration */
-				} else {
-					/* need to declare variable with a 'dummy' initial value of 0,
-					then initialise it properly within the function body */
-					out.body.push(
-						estree.ExpressionStatement(
-							expressions.AssignmentExpression(
-								expressions.VariableExpression(variable),
-								initialValueExpression
-							).tree
-						)
-					);
-					initialValueExpression = expressions.ConstExpression(0, cTypes.int);
-				}
-			}
-
+			assignedType = asmJsTypes.int;
 			break;
 		case 'double':
 			/* register as a local var of type 'double' */
-			variable = this.allocateLocalVariable(
-				suggestedName, asmJsTypes.double, intendedType, id
-			);
-			/* can declare directly if initialValueExpression is null
-			or a numeric literal in signed range */
-			if (initialValueExpression === null) {
-				/* output: var i = 0.0 */
-				initialValueExpression = expressions.ConstExpression(0, cTypes.double);
-			} else {
-				if ('numericLiteralValue' in initialValueExpression && initialValueExpression.numericLiteralValue !== null) {
-					/* initial value is a numeric literal - can use it directly
-					in the variable declaration */
-				} else {
-					/* need to declare variable with a 'dummy' initial value of 0.0,
-					then initialise it properly within the function body */
-					out.body.push(
-						estree.ExpressionStatement(
-							expressions.AssignmentExpression(
-								expressions.VariableExpression(variable),
-								initialValueExpression
-							).tree
-						)
-					);
-					initialValueExpression = expressions.ConstExpression(0, cTypes.double);
-				}
-			}
+			assignedType = asmJsTypes.double;
 			break;
 		default:
 			throw "Don't know how to declare a local variable of type: " + util.inspect(intendedType);
 	}
 
+	variable = this.allocateVariable(
+		suggestedName, assignedType, intendedType, id
+	);
+
 	out.variableDeclarations.push(
 		estree.VariableDeclarator(
 			estree.Identifier(variable.name),
-			initialValueExpression.tree
+			expressions.ConstExpression(initialValue, intendedType).tree
 		)
 	);
 
 	return variable;
 };
+
+exports.Context = Context;
+
+function FunctionContext(parentContext, returnType) {
+	var context = new Context(parentContext);
+	context.returnType = returnType;
+	return context;
+}
 
 exports.FunctionContext = FunctionContext;

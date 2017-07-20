@@ -143,10 +143,16 @@ function ConstExpression(value, originalType) {
 	if (originalType.category == 'int') {
 		if (value >= 0 && value < 0x80000000) {
 			typ = asmJsTypes.fixnum;
+		} else if (value >= -0x80000000 && value < 0) {
+			typ = asmJsTypes.signed;
 		} else {
 			throw("Numeric literal out of range for signed int: %d" % value);
 		}
-		tree = estree.Literal(value);
+		if (value < 0) {
+			tree = estree.UnaryExpression('-', estree.Literal(-value));
+		} else {
+			tree = estree.Literal(value);
+		}
 	/* // TODO: reinstate when c_types has a concept of unsigned int...
 	} else if (originalType.satisfies(asmJsTypes.unsigned)) {
 		if (value >= 0 && value < 0x80000000) {
@@ -159,11 +165,15 @@ function ConstExpression(value, originalType) {
 	*/
 	} else if (originalType.category == 'double') {
 		typ = asmJsTypes.double;
-		var valueString = value.toString();
+		var valueString = Math.abs(value).toString();
 		if (valueString.indexOf('.') == -1) {
 			valueString += '.0';
 		}
-		tree = estree.RawLiteral(value, valueString);
+		if (value < 0) {
+			tree = estree.UnaryExpression('-', estree.RawLiteral(-value, valueString));
+		} else {
+			tree = estree.RawLiteral(value, valueString);
+		}
 	} else {
 		throw(
 			util.format("Can't determine type of numeric literal: %s (reported: %s)",
@@ -406,7 +416,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 		/* (arg)++ is equivalent to ((arg) = (tmp = (arg)) + 1), tmp */
 		if (arg.type.satisfies(asmJsTypes.int)) {
 			/* register a temp local var of type 'int' */
-			var tempVariable = context.declareLocalVariable('temp', null, arg.intendedType, null, out);
+			var tempVariable = context.declareLocalVariable('temp', null, arg.intendedType, 0, out);
 			return CommaExpression(
 				AssignmentExpression(
 					arg,
@@ -635,7 +645,8 @@ function coerce(expr, intendedType) {
 					'tree': estree.BinaryExpression('|', expr.tree, estree.Literal(0)),
 					'type': asmJsTypes.signed,
 					'intendedType': intendedType,
-					'isPureBoolean': expr.isPureBoolean
+					'isPureBoolean': expr.isPureBoolean,
+					'isAnnotatedAsSigned': true
 				};
 			} else if (expr.type.satisfies(asmJsTypes.double)) {
 				/* coerce double to signed using ~~x */
