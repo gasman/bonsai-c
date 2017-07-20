@@ -394,17 +394,17 @@ function GreaterThanOrEqualExpression(left, right, intendedOperandType) {
 }
 exports.GreaterThanOrEqualExpression = GreaterThanOrEqualExpression;
 
-function PostincrementExpression(arg, resultIsUsed, out, context) {
-	return PostupdateExpression(AddExpression, arg, resultIsUsed, out, context);
+function PostincrementExpression(arg, resultIsUsed, context) {
+	return PostupdateExpression(AddExpression, arg, resultIsUsed, context);
 }
 exports.PostincrementExpression = PostincrementExpression;
 
-function PostdecrementExpression(arg, resultIsUsed, out, context) {
-	return PostupdateExpression(SubtractExpression, arg, resultIsUsed, out, context);
+function PostdecrementExpression(arg, resultIsUsed, context) {
+	return PostupdateExpression(SubtractExpression, arg, resultIsUsed, context);
 }
 exports.PostdecrementExpression = PostdecrementExpression;
 
-function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
+function PostupdateExpression(internalOp, arg, resultIsUsed, context) {
 	assert(arg.isIdentifier,
 		"Argument of a postincrement expression must be an identifier - got " + util.inspect(arg)
 	);
@@ -413,7 +413,7 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, out, context) {
 		/* (arg)++ is equivalent to ((arg) = (tmp = (arg)) + 1), tmp */
 		if (arg.type.satisfies(asmJsTypes.int)) {
 			/* register a temp local var of type 'int' */
-			var tempVariable = context.declareLocalVariable('temp', null, arg.intendedType, 0, out);
+			var tempVariable = context.declareLocalVariable('temp', null, arg.intendedType, 0);
 			return CommaExpression(
 				AssignmentExpression(
 					arg,
@@ -494,98 +494,93 @@ function getAsmJsType(typ) {
 	);
 }
 
-function compileExpression(expression, context, out) {
-	/* out = the output stream for the function currently being compiled.
-	compileExpression _must not_ write to out.body
-	(the expression estree should be returned in result.tree instead),
-	but _can_ write to out.variableDeclarations if it needs to declare a variable
-	for intermediate value storage */
+function compileExpression(expression, context) {
 	var left, right, arg, typ;
 
 	switch(expression.expressionType) {
 		case 'AddExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return AddExpression(left, right, expression.type);
 		case 'AddAssignmentExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return AddAssignmentExpression(left, right, expression.type);
 		case 'SubtractAssignmentExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return SubtractAssignmentExpression(left, right, expression.type);
 		case 'AssignmentExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return AssignmentExpression(left, right);
 		case 'CommaExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return CommaExpression(left, right);
 		case 'ConditionalExpression':
-			var test = compileExpression(expression.test, context, out);
-			var consequent = compileExpression(expression.consequent, context, out);
-			var alternate = compileExpression(expression.alternate, context, out);
+			var test = compileExpression(expression.test, context);
+			var consequent = compileExpression(expression.consequent, context);
+			var alternate = compileExpression(expression.alternate, context);
 			return ConditionalExpression(test, consequent, alternate, expression.type);
 		case 'ConstExpression':
 			return ConstExpression(expression.value, expression.type);
 		case 'DivideExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return DivideExpression(left, right, expression.type);
 		case 'FunctionCallExpression':
-			var callee = compileExpression(expression.callee, context, out);
+			var callee = compileExpression(expression.callee, context);
 			var args = [];
 			for (var i = 0; i < expression.parameters.length; i++) {
-				args[i] = compileExpression(expression.parameters[i], context, out);
+				args[i] = compileExpression(expression.parameters[i], context);
 			}
 			return FunctionCallExpression(callee, args);
 		case 'LogicalAndExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return LogicalAndExpression(left, right, expression.resultIsUsed, expression.resultIsUsedAsBoolean);
 		case 'LogicalNotExpression':
-			arg = compileExpression(expression.argument, context, out);
+			arg = compileExpression(expression.argument, context);
 			return LogicalNotExpression(arg);
 		case 'LogicalOrExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return LogicalOrExpression(left, right, expression.resultIsUsed, expression.resultIsUsedAsBoolean);
 		case 'ModExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return ModExpression(left, right, expression.type);
 		case 'MultiplyExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return MultiplyExpression(left, right, expression.type);
 		case 'LessThanExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return LessThanExpression(left, right, expression.operandType);
 		case 'GreaterThanExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return GreaterThanExpression(left, right, expression.operandType);
 		case 'EqualExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return EqualExpression(left, right, expression.operandType);
 		case 'NotEqualExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return NotEqualExpression(left, right, expression.operandType);
 		case 'LessThanOrEqualExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return LessThanOrEqualExpression(left, right, expression.operandType);
 		case 'GreaterThanOrEqualExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return GreaterThanOrEqualExpression(left, right, expression.operandType);
 		case 'NegationExpression':
-			arg = compileExpression(expression.argument, context, out);
+			arg = compileExpression(expression.argument, context);
 			typ = null;
 			if (arg.tree.type == 'Literal' && arg.tree.value > 0 && arg.tree.value <= 0x80000000) {
 				typ = asmJsTypes.signed;
@@ -600,14 +595,14 @@ function compileExpression(expression, context, out) {
 				'type': typ
 			};
 		case 'PostdecrementExpression':
-			arg = compileExpression(expression.argument, context, out);
-			return PostdecrementExpression(arg, expression.resultIsUsed, out, context);
+			arg = compileExpression(expression.argument, context);
+			return PostdecrementExpression(arg, expression.resultIsUsed, context);
 		case 'PostincrementExpression':
-			arg = compileExpression(expression.argument, context, out);
-			return PostincrementExpression(arg, expression.resultIsUsed, out, context);
+			arg = compileExpression(expression.argument, context);
+			return PostincrementExpression(arg, expression.resultIsUsed, context);
 		case 'SubtractExpression':
-			left = compileExpression(expression.left, context, out);
-			right = compileExpression(expression.right, context, out);
+			left = compileExpression(expression.left, context);
+			right = compileExpression(expression.right, context);
 			return SubtractExpression(left, right, expression.type);
 		case 'VariableExpression':
 			var variable = context.get(expression.variable.id);

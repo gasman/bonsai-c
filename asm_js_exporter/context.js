@@ -7,6 +7,7 @@ function Context(parentContext) {
 	this.parentContext = parentContext;
 	this.variablesById = {};
 	this.variablesByName = {};
+	this.variableDeclarations = [];
 }
 Context.prototype.get = function(id) {
 	var variable = this.variablesById[id];
@@ -43,7 +44,7 @@ Context.prototype.allocateVariable = function(suggestedName, typ, intendedType, 
 	}
 	return variable;
 };
-Context.prototype.declareLocalVariable = function(suggestedName, id, intendedType, initialValue, out) {
+Context.prototype.declareLocalVariable = function(suggestedName, id, intendedType, initialValue) {
 	var variable, assignedType;
 
 	switch (intendedType.category) {
@@ -63,7 +64,7 @@ Context.prototype.declareLocalVariable = function(suggestedName, id, intendedTyp
 		suggestedName, assignedType, intendedType, id
 	);
 
-	out.variableDeclarations.push(
+	this.variableDeclarations.push(
 		estree.VariableDeclarator(
 			estree.Identifier(variable.name),
 			expressions.ConstExpression(initialValue, intendedType).tree

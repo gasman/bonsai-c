@@ -12,7 +12,6 @@ function compileStatement(statement, out, context) {
 	switch(statement.statementType) {
 		case 'BlockStatement':
 			var blockOutput = {
-				'variableDeclarations': out.variableDeclarations,
 				'body': []
 			};
 			for (i = 0; i < statement.statements.length; i++) {
@@ -27,10 +26,12 @@ function compileStatement(statement, out, context) {
 			out.body.push(estree.ContinueStatement());
 			return;
 		case 'DeclarationStatement':
-			/* Don't generate any code, but add to the list of variables that need
-			declaring at the top of the function */
 			for (i = 0; i < statement.variableDeclarations.length; i++) {
 				var variableDeclaration = statement.variableDeclarations[i];
+
+				/* if initial value expression is omitted or is a compile-time constant,
+				just add this to the context's variableDeclarations and we're done;
+				otherwise, also need to output an assignment expression to initialise it */
 
 				var initialValue;
 				var needsDynamicInitialisation = false;
@@ -44,15 +45,14 @@ function compileStatement(statement, out, context) {
 					initialValue = 0;
 					needsDynamicInitialisation = true;
 					dynamicInitialiserExpression = expressions.compileExpression(
-						variableDeclaration.initialValueExpression, context, out
+						variableDeclaration.initialValueExpression, context
 					);
 				}
 
 				var variable = context.declareLocalVariable(
 					variableDeclaration.variable.name, variableDeclaration.variable.id,
 					statement.type,
-					initialValue,
-					out
+					initialValue
 				);
 
 				if (needsDynamicInitialisation) {
@@ -69,12 +69,11 @@ function compileStatement(statement, out, context) {
 			return;
 		case 'DoWhileStatement':
 			bodyOutput = {
-				'variableDeclarations': out.variableDeclarations,
 				'body': []
 			};
 			compileStatement(statement.body, bodyOutput, context);
 			assert.equal(1, bodyOutput.body.length);
-			condition = expressions.compileExpression(statement.condition, context, out);
+			condition = expressions.compileExpression(statement.condition, context);
 
 			out.body.push(estree.DoWhileStatement(
 				bodyOutput.body[0],
@@ -82,12 +81,11 @@ function compileStatement(statement, out, context) {
 			));
 			return;
 		case 'ExpressionStatement':
-			expr = expressions.compileExpression(statement.expression, context, out);
+			expr = expressions.compileExpression(statement.expression, context);
 			out.body.push(estree.ExpressionStatement(expr.tree));
 			return;
 		case 'ForStatement':
 			var initOutput = {
-				'variableDeclarations': out.variableDeclarations,
 				'body': []
 			};
 			compileStatement(statement.init, initOutput, context);
@@ -110,18 +108,17 @@ function compileStatement(statement, out, context) {
 
 			var testExpressionTree = null;
 			if (statement.test !== null) {
-				testExpression = expressions.compileExpression(statement.test, context, out);
+				testExpression = expressions.compileExpression(statement.test, context);
 				testExpressionTree = testExpression.tree;
 			}
 
 			var updateExpressionTree = null;
 			if (statement.update !== null) {
-				var updateExpression = expressions.compileExpression(statement.update, context, out);
+				var updateExpression = expressions.compileExpression(statement.update, context);
 				updateExpressionTree = updateExpression.tree;
 			}
 
 			var bodyOutput = {
-				'variableDeclarations': out.variableDeclarations,
 				'body': []
 			};
 			compileStatement(statement.body, bodyOutput, context);
@@ -136,10 +133,9 @@ function compileStatement(statement, out, context) {
 			));
 			return;
 		case 'IfStatement':
-			testExpression = expressions.compileExpression(statement.test, context, out);
+			testExpression = expressions.compileExpression(statement.test, context);
 
 			var thenOutput = {
-				'variableDeclarations': out.variableDeclarations,
 				'body': []
 			};
 			compileStatement(statement.thenStatement, thenOutput, context);
@@ -151,7 +147,6 @@ function compileStatement(statement, out, context) {
 			var elseStatement = null;
 			if (statement.elseStatement !== null) {
 				var elseOutput = {
-					'variableDeclarations': out.variableDeclarations,
 					'body': []
 				};
 				compileStatement(statement.elseStatement, elseOutput, context);
@@ -188,7 +183,7 @@ function compileStatement(statement, out, context) {
 						} else {
 							/* for all other expressions, annotate as (expr | 0),
 							ensuring that expr is coerced to signed */
-							expr = expressions.compileExpression(statement.expression, context, out);
+							expr = expressions.compileExpression(statement.expression, context);
 							coercedExpr = expressions.coerce(expr, cTypes.int);
 							if (coercedExpr.isAnnotatedAsSigned) {
 								exprTree = coercedExpr.tree;
@@ -204,7 +199,7 @@ function compileStatement(statement, out, context) {
 							).tree;
 						} else {
 							/* annotate as (+expr) */
-							expr = expressions.compileExpression(statement.expression, context, out);
+							expr = expressions.compileExpression(statement.expression, context);
 							coercedExpr = expressions.coerce(expr, cTypes.double);
 							if (coercedExpr.isAnnotatedAsDouble) {
 								exprTree = coercedExpr.tree;
@@ -221,9 +216,8 @@ function compileStatement(statement, out, context) {
 			out.body.push(estree.ReturnStatement(exprTree));
 			return;
 		case 'WhileStatement':
-			condition = expressions.compileExpression(statement.condition, context, out);
+			condition = expressions.compileExpression(statement.condition, context);
 			bodyOutput = {
-				'variableDeclarations': out.variableDeclarations,
 				'body': []
 			};
 			compileStatement(statement.body, bodyOutput, context);
@@ -319,10 +313,9 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 		asmJsTypes.func(returnType, parameterTypes),
 		functionDefinition.type,
 		functionDefinition.variable.id
-	)
+	);
 
 	var output = {
-		'variableDeclarations': [],
 		'body': []
 	};
 
@@ -346,9 +339,9 @@ function compileFunctionDefinition(functionDefinition, globalContext) {
 	}
 
 	var outputNodes;
-	if (output.variableDeclarations.length) {
+	if (context.variableDeclarations.length) {
 		outputNodes = parameterDeclarations.concat(
-			[estree.VariableDeclaration(output.variableDeclarations)],
+			[estree.VariableDeclaration(context.variableDeclarations)],
 			output.body
 		);
 	} else {
@@ -400,15 +393,14 @@ function compileModule(module) {
 
 					if (variableDeclaration.initialValueExpression !== null) {
 						initialValueExpression = expressions.compileExpression(
-							variableDeclaration.initialValueExpression, context, out
+							variableDeclaration.initialValueExpression, context
 						);
 					}
 
 					globalContext.declareLocalVariable(
 						variableDeclaration.variable.name, variableDeclaration.variable.id,
 						declaration.type,
-						initialValueExpression,
-						out
+						initialValueExpression
 					);
 				}
 				break;
