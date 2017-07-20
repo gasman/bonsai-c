@@ -108,5 +108,6 @@ testCompile('tests/double_mod.c', 42);
 testCompile('tests/double_to_signed.c', 42);
 testCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 testCompile('tests/global_var.c', 42);
+testCompile('tests/double_subtract.c', 42);
 
 console.log("All tests passed");
