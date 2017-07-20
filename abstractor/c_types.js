@@ -2,10 +2,12 @@ var util = require('util');
 
 exports.double = {
 	'category': 'double',
+	'size': 8,
 	'inspect': function() {return 'double';}
 };
 exports.int = {
 	'category': 'int',
+	'size': 4,
 	'inspect': function() {return 'int';}
 };
 exports.void = {
@@ -20,6 +22,17 @@ exports.func = function(returnType, paramTypes) {
 		'paramTypes': paramTypes,
 		'inspect': function() {
 			return "function " + util.inspect(this.paramTypes) + " => " + util.inspect(this.returnType);
+		}
+	};
+};
+
+exports.pointer = function(targetType) {
+	return {
+		'category': 'pointer',
+		'targetType': targetType,
+		'size': 4,
+		'inspect': function() {
+			return util.inspect(this.targetType) + "*"
 		}
 	};
 };

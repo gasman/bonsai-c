@@ -62,6 +62,10 @@ Context.prototype.declareVariable = function(suggestedName, id, intendedType, in
 			/* register as a local var of type 'double' */
 			assignedType = asmJsTypes.double;
 			break;
+		case 'pointer':
+			/* pointers are modelled as int */
+			assignedType = asmJsTypes.int;
+			break;
 		default:
 			throw "Don't know how to declare a local variable of type: " + util.inspect(intendedType);
 	}
@@ -80,16 +84,29 @@ Context.prototype.declareVariable = function(suggestedName, id, intendedType, in
 	return variable;
 };
 
-Context.prototype.import = function(name, path) {
+Context.prototype.importByExprTree = function(name, exprTree) {
 	/* Add a variable declaration (if one does not exist already) for 'name',
-	pointing to the external reference 'path' (a list of path components such as
-	['stdlib', 'Math', 'imul']). The variable must have previously been allocated
-	via allocateVariable; we return that variable. */
+	defined as the expression exprTree (in estree format). The variable must
+	have previously been allocated via allocateVariable; we return that variable. */
 
 	if (name in this.importedNames) return;
 
 	var variable = this.getByName(name);
 	assert(variable, "Variable " + name + " has not been allocated");
+
+	this.variableDeclarations.push(
+		estree.VariableDeclarator(estree.Identifier(name), exprTree)
+	);
+    this.importedNames[name] = true;
+
+    return variable;
+};
+
+Context.prototype.importByPath = function(name, path) {
+	/* Add a variable declaration (if one does not exist already) for 'name',
+	pointing to the external reference 'path' (a list of path components such as
+	['stdlib', 'Math', 'imul']). The variable must have previously been allocated
+	via allocateVariable; we return that variable. */
 
 	/* convert a path into the estree representation for (e.g.) stdlib.Math.imul:
 	estree.MemberExpression(
@@ -100,13 +117,7 @@ Context.prototype.import = function(name, path) {
 	for (i = 1; i < path.length; i++) {
 		exprTree = estree.MemberExpression(exprTree, estree.Identifier(path[i]));
 	}
-
-	this.variableDeclarations.push(
-		estree.VariableDeclarator(estree.Identifier(name), exprTree)
-	);
-    this.importedNames[name] = true;
-
-    return variable;
+	return this.importByExprTree(name, exprTree);
 };
 
 exports.Context = Context;

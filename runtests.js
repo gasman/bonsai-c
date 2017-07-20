@@ -19,7 +19,8 @@ function testCompile(filename, expectedResult, opts) {
 		}
 	}
 
-	module = eval('(' + js + ')')(global);
+	var heap = new ArrayBuffer(1024);
+	module = eval('(' + js + ')')(global, null, heap);
 
 	if (!opts.params) {
 		assert.equal(expectedResult, module.main());
@@ -110,5 +111,6 @@ testCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 testCompile('tests/global_var.c', 42);
 testCompile('tests/double_subtract.c', 42);
 testCompile('tests/int_mul.c', 42);
+testCompile('tests/global_array.c', 42);
 
 console.log("All tests passed");

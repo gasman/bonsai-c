@@ -153,8 +153,8 @@ function ConstExpression(value, originalType) {
 		} else {
 			tree = estree.Literal(value);
 		}
-	/* // TODO: reinstate when c_types has a concept of unsigned int...
-	} else if (originalType.satisfies(asmJsTypes.unsigned)) {
+	} else if (originalType.category == 'pointer') {
+		/* also use this for unsigned int, when we've implemented that... */
 		if (value >= 0 && value < 0x80000000) {
 			typ = asmJsTypes.fixnum;
 		} else if (value >= 0x80000000 && value < 0x100000000) {
@@ -162,7 +162,7 @@ function ConstExpression(value, originalType) {
 		} else {
 			throw("Numeric literal out of range for unsigned int: %d" % value);
 		}
-	*/
+		tree = estree.Literal(value);
 	} else if (originalType.category == 'double') {
 		typ = asmJsTypes.double;
 		var valueString = Math.abs(value).toString();
@@ -191,6 +191,43 @@ function ConstExpression(value, originalType) {
 	};
 }
 exports.ConstExpression = ConstExpression;
+
+function DereferenceExpression(arg, context) {
+	assert(arg.intendedType.category == 'pointer');
+
+	var intendedTargetType = arg.intendedType.targetType;
+	var tree;
+
+	switch (intendedTargetType.category) {
+		case 'int':
+			var constructor = estree.MemberExpression(
+				estree.Identifier('stdlib'), estree.Identifier('Int32Array')
+			);
+			context.globalContext.importByExprTree('HEAP_I32',
+				estree.NewExpression(constructor, [estree.Identifier('heap')])
+			);
+
+			tree = estree.MemberExpression(
+				estree.Identifier('HEAP_I32'),
+				estree.BinaryExpression('>>', arg.tree, estree.Literal(2)),
+				true
+			);
+
+			return {
+				'tree': tree,
+				'type': asmJsTypes.int,
+				'intendedType': intendedTargetType,
+				'isValidAsLvalue': true
+			};
+		default:
+			throw(
+				util.format("Don't know how to dereference a pointer of type: %s",
+					util.inspect(intendedTargetType)
+				)
+			);
+	}
+}
+exports.DereferenceExpression = DereferenceExpression;
 
 function FunctionCallExpression(callee, args) {
 	assert(callee.isIdentifier,
@@ -279,7 +316,7 @@ function MultiplyExpression(left, right, intendedType, context) {
 		};
 	} else if (intendedType.category == 'int') {
 		/* compile as a call to stdlib.Math.imul */
-		var imul = context.globalContext.import('imul', ['stdlib', 'Math', 'imul']);
+		var imul = context.globalContext.importByPath('imul', ['stdlib', 'Math', 'imul']);
 		return FunctionCallExpression(
 			VariableExpression(imul), [left, right]
 		);
@@ -549,6 +586,9 @@ function compileExpression(expression, context) {
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
 			return DivideExpression(left, right, expression.type);
+		case 'DereferenceExpression':
+			arg = compileExpression(expression.argument, context);
+			return DereferenceExpression(arg, context);
 		case 'FunctionCallExpression':
 			var callee = compileExpression(expression.callee, context);
 			var args = [];

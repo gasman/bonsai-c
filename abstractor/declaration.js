@@ -5,10 +5,49 @@ var expressions = require('./expressions');
 var cTypes = require('./c_types');
 
 
+function variableDeclarationFromDeclarator(typ, declaratorNode, initialValueExpression, context) {
+	switch (declaratorNode.type) {
+		case 'Identifier':
+			var identifier = declaratorNode.params[0];
+			return {
+				'variable': context.define(identifier, typ),
+				'initialValueExpression': initialValueExpression
+			};
+		case 'ArrayDeclarator':
+			var subDeclarator = declaratorNode.params[0];
+			var sizeExpr = declaratorNode.params[1];
+			var size = expressions.constructExpression(sizeExpr, context, {
+				'resultIsUsed': true
+			});
+
+			assert(initialValueExpression === null, "Array declarators with initial values are not supported yet");
+			assert(size.isCompileTimeConstant);
+			assert(size.type.category == 'int');
+			assert(size.compileTimeConstantValue >= 0);
+
+			var heapAllocationSize = size.compileTimeConstantValue * typ.size;
+			var ptr = context.allocateFromHeap(heapAllocationSize);
+
+			return variableDeclarationFromDeclarator(
+				cTypes.pointer(typ), subDeclarator,
+				new expressions.ConstExpression(ptr.toString(), context, {
+					'resultIsUsed': true
+				}),
+				context
+			);
+		default:
+			throw(
+				util.format("Don't know how to handle a declarator node of type %s",
+					util.inspect(declaratorNode)
+				)
+			);
+	}
+}
+
 function Declaration(node, context) {
 	this.declarationType = 'VariableDeclaration';
 	var declarationSpecifiersNode = node.params[0];
-	this.type = cTypes.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
+	var typ = cTypes.getTypeFromDeclarationSpecifiers(declarationSpecifiersNode);
 
 	this.variableDeclarations = [];
 
@@ -28,12 +67,7 @@ function Declaration(node, context) {
 			util.format('Expected an InitDeclarator node, got %s', util.inspect(initDeclaratorNode))
 		);
 
-		var identifierNode = initDeclaratorNode.params[0];
-		assert(
-			identifierNode.type == 'Identifier',
-			util.format('Expected an Identifier node, got %s', util.inspect(identifierNode))
-		);
-		var identifier = identifierNode.params[0];
+		var declaratorNode = initDeclaratorNode.params[0];
 
 		var initialValueNode = initDeclaratorNode.params[1];
 		var initialValueExpression;
@@ -45,10 +79,12 @@ function Declaration(node, context) {
 			});
 		}
 
-		this.variableDeclarations.push({
-			'variable': context.define(identifier, this.type),
-			'initialValueExpression': initialValueExpression
-		});
+		this.variableDeclarations.push(
+			variableDeclarationFromDeclarator(typ, declaratorNode, initialValueExpression, context)
+		);
 	}
 }
+Declaration.prototype.inspect = function() {
+	return util.format("VariableDeclaration: %s", util.inspect(this.variableDeclarations));
+};
 exports.Declaration = Declaration;

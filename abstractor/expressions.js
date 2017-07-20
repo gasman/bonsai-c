@@ -1,3 +1,4 @@
+var assert = require('assert');
 var util = require('util');
 
 var cTypes = require('./c_types');
@@ -215,6 +216,26 @@ function ConstExpression(numString, context, hints) {
 ConstExpression.prototype.inspect = function() {
 	return util.format(
 		"Const: %s <%s>", this.value, util.inspect(this.type)
+	);
+};
+exports.ConstExpression = ConstExpression;
+
+function DereferenceExpression(argument, context, hints) {
+	this.expressionType = 'DereferenceExpression';
+	this.resultIsUsed = hints.resultIsUsed;
+	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+	this.argument = constructExpression(argument, context, {
+		'resultIsUsed': this.resultIsUsed
+	});
+
+	assert(this.argument.type.category == 'pointer');
+	this.type = this.argument.type.targetType;
+}
+DereferenceExpression.prototype.inspect = function() {
+	return util.format(
+		"Dereference: (%s) <%s>",
+		util.inspect(this.argument), util.inspect(this.type)
 	);
 };
 
@@ -586,6 +607,8 @@ function constructExpression(node, context, hints) {
 					return new NegationExpression(node.params[1], context, hints);
 				case '!':
 					return new LogicalNotExpression(node.params[1], context, hints);
+				case '*':
+					return new DereferenceExpression(node.params[1], context, hints);
 				default:
 					throw("Unrecognised unary operator: " + operator);
 			}

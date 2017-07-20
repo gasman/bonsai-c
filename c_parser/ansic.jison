@@ -191,7 +191,7 @@ expression
 
 constant_expression
 	: conditional_expression
-		{ throw("Unimplemented rule for constant_expression: " + yytext); }
+		{ $$ = $1; }
 	;
 
 declaration
@@ -346,7 +346,7 @@ direct_declarator
 	| '(' declarator ')'
 		{ throw("Unimplemented rule 1 for direct_declarator: " + yytext); }
 	| direct_declarator '[' constant_expression ']'
-		{ throw("Unimplemented rule 2 for direct_declarator: " + yytext); }
+		{ $$ = new yy.Node('ArrayDeclarator', [$1, $3]); }
 	| direct_declarator '[' ']'
 		{ throw("Unimplemented rule 3 for direct_declarator: " + yytext); }
 	| direct_declarator '(' parameter_type_list ')'

@@ -116,6 +116,14 @@ exports.MemberExpression = function(obj, property, computed) {
 	};
 };
 
+exports.NewExpression = function(callee, args) {
+	return {
+		'type': 'NewExpression',
+		'callee': callee,
+		'arguments': args
+	};
+};
+
 exports.ObjectExpression = function(properties) {
 	return {'type': 'ObjectExpression', 'properties': properties};
 };

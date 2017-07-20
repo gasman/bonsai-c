@@ -49,7 +49,7 @@ function compileStatement(statement, out, context) {
 
 				var variable = context.declareVariable(
 					variableDeclaration.variable.name, variableDeclaration.variable.id,
-					statement.type,
+					variableDeclaration.variable.type,
 					initialValue
 				);
 
@@ -351,8 +351,7 @@ function compileModule(module) {
 
 	var globalContext = new contextModule.Context();
 
-	/* reserve the variable names 'stdlib', 'foreign' and 'heap' */
-	var RESERVED_WORDS = ['stdlib', 'foreign', 'heap'];
+	var RESERVED_WORDS = ['stdlib', 'foreign', 'heap', 'HEAP_I32'];
 	for (var w = 0; w < RESERVED_WORDS.length; w++) {
 		globalContext.allocateVariable(RESERVED_WORDS[w]);
 	}
@@ -403,7 +402,7 @@ function compileModule(module) {
 
 					globalContext.declareVariable(
 						variableDeclaration.variable.name, variableDeclaration.variable.id,
-						declaration.type,
+						variableDeclaration.variable.type,
 						initialValue
 					);
 				}
