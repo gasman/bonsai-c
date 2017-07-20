@@ -47,7 +47,7 @@ function compileStatement(statement, out, context) {
 					);
 				}
 
-				var variable = context.declareLocalVariable(
+				var variable = context.declareVariable(
 					variableDeclaration.variable.name, variableDeclaration.variable.id,
 					statement.type,
 					initialValue
@@ -356,11 +356,13 @@ function compileModule(module) {
 	globalContext.allocateVariable('foreign');
 	globalContext.allocateVariable('heap');
 
+	var functionDefinitionStatements = [];
+
 	for (var i = 0; i < module.declarations.length; i++) {
 		var declaration = module.declarations[i];
 		switch (declaration.declarationType) {
 			case 'FunctionDefinition':
-				moduleBodyStatements.push(
+				functionDefinitionStatements.push(
 					compileFunctionDefinition(declaration, globalContext)
 				);
 				if (declaration.isExported) {
@@ -372,21 +374,28 @@ function compileModule(module) {
 				}
 				break;
 			case 'VariableDeclaration':
-				for (i = 0; i < declaration.variableDeclarations.length; i++) {
-					var variableDeclaration = statement.variableDeclarations[i];
+				for (j = 0; j < declaration.variableDeclarations.length; j++) {
+					var variableDeclaration = declaration.variableDeclarations[j];
 
-					var initialValueExpression = null;
+					var initialValue;
 
-					if (variableDeclaration.initialValueExpression !== null) {
-						initialValueExpression = expressions.compileExpression(
-							variableDeclaration.initialValueExpression, context
+					if (variableDeclaration.initialValueExpression === null) {
+						initialValue = 0;
+					} else if (variableDeclaration.initialValueExpression.isCompileTimeConstant) {
+						initialValue = variableDeclaration.initialValueExpression.compileTimeConstantValue;
+					} else {
+						throw(
+							util.format(
+								"Initial value for global variable is not a compile-time constant - got %s",
+								util.inspect(variableDeclaration.initialValueExpression)
+							)
 						);
 					}
 
-					globalContext.declareLocalVariable(
+					globalContext.declareVariable(
 						variableDeclaration.variable.name, variableDeclaration.variable.id,
 						declaration.type,
-						initialValueExpression
+						initialValue
 					);
 				}
 				break;
@@ -394,6 +403,12 @@ function compileModule(module) {
 				throw "Unexpected declaration type: " + declaration.declarationType;
 		}
 	}
+
+	if (globalContext.variableDeclarations.length) {
+		moduleBodyStatements.push(estree.VariableDeclaration(globalContext.variableDeclarations));
+	}
+
+	moduleBodyStatements = moduleBodyStatements.concat(functionDefinitionStatements);
 
 	moduleBodyStatements.push(
 		estree.ReturnStatement(

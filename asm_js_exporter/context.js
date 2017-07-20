@@ -44,7 +44,7 @@ Context.prototype.allocateVariable = function(suggestedName, typ, intendedType, 
 	}
 	return variable;
 };
-Context.prototype.declareLocalVariable = function(suggestedName, id, intendedType, initialValue) {
+Context.prototype.declareVariable = function(suggestedName, id, intendedType, initialValue) {
 	var variable, assignedType;
 
 	switch (intendedType.category) {
