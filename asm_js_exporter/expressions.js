@@ -765,6 +765,26 @@ function coerce(expr, intendedType) {
 				);
 			}
 			break;
+		case 'pointer':
+			/* model pointers as unsigned ints */
+			if (expr.type.satisfies(asmJsTypes.unsigned)) {
+				/* no coercion necessary */
+			} else if (expr.type.satisfies(asmJsTypes.intish)) {
+				/* coerce intish to unsigned using x >>> 0 */
+				return {
+					'tree': estree.BinaryExpression('>>>', expr.tree, estree.Literal(0)),
+					'type': asmJsTypes.unsigned,
+					'intendedType': intendedType,
+					'isPureBoolean': expr.isPureBoolean
+				};
+			} else {
+				throw(
+					util.format("Don't know how to coerce expression %s to unsigned int",
+						util.inspect(expr)
+					)
+				);
+			}
+			break;
 		default:
 			throw(
 				util.format("Don't know how to coerce expression %s to type %s",

@@ -229,7 +229,10 @@ function DereferenceExpression(argument, context, hints) {
 		'resultIsUsed': this.resultIsUsed
 	});
 
-	assert(this.argument.type.category == 'pointer');
+	assert(
+		this.argument.type.category == 'pointer',
+		util.format("Attempting to dereference a non-pointer type: %s", util.inspect(this.argument.type))
+	);
 	this.type = this.argument.type.targetType;
 }
 DereferenceExpression.prototype.inspect = function() {

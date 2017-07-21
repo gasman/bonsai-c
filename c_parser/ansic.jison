@@ -336,7 +336,7 @@ type_qualifier
 
 declarator
 	: pointer direct_declarator
-		{ throw("Unimplemented rule for declarator: " + yytext); }
+		{ $$ = new yy.Node('IndirectDeclarator', [$1, $2]); }
 	| direct_declarator
 	;
 
@@ -359,13 +359,13 @@ direct_declarator
 
 pointer
 	: '*'
-		{ throw("Unimplemented rule for pointer: " + yytext); }
+		{ $$ = [new yy.Node('Pointer', [[]])]; }
 	| '*' type_qualifier_list
-		{ throw("Unimplemented rule for pointer: " + yytext); }
+		{ throw("Unimplemented rule 2 for pointer: " + yytext); }
 	| '*' pointer
-		{ throw("Unimplemented rule for pointer: " + yytext); }
+		{ throw("Unimplemented rule 3 for pointer: " + yytext); }
 	| '*' type_qualifier_list pointer
-		{ throw("Unimplemented rule for pointer: " + yytext); }
+		{ throw("Unimplemented rule 4 for pointer: " + yytext); }
 	;
 
 type_qualifier_list

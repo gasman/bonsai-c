@@ -6,6 +6,7 @@ var cTypes = require('./c_types');
 
 
 function variableDeclarationFromDeclarator(typ, declaratorNode, initialValueExpression, context) {
+	var subDeclarator;
 	switch (declaratorNode.type) {
 		case 'Identifier':
 			var identifier = declaratorNode.params[0];
@@ -14,7 +15,7 @@ function variableDeclarationFromDeclarator(typ, declaratorNode, initialValueExpr
 				'initialValueExpression': initialValueExpression
 			};
 		case 'ArrayDeclarator':
-			var subDeclarator = declaratorNode.params[0];
+			subDeclarator = declaratorNode.params[0];
 			var sizeExpr = declaratorNode.params[1];
 			var size = expressions.constructExpression(sizeExpr, context, {
 				'resultIsUsed': true
@@ -34,6 +35,19 @@ function variableDeclarationFromDeclarator(typ, declaratorNode, initialValueExpr
 					'resultIsUsed': true
 				}),
 				context
+			);
+		case 'IndirectDeclarator':
+			var pointerList = declaratorNode.params[0];
+			subDeclarator = declaratorNode.params[1];
+			for (var i = 0; i < pointerList.length; i++) {
+				var pointer = pointerList[i];
+				assert(pointer.type == 'Pointer');
+				assert(pointer.params[0].length === 0, "Type qualifiers on pointers are not supported yet");
+				typ = cTypes.pointer(typ);
+			}
+
+			return variableDeclarationFromDeclarator(
+				typ, subDeclarator, initialValueExpression, context
 			);
 		default:
 			throw(
