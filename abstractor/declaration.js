@@ -31,7 +31,7 @@ function variableDeclarationFromDeclarator(typ, declaratorNode, initialValueExpr
 
 			return variableDeclarationFromDeclarator(
 				cTypes.pointer(typ), subDeclarator,
-				new expressions.ConstExpression(ptr.toString(), context, {
+				new expressions.ConstExpression(ptr, cTypes.int, {
 					'resultIsUsed': true
 				}),
 				context

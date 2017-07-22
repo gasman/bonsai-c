@@ -174,16 +174,11 @@ class SubtractAssignmentExpression extends AssignmentExpression {
 class CommaExpression extends Expression {
 	get expressionType() {return 'CommaExpression';}
 
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': false
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
-		});
+		this.left = left;
+		this.right = right;
 		this.type = this.right.type;
 		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
 			this.isCompileTimeConstant = true;
@@ -196,6 +191,17 @@ class CommaExpression extends Expression {
 			"Comma: (%s, %s) <%s>",
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[0], context, {
+			'resultIsUsed': false
+		});
+		var right = constructExpression(node.params[1], context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
+		});
+		return new CommaExpression(left, right, hints);
 	}
 }
 
@@ -247,26 +253,11 @@ class ConditionalExpression extends Expression {
 class ConstExpression extends Expression {
 	get expressionType() {return 'ConstExpression';}
 
-	constructor(numString, context, hints) {
+	constructor(value, typ, hints) {
 		super(hints);
 
-		if (numString.match(/^\d+$/)) {
-			this.value = parseInt(numString, 10);
-			if (this.value >= -0x80000000 && this.value <= 0x7fffffff) {
-				this.type = cTypes.int;
-			} else {
-				throw("Integer out of range: " + numString);
-			}
-		} else if (numString.match(/^\d+\.\d+$/)) {
-			this.value = parseFloat(numString);
-			this.type = cTypes.double;
-			if (isNaN(this.value)) {
-				throw("Not a number: " + numString);
-			}
-		} else {
-			throw("Unrecognised numeric constant: " + numString);
-		}
-
+		this.value = value;
+		this.type = typ;
 		this.isCompileTimeConstant = true;
 		this.compileTimeConstantValue = this.value;
 	}
@@ -275,6 +266,30 @@ class ConstExpression extends Expression {
 		return util.format(
 			"Const: %s <%s>", this.value, util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var numString = node.params[0];
+		var value, typ;
+
+		if (numString.match(/^\d+$/)) {
+			value = parseInt(numString, 10);
+			if (value >= -0x80000000 && value <= 0x7fffffff) {
+				typ = cTypes.int;
+			} else {
+				throw("Integer out of range: " + numString);
+			}
+		} else if (numString.match(/^\d+\.\d+$/)) {
+			value = parseFloat(numString);
+			typ = cTypes.double;
+			if (isNaN(value)) {
+				throw("Not a number: " + numString);
+			}
+		} else {
+			throw("Unrecognised numeric constant: " + numString);
+		}
+
+		return new ConstExpression(value, typ, hints);
 	}
 }
 exports.ConstExpression = ConstExpression;
@@ -307,18 +322,11 @@ class DereferenceExpression extends Expression {
 class FunctionCallExpression extends Expression {
 	get expressionType() {return 'FunctionCallExpression';}
 
-	constructor(callee, params, context, hints) {
+	constructor(callee, params, hints) {
 		super(hints);
 
-		this.callee = constructExpression(callee, context, {
-			'resultIsUsed': true
-		});
-		this.parameters = [];
-		for (var i = 0; i < params.length; i++) {
-			this.parameters.push(constructExpression(params[i], context, {
-				'resultIsUsed': true
-			}));
-		}
+		this.callee = callee;
+		this.parameters = params;
 		this.type = this.callee.type.returnType;
 	}
 
@@ -327,6 +335,21 @@ class FunctionCallExpression extends Expression {
 			"FunctionCall: %s(%s) <%s>",
 			util.inspect(this.callee), util.inspect(this.parameters), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var callee = constructExpression(node.params[0], context, {
+			'resultIsUsed': true
+		});
+		var paramNodes = node.params[1];
+		var params = [];
+		for (var i = 0; i < paramNodes.length; i++) {
+			params.push(constructExpression(paramNodes[i], context, {
+				'resultIsUsed': true
+			}));
+		}
+
+		return new FunctionCallExpression(callee, params, hints);
 	}
 }
 
@@ -685,13 +708,10 @@ class ShiftRightExpression extends Expression {
 class VariableExpression extends Expression {
 	get expressionType() {return 'VariableExpression';}
 
-	constructor(variableName, context, hints) {
+	constructor(variable, hints) {
 		super(hints);
 
-		this.variable = context.get(variableName);
-		if (this.variable === null) {
-			throw "Variable not found: " + variableName;
-		}
+		this.variable = variable;
 		this.type = this.variable.type;
 	}
 
@@ -700,6 +720,13 @@ class VariableExpression extends Expression {
 			"Var: %s#%d <%s>",
 			this.variable.name, this.variable.id, util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var variableName = node.params[0];
+		var variable = context.get(variableName);
+		assert(variable, "Variable not found: " + variableName);
+		return new VariableExpression(variable, hints);
 	}
 }
 
@@ -755,23 +782,23 @@ function constructExpression(node, context, hints) {
 		case 'Conditional':
 			return new ConditionalExpression(node.params[0], node.params[1], node.params[2], context, hints);
 		case 'Const':
-			return new ConstExpression(node.params[0], context, hints);
+			return ConstExpression.fromNode(node, context, hints);
 		case 'FunctionCall':
-			return new FunctionCallExpression(node.params[0], node.params[1], context, hints);
+			return FunctionCallExpression.fromNode(node, context, hints);
 		case 'Postupdate':
 			operator = node.params[0];
 			constructor = POSTUPDATE_OPERATORS[operator];
 			assert(constructor, "Unrecognised postupdate operator: " + operator);
 			return new constructor(node.params[1], context, hints);
 		case 'Sequence':
-			return new CommaExpression(node.params[0], node.params[1], context, hints);
+			return CommaExpression.fromNode(node, context, hints);
 		case 'UnaryOp':
 			operator = node.params[0];
 			constructor = UNARY_OPERATORS[operator];
 			assert(constructor, "Unrecognised unary operator: " + operator);
 			return new constructor(node.params[1], context, hints);
 		case 'Var':
-			return new VariableExpression(node.params[0], context, hints);
+			return VariableExpression.fromNode(node, context, hints);
 		default:
 			throw("Unrecognised expression node type: " + node.type);
 	}
