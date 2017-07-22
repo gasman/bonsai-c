@@ -119,64 +119,53 @@ class ModExpression extends ArithmeticExpression {
 	}
 }
 
-function AddAssignmentExpression(left, right, context, hints) {
-	this.expressionType = 'AddAssignmentExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class AssignmentExpression {
+	get expressionType() {return 'AssignmentExpression';}
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': true
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': true
-	});
-	this.type = this.left.type;
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': true
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': true
+		});
+		this.type = this.left.type;
+	}
+
+	inspect() {
+		return util.format(
+			"Assignment: (%s = %s) <%s>",
+			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		);
+	}
 }
-AddAssignmentExpression.prototype.inspect = function() {
-	return util.format(
-		"AddAssignment: (%s += %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
-function SubtractAssignmentExpression(left, right, context, hints) {
-	this.expressionType = 'SubtractAssignmentExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': true
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': true
-	});
-	this.type = this.left.type;
+
+class AddAssignmentExpression extends AssignmentExpression {
+	get expressionType() {return 'AddAssignmentExpression';}
+
+	inspect() {
+		return util.format(
+			"AddAssignment: (%s += %s) <%s>",
+			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		);
+	}
 }
-SubtractAssignmentExpression.prototype.inspect = function() {
-	return util.format(
-		"SubtractAssignment: (%s += %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
 
-function AssignmentExpression(left, right, context, hints) {
-	this.expressionType = 'AssignmentExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class SubtractAssignmentExpression extends AssignmentExpression {
+	get expressionType() {return 'SubtractAssignmentExpression';}
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': true
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': true
-	});
-	this.type = this.left.type;
+	inspect() {
+		return util.format(
+			"SubtractAssignment: (%s += %s) <%s>",
+			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		);
+	}
 }
-AssignmentExpression.prototype.inspect = function() {
-	return util.format(
-		"Assignment: (%s = %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
+
 
 function CommaExpression(left, right, context, hints) {
 	this.expressionType = 'CommaExpression';
