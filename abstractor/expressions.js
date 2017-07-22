@@ -166,259 +166,289 @@ class SubtractAssignmentExpression extends AssignmentExpression {
 	}
 }
 
+class CommaExpression {
+	get expressionType() {return 'CommaExpression';}
 
-function CommaExpression(left, right, context, hints) {
-	this.expressionType = 'CommaExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': false
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
-	});
-	this.type = this.right.type;
-	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = this.right.compileTimeConstantValue;
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': false
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
+		});
+		this.type = this.right.type;
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = this.right.compileTimeConstantValue;
+		}
 	}
-}
-CommaExpression.prototype.inspect = function() {
-	return util.format(
-		"Comma: (%s, %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
 
-function ConditionalExpression(test, consequent, alternate, context, hints) {
-	this.expressionType = 'ConditionalExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
-
-	this.test = constructExpression(test, context, {
-		'resultIsUsed': true,
-		'resultIsUsedAsBoolean': true
-	});
-	this.consequent = constructExpression(consequent, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
-	});
-	this.alternate = constructExpression(alternate, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
-	});
-
-	if (this.consequent.type == cTypes.int && this.alternate.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle ConditionalExpression with types: %s, %s",
-				util.inspect(this.consequent.type),
-				util.inspect(this.alternate.type)
-			)
+	inspect() {
+		return util.format(
+			"Comma: (%s, %s) <%s>",
+			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
-
-	if (this.test.isCompileTimeConstant && this.consequent.isCompileTimeConstant && this.alternate.isCompileTimeConstant) {
-		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = (this.test.compileTimeConstantValue ? this.consequent.compileTimeConstantValue : this.alternate.compileTimeConstantValue);
-	}
 }
-ConditionalExpression.prototype.inspect = function() {
-	return util.format(
-		"ConditionalExpression: %s ? %s : %s -> <%s>",
-		util.inspect(this.test), util.inspect(this.consequent), util.inspect(this.alternate),
-		util.inspect(this.type)
-	);
-};
 
-function ConstExpression(numString, context, hints) {
-	this.expressionType = 'ConstExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class ConditionalExpression {
+	get expressionType() {return 'ConditionalExpression';}
 
-	if (numString.match(/^\d+$/)) {
-		this.value = parseInt(numString, 10);
-		if (this.value >= -0x80000000 && this.value <= 0x7fffffff) {
+	constructor(test, consequent, alternate, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.test = constructExpression(test, context, {
+			'resultIsUsed': true,
+			'resultIsUsedAsBoolean': true
+		});
+		this.consequent = constructExpression(consequent, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
+		});
+		this.alternate = constructExpression(alternate, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
+		});
+
+		if (this.consequent.type == cTypes.int && this.alternate.type == cTypes.int) {
 			this.type = cTypes.int;
 		} else {
-			throw("Integer out of range: " + numString);
+			throw(
+				util.format("Don't know how to handle ConditionalExpression with types: %s, %s",
+					util.inspect(this.consequent.type),
+					util.inspect(this.alternate.type)
+				)
+			);
 		}
-	} else if (numString.match(/^\d+\.\d+$/)) {
-		this.value = parseFloat(numString);
-		this.type = cTypes.double;
-		if (isNaN(this.value)) {
-			throw("Not a number: " + numString);
+
+		if (this.test.isCompileTimeConstant && this.consequent.isCompileTimeConstant && this.alternate.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = (this.test.compileTimeConstantValue ? this.consequent.compileTimeConstantValue : this.alternate.compileTimeConstantValue);
 		}
-	} else {
-		throw("Unrecognised numeric constant: " + numString);
 	}
 
-	this.isCompileTimeConstant = true;
-	this.compileTimeConstantValue = this.value;
+	inspect() {
+		return util.format(
+			"ConditionalExpression: %s ? %s : %s -> <%s>",
+			util.inspect(this.test), util.inspect(this.consequent), util.inspect(this.alternate),
+			util.inspect(this.type)
+		);
+	}
 }
-ConstExpression.prototype.inspect = function() {
-	return util.format(
-		"Const: %s <%s>", this.value, util.inspect(this.type)
-	);
-};
+
+class ConstExpression {
+	get expressionType() {return 'ConstExpression';}
+
+	constructor(numString, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		if (numString.match(/^\d+$/)) {
+			this.value = parseInt(numString, 10);
+			if (this.value >= -0x80000000 && this.value <= 0x7fffffff) {
+				this.type = cTypes.int;
+			} else {
+				throw("Integer out of range: " + numString);
+			}
+		} else if (numString.match(/^\d+\.\d+$/)) {
+			this.value = parseFloat(numString);
+			this.type = cTypes.double;
+			if (isNaN(this.value)) {
+				throw("Not a number: " + numString);
+			}
+		} else {
+			throw("Unrecognised numeric constant: " + numString);
+		}
+
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = this.value;
+	}
+
+	inspect() {
+		return util.format(
+			"Const: %s <%s>", this.value, util.inspect(this.type)
+		);
+	}
+}
 exports.ConstExpression = ConstExpression;
 
-function DereferenceExpression(argument, context, hints) {
-	this.expressionType = 'DereferenceExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class DereferenceExpression {
+	get expressionType() {return 'DereferenceExpression';}
 
-	this.argument = constructExpression(argument, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
+	constructor(argument, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	assert(
-		this.argument.type.category == 'pointer',
-		util.format("Attempting to dereference a non-pointer type: %s", util.inspect(this.argument.type))
-	);
-	this.type = this.argument.type.targetType;
+		this.argument = constructExpression(argument, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+
+		assert(
+			this.argument.type.category == 'pointer',
+			util.format("Attempting to dereference a non-pointer type: %s", util.inspect(this.argument.type))
+		);
+		this.type = this.argument.type.targetType;
+	}
+
+	inspect() {
+		return util.format(
+			"Dereference: (%s) <%s>",
+			util.inspect(this.argument), util.inspect(this.type)
+		);
+	}
 }
-DereferenceExpression.prototype.inspect = function() {
-	return util.format(
-		"Dereference: (%s) <%s>",
-		util.inspect(this.argument), util.inspect(this.type)
-	);
-};
 
-function FunctionCallExpression(callee, params, context, hints) {
-	this.expressionType = 'FunctionCallExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class FunctionCallExpression {
+	get expressionType() {return 'FunctionCallExpression';}
 
-	this.callee = constructExpression(callee, context, {
-		'resultIsUsed': true
-	});
-	this.parameters = [];
-	for (var i = 0; i < params.length; i++) {
-		this.parameters.push(constructExpression(params[i], context, {
+	constructor(callee, params, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.callee = constructExpression(callee, context, {
 			'resultIsUsed': true
-		}));
+		});
+		this.parameters = [];
+		for (var i = 0; i < params.length; i++) {
+			this.parameters.push(constructExpression(params[i], context, {
+				'resultIsUsed': true
+			}));
+		}
+		this.type = this.callee.type.returnType;
 	}
-	this.type = this.callee.type.returnType;
-}
-FunctionCallExpression.prototype.inspect = function() {
-	return util.format(
-		"FunctionCall: %s(%s) <%s>",
-		util.inspect(this.callee), util.inspect(this.parameters), util.inspect(this.type)
-	);
-};
 
-
-function LogicalAndExpression(left, right, context, hints) {
-	this.expressionType = 'LogicalAndExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
-
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': true
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': true
-	});
-
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle LogicalAndExpression with types: %s, %s",
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
+	inspect() {
+		return util.format(
+			"FunctionCall: %s(%s) <%s>",
+			util.inspect(this.callee), util.inspect(this.parameters), util.inspect(this.type)
 		);
 	}
-
-	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = +!!(this.left.compileTimeConstantValue && this.right.compileTimeConstantValue);
-	}
 }
-LogicalAndExpression.prototype.inspect = function() {
-	return util.format(
-		"LogicalAnd: (%s, %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
 
 
-function LogicalNotExpression(argument, context, hints) {
-	this.expressionType = 'LogicalNotExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class LogicalAndExpression {
+	get expressionType() {return 'LogicalAndExpression';}
 
-	this.argument = constructExpression(argument, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': true
-	});
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	if (this.argument.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle LogicalNotExpression with type: %s",
-				util.inspect(this.argument.type)
-			)
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+
+		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+			this.type = cTypes.int;
+		} else {
+			throw(
+				util.format("Don't know how to handle LogicalAndExpression with types: %s, %s",
+					util.inspect(this.left.type),
+					util.inspect(this.right.type)
+				)
+			);
+		}
+
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = +!!(this.left.compileTimeConstantValue && this.right.compileTimeConstantValue);
+		}
+	}
+
+	inspect() {
+		return util.format(
+			"LogicalAnd: (%s, %s) <%s>",
+			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
-
-	if (this.argument.isCompileTimeConstant) {
-		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = +!this.argument.compileTimeConstantValue;
-	}
 }
-LogicalNotExpression.prototype.inspect = function() {
-	return util.format(
-		"LogicalNot: (%s) <%s>",
-		util.inspect(this.argument), util.inspect(this.type)
-	);
-};
 
-function LogicalOrExpression(left, right, context, hints) {
-	this.expressionType = 'LogicalOrExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': true
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed,
-		'resultIsUsedAsBoolean': true
-	});
+class LogicalNotExpression {
+	get expressionType() {return 'LogicalNotExpression';}
 
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle LogicalOrExpression with types: %s, %s",
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
+	constructor(argument, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.argument = constructExpression(argument, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+
+		if (this.argument.type == cTypes.int) {
+			this.type = cTypes.int;
+		} else {
+			throw(
+				util.format("Don't know how to handle LogicalNotExpression with type: %s",
+					util.inspect(this.argument.type)
+				)
+			);
+		}
+
+		if (this.argument.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = +!this.argument.compileTimeConstantValue;
+		}
+	}
+
+	inspect() {
+		return util.format(
+			"LogicalNot: (%s) <%s>",
+			util.inspect(this.argument), util.inspect(this.type)
 		);
 	}
+}
 
-	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = +!!(this.left.compileTimeConstantValue || this.right.compileTimeConstantValue);
+class LogicalOrExpression {
+	get expressionType() {return 'LogicalOrExpression';}
+
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+
+		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+			this.type = cTypes.int;
+		} else {
+			throw(
+				util.format("Don't know how to handle LogicalOrExpression with types: %s, %s",
+					util.inspect(this.left.type),
+					util.inspect(this.right.type)
+				)
+			);
+		}
+
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = +!!(this.left.compileTimeConstantValue || this.right.compileTimeConstantValue);
+		}
+	}
+
+	inspect() {
+		return util.format(
+			"LogicalOr: (%s, %s) <%s>",
+			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		);
 	}
 }
-LogicalOrExpression.prototype.inspect = function() {
-	return util.format(
-		"LogicalOr: (%s, %s) <%s>",
-		util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
-
 
 
 class RelationalExpression {
@@ -491,170 +521,195 @@ class GreaterThanOrEqualExpression extends RelationalExpression {
 }
 
 
-function NegationExpression(argument, context, hints) {
-	this.expressionType = 'NegationExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class NegationExpression {
+	get expressionType() {return 'NegationExpression';}
 
-	this.argument = constructExpression(argument, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
+	constructor(argument, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	if (this.argument.type == cTypes.int) {
-		this.type = cTypes.int;
-		if (this.argument.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = -this.argument.compileTimeConstantValue;
+		this.argument = constructExpression(argument, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+
+		if (this.argument.type == cTypes.int) {
+			this.type = cTypes.int;
+			if (this.argument.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = -this.argument.compileTimeConstantValue;
+			}
+		} else {
+			throw(
+				util.format("Don't know how to handle NegationExpression with type: %s",
+					util.inspect(this.argument.type)
+				)
+			);
 		}
-	} else {
-		throw(
-			util.format("Don't know how to handle NegationExpression with type: %s",
-				util.inspect(this.argument.type)
-			)
+	}
+
+	inspect() {
+		return util.format(
+			"Negation: (%s) <%s>",
+			util.inspect(this.argument), util.inspect(this.type)
 		);
 	}
 }
-NegationExpression.prototype.inspect = function() {
-	return util.format(
-		"Negation: (%s) <%s>",
-		util.inspect(this.argument), util.inspect(this.type)
-	);
-};
 
-function PostdecrementExpression(argument, context, hints) {
-	this.expressionType = 'PostdecrementExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
-	this.argument = constructExpression(argument, context, {
-		'resultIsUsed': true
-	});
+class PostdecrementExpression {
+	get expressionType() {return 'PostdecrementExpression';}
 
-	if (this.argument.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle PostdecrementExpression with type: %s",
-				util.inspect(this.argument.type)
-			)
-		);
-	}
-}
-PostdecrementExpression.prototype.inspect = function() {
-	return util.format(
-		"Postdecrement: (%s) <%s>",
-		util.inspect(this.argument), util.inspect(this.type)
-	);
-};
-function PostincrementExpression(argument, context, hints) {
-	this.expressionType = 'PostincrementExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
-	this.argument = constructExpression(argument, context, {
-		'resultIsUsed': true
-	});
+	constructor(argument, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		this.argument = constructExpression(argument, context, {
+			'resultIsUsed': true
+		});
 
-	if (this.argument.type == cTypes.int) {
-		this.type = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle PostincrementExpression with type: %s",
-				util.inspect(this.argument.type)
-			)
-		);
-	}
-}
-PostdecrementExpression.prototype.inspect = function() {
-	return util.format(
-		"Postdecrement: (%s) <%s>",
-		util.inspect(this.argument), util.inspect(this.type)
-	);
-};
-
-function ShiftLeftExpression(left, right, context, hints) {
-	this.expressionType = 'ShiftLeftExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
-
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.type = cTypes.int;
-		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = (this.left.compileTimeConstantValue << this.right.compileTimeConstantValue) | 0;
+		if (this.argument.type == cTypes.int) {
+			this.type = cTypes.int;
+		} else {
+			throw(
+				util.format("Don't know how to handle PostdecrementExpression with type: %s",
+					util.inspect(this.argument.type)
+				)
+			);
 		}
-	} else {
-		throw(
-			util.format("Don't know how to handle ShiftLeftExpression with types: %s, %s",
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
+	}
+
+	inspect() {
+		return util.format(
+			"Postdecrement: (%s) <%s>",
+			util.inspect(this.argument), util.inspect(this.type)
 		);
 	}
 }
-ShiftLeftExpression.prototype.inspect = function() {
-	return util.format(
-		"ShiftLeft: (%s, %s) <%s>",
-		this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
 
-function ShiftRightExpression(left, right, context, hints) {
-	this.expressionType = 'ShiftRightExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class PostincrementExpression {
+	get expressionType() {return 'PostincrementExpression';}
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
+	constructor(argument, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		this.argument = constructExpression(argument, context, {
+			'resultIsUsed': true
+		});
 
-	if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.type = cTypes.int;
-		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = (this.left.compileTimeConstantValue >> this.right.compileTimeConstantValue) | 0;
+		if (this.argument.type == cTypes.int) {
+			this.type = cTypes.int;
+		} else {
+			throw(
+				util.format("Don't know how to handle PostincrementExpression with type: %s",
+					util.inspect(this.argument.type)
+				)
+			);
 		}
-	} else {
-		throw(
-			util.format("Don't know how to handle ShiftRightExpression with types: %s, %s",
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
+	}
+
+	inspect() {
+		return util.format(
+			"Postdecrement: (%s) <%s>",
+			util.inspect(this.argument), util.inspect(this.type)
 		);
 	}
 }
-ShiftRightExpression.prototype.inspect = function() {
-	return util.format(
-		"ShiftRight: (%s, %s) <%s>",
-		this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
 
-function VariableExpression(variableName, context, hints) {
-	this.expressionType = 'VariableExpression';
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class ShiftLeftExpression {
+	get expressionType() {return 'ShiftLeftExpression';}
 
-	this.variable = context.get(variableName);
-	if (this.variable === null) {
-		throw "Variable not found: " + variableName;
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+
+		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+			this.type = cTypes.int;
+			if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = (this.left.compileTimeConstantValue << this.right.compileTimeConstantValue) | 0;
+			}
+		} else {
+			throw(
+				util.format("Don't know how to handle ShiftLeftExpression with types: %s, %s",
+					util.inspect(this.left.type),
+					util.inspect(this.right.type)
+				)
+			);
+		}
 	}
-	this.type = this.variable.type;
+
+	inspect() {
+		return util.format(
+			"ShiftLeft: (%s, %s) <%s>",
+			this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		);
+	}
 }
-VariableExpression.prototype.inspect = function() {
-	return util.format(
-		"Var: %s#%d <%s>",
-		this.variable.name, this.variable.id, util.inspect(this.type)
-	);
-};
+
+class ShiftRightExpression {
+	get expressionType() {return 'ShiftRightExpression';}
+
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+
+		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+			this.type = cTypes.int;
+			if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = (this.left.compileTimeConstantValue >> this.right.compileTimeConstantValue) | 0;
+			}
+		} else {
+			throw(
+				util.format("Don't know how to handle ShiftRightExpression with types: %s, %s",
+					util.inspect(this.left.type),
+					util.inspect(this.right.type)
+				)
+			);
+		}
+	}
+
+	inspect() {
+		return util.format(
+			"ShiftRight: (%s, %s) <%s>",
+			this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
+		);
+	}
+}
+
+class VariableExpression {
+	get expressionType() {return 'VariableExpression';}
+
+	constructor(variableName, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+
+		this.variable = context.get(variableName);
+		if (this.variable === null) {
+			throw "Variable not found: " + variableName;
+		}
+		this.type = this.variable.type;
+	}
+
+	inspect() {
+		return util.format(
+			"Var: %s#%d <%s>",
+			this.variable.name, this.variable.id, util.inspect(this.type)
+		);
+	}
+}
 
 ASSIGNMENT_OPERATORS = {
 	'=': AssignmentExpression,
