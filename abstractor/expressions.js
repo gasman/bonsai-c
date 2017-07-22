@@ -21,7 +21,8 @@ function ArithmeticExpression(expressionType, calcFunction, left, right, context
 		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
 			this.isCompileTimeConstant = true;
 			this.compileTimeConstantValue = +calcFunction(
-				+this.left.compileTimeConstantValue, +this.right.compileTimeConstantValue
+				+this.left.compileTimeConstantValue, +this.right.compileTimeConstantValue,
+				this.type
 			);
 		}
 	} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
@@ -29,7 +30,8 @@ function ArithmeticExpression(expressionType, calcFunction, left, right, context
 		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
 			this.isCompileTimeConstant = true;
 			this.compileTimeConstantValue = calcFunction(
-				this.left.compileTimeConstantValue | 0, this.right.compileTimeConstantValue | 0
+				this.left.compileTimeConstantValue | 0, this.right.compileTimeConstantValue | 0,
+				this.type
 			) | 0;
 		}
 	} else if (
@@ -41,7 +43,8 @@ function ArithmeticExpression(expressionType, calcFunction, left, right, context
 			this.isCompileTimeConstant = true;
 			this.compileTimeConstantValue = calcFunction(
 				this.left.compileTimeConstantValue,
-				this.right.compileTimeConstantValue * this.type.targetType.size
+				this.right.compileTimeConstantValue * this.type.targetType.size,
+				this.type
 			) >>> 0;
 		}
 	} else if (
@@ -53,7 +56,8 @@ function ArithmeticExpression(expressionType, calcFunction, left, right, context
 			this.isCompileTimeConstant = true;
 			this.compileTimeConstantValue = calcFunction(
 				this.left.compileTimeConstantValue * this.type.targetType.size,
-				this.right.compileTimeConstantValue
+				this.right.compileTimeConstantValue,
+				this.type
 			) >>> 0;
 		}
 	} else {
@@ -80,7 +84,11 @@ function SubtractExpression(left, right, context, hints) {
 	return new ArithmeticExpression('SubtractExpression', function(a, b) {return a - b;}, left, right, context, hints);
 }
 function MultiplyExpression(left, right, context, hints) {
-	return new ArithmeticExpression('MultiplyExpression', function(a, b) {return a * b;}, left, right, context, hints);
+	return new ArithmeticExpression(
+		'MultiplyExpression',
+		function(a, b, typ) {return (typ.category == 'int') ? Math.imul(a, b) : (a * b);},
+		left, right, context, hints
+	);
 }
 function DivideExpression(left, right, context, hints) {
 	return new ArithmeticExpression('DivideExpression', function(a, b) {return a / b;}, left, right, context, hints);
@@ -161,8 +169,10 @@ function CommaExpression(left, right, context, hints) {
 		'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
 	});
 	this.type = this.right.type;
-	this.isCompileTimeConstant = this.right.isCompileTimeConstant;
-	this.compileTimeConstantValue = this.right.compileTimeConstantValue;
+	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+		this.isCompileTimeConstant = true;
+		this.compileTimeConstantValue = this.right.compileTimeConstantValue;
+	}
 }
 CommaExpression.prototype.inspect = function() {
 	return util.format(

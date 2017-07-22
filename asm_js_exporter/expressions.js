@@ -637,6 +637,10 @@ function getAsmJsType(typ) {
 function compileExpression(expression, context) {
 	var left, right, arg, typ;
 
+	if (expression.isCompileTimeConstant) {
+		return ConstExpression(expression.compileTimeConstantValue, expression.type);
+	}
+
 	switch(expression.expressionType) {
 		case 'AddExpression':
 			left = compileExpression(expression.left, context);
