@@ -12,15 +12,11 @@ class Expression {
 }
 
 class ArithmeticExpression extends Expression {
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
+		this.left = left;
+		this.right = right;
 
 		if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
 			this.type = cTypes.double;
@@ -91,6 +87,16 @@ class AddExpression extends ArithmeticExpression {
 	calcFunction(a, b, typ) {
 		return a + b;
 	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new AddExpression(left, right, hints);
+	}
 }
 
 class SubtractExpression extends ArithmeticExpression {
@@ -98,6 +104,16 @@ class SubtractExpression extends ArithmeticExpression {
 
 	calcFunction(a, b, typ) {
 		return a - b;
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new SubtractExpression(left, right, hints);
 	}
 }
 
@@ -107,6 +123,16 @@ class MultiplyExpression extends ArithmeticExpression {
 	calcFunction(a, b, typ) {
 		return (typ.category == 'int') ? Math.imul(a, b) : (a * b);
 	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new MultiplyExpression(left, right, hints);
+	}
 }
 
 class DivideExpression extends ArithmeticExpression {
@@ -115,6 +141,16 @@ class DivideExpression extends ArithmeticExpression {
 	calcFunction(a, b, typ) {
 		return a / b;
 	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new DivideExpression(left, right, hints);
+	}
 }
 
 class ModExpression extends ArithmeticExpression {
@@ -122,6 +158,16 @@ class ModExpression extends ArithmeticExpression {
 
 	calcFunction(a, b, typ) {
 		return a % b;
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new ModExpression(left, right, hints);
 	}
 }
 
@@ -357,17 +403,11 @@ class FunctionCallExpression extends Expression {
 class LogicalAndExpression extends Expression {
 	get expressionType() {return 'LogicalAndExpression';}
 
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': true
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': true
-		});
+		this.left = left;
+		this.right = right;
 
 		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -391,6 +431,19 @@ class LogicalAndExpression extends Expression {
 			"LogicalAnd: (%s, %s) <%s>",
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+
+		return new LogicalAndExpression(left, right, hints);
 	}
 }
 
@@ -433,17 +486,11 @@ class LogicalNotExpression extends Expression {
 class LogicalOrExpression extends Expression {
 	get expressionType() {return 'LogicalOrExpression';}
 
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': true
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': true
-		});
+		this.left = left;
+		this.right = right;
 
 		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -468,21 +515,29 @@ class LogicalOrExpression extends Expression {
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+
+		return new LogicalOrExpression(left, right, hints);
+	}
 }
 
 
 class RelationalExpression extends Expression {
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
 		this.type = cTypes.int;
-
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
+		this.left = left;
+		this.right = right;
 
 		if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
 			this.operandType = cTypes.double;
@@ -517,26 +572,86 @@ class RelationalExpression extends Expression {
 class LessThanExpression extends RelationalExpression {
 	get expressionType() {return 'LessThanExpression';}
 	calcFunction(a, b) {return a < b;}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new LessThanExpression(left, right, hints);
+	}
 }
 class GreaterThanExpression extends RelationalExpression {
 	get expressionType() {return 'GreaterThanExpression';}
 	calcFunction(a, b) {return a > b;}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new GreaterThanExpression(left, right, hints);
+	}
 }
 class EqualExpression extends RelationalExpression {
 	get expressionType() {return 'EqualExpression';}
 	calcFunction(a, b) {return a == b;}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new EqualExpression(left, right, hints);
+	}
 }
 class NotEqualExpression extends RelationalExpression {
 	get expressionType() {return 'NotEqualExpression';}
 	calcFunction(a, b) {return a != b;}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new NotEqualExpression(left, right, hints);
+	}
 }
 class LessThanOrEqualExpression extends RelationalExpression {
 	get expressionType() {return 'LessThanOrEqualExpression';}
 	calcFunction(a, b) {return a <= b;}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new LessThanOrEqualExpression(left, right, hints);
+	}
 }
 class GreaterThanOrEqualExpression extends RelationalExpression {
 	get expressionType() {return 'GreaterThanOrEqualExpression';}
 	calcFunction(a, b) {return a >= b;}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new GreaterThanOrEqualExpression(left, right, hints);
+	}
 }
 
 
@@ -634,15 +749,11 @@ class PostincrementExpression extends Expression {
 class ShiftLeftExpression extends Expression {
 	get expressionType() {return 'ShiftLeftExpression';}
 
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
+		this.left = left;
+		this.right = right;
 
 		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -666,20 +777,26 @@ class ShiftLeftExpression extends Expression {
 			this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new ShiftLeftExpression(left, right, hints);
+	}
 }
 
 class ShiftRightExpression extends Expression {
 	get expressionType() {return 'ShiftRightExpression';}
 
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
+		this.left = left;
+		this.right = right;
 
 		if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -702,6 +819,16 @@ class ShiftRightExpression extends Expression {
 			"ShiftRight: (%s, %s) <%s>",
 			this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new ShiftRightExpression(left, right, hints);
 	}
 }
 
@@ -778,7 +905,7 @@ function constructExpression(node, context, hints) {
 			operator = node.params[0];
 			constructor = BINARY_OPERATORS[operator];
 			assert(constructor, "Unrecognised binary operator: " + operator);
-			return new constructor(node.params[1], node.params[2], context, hints);
+			return constructor.fromNode(node, context, hints);
 		case 'Conditional':
 			return new ConditionalExpression(node.params[0], node.params[1], node.params[2], context, hints);
 		case 'Const':
