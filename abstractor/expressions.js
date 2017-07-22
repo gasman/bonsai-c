@@ -421,65 +421,73 @@ LogicalOrExpression.prototype.inspect = function() {
 
 
 
-function RelationalExpression(expressionType, calcFunction, left, right, context, hints) {
-	this.expressionType = expressionType;
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class RelationalExpression {
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	this.type = cTypes.int;
+		this.type = cTypes.int;
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
 
-	if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
-		this.operandType = cTypes.double;
-	} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.operandType = cTypes.int;
-	} else {
-		throw(
-			util.format("Don't know how to handle %s with types: %s, %s",
-				expressionType,
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
+		if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
+			this.operandType = cTypes.double;
+		} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+			this.operandType = cTypes.int;
+		} else {
+			throw(
+				util.format("Don't know how to handle %s with types: %s, %s",
+					this.expressionType,
+					util.inspect(this.left.type),
+					util.inspect(this.right.type)
+				)
+			);
+		}
+
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = +this.calcFunction(this.left.compileTimeConstantValue, this.right.compileTimeConstantValue);
+		}
+	}
+
+	inspect() {
+		return util.format(
+			"%s: (%s, %s) <%s> -> <%s>",
+			this.expressionType,
+			util.inspect(this.left), util.inspect(this.right),
+			util.inspect(this.operandType), util.inspect(this.type)
 		);
 	}
+}
 
-	if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = +calcFunction(this.left.compileTimeConstantValue, this.right.compileTimeConstantValue);
-	}
+class LessThanExpression extends RelationalExpression {
+	get expressionType() {return 'LessThanExpression';}
+	calcFunction(a, b) {return a < b;}
 }
-RelationalExpression.prototype.inspect = function() {
-	return util.format(
-		"%s: (%s, %s) <%s> -> <%s>",
-		this.expressionType,
-		util.inspect(this.left), util.inspect(this.right),
-		util.inspect(this.operandType), util.inspect(this.type)
-	);
-};
-
-function LessThanExpression(left, right, context, hints) {
-	return new RelationalExpression('LessThanExpression', function(a, b) {return a < b;}, left, right, context, hints);
+class GreaterThanExpression extends RelationalExpression {
+	get expressionType() {return 'GreaterThanExpression';}
+	calcFunction(a, b) {return a > b;}
 }
-function GreaterThanExpression(left, right, context, hints) {
-	return new RelationalExpression('GreaterThanExpression', function(a, b) {return a > b;}, left, right, context, hints);
+class EqualExpression extends RelationalExpression {
+	get expressionType() {return 'EqualExpression';}
+	calcFunction(a, b) {return a == b;}
 }
-function EqualExpression(left, right, context, hints) {
-	return new RelationalExpression('EqualExpression', function(a, b) {return a == b;}, left, right, context, hints);
+class NotEqualExpression extends RelationalExpression {
+	get expressionType() {return 'NotEqualExpression';}
+	calcFunction(a, b) {return a != b;}
 }
-function NotEqualExpression(left, right, context, hints) {
-	return new RelationalExpression('NotEqualExpression', function(a, b) {return a != b;}, left, right, context, hints);
+class LessThanOrEqualExpression extends RelationalExpression {
+	get expressionType() {return 'LessThanOrEqualExpression';}
+	calcFunction(a, b) {return a <= b;}
 }
-function LessThanOrEqualExpression(left, right, context, hints) {
-	return new RelationalExpression('LessThanOrEqualExpression', function(a, b) {return a <= b;}, left, right, context, hints);
-}
-function GreaterThanOrEqualExpression(left, right, context, hints) {
-	return new RelationalExpression('GreaterThanOrEqualExpression', function(a, b) {return a >= b;}, left, right, context, hints);
+class GreaterThanOrEqualExpression extends RelationalExpression {
+	get expressionType() {return 'GreaterThanOrEqualExpression';}
+	calcFunction(a, b) {return a >= b;}
 }
 
 
