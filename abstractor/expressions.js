@@ -637,60 +637,55 @@ VariableExpression.prototype.inspect = function() {
 	);
 };
 
+ASSIGNMENT_OPERATORS = {
+	'=': AssignmentExpression,
+	'+=': AddAssignmentExpression,
+	'-=': SubtractAssignmentExpression
+};
+
+BINARY_OPERATORS = {
+	'+': AddExpression,
+	'-': SubtractExpression,
+	'<': LessThanExpression,
+	'>': GreaterThanExpression,
+	'==': EqualExpression,
+	'!=': NotEqualExpression,
+	'<=': LessThanOrEqualExpression,
+	'>=': GreaterThanOrEqualExpression,
+	'&&': LogicalAndExpression,
+	'||': LogicalOrExpression,
+	'*': MultiplyExpression,
+	'/': DivideExpression,
+	'%': ModExpression,
+	'<<': ShiftLeftExpression,
+	'>>': ShiftRightExpression
+};
+
+POSTUPDATE_OPERATORS = {
+	'--': PostdecrementExpression,
+	'++': PostincrementExpression
+};
+
+UNARY_OPERATORS = {
+	'-': NegationExpression,
+	'!': LogicalNotExpression,
+	'*': DereferenceExpression
+};
+
 function constructExpression(node, context, hints) {
-	var operator;
+	var operator, constructor;
 
 	switch (node.type) {
 		case 'Assign':
 			operator = node.params[1];
-			switch (operator) {
-				case '=':
-					return new AssignmentExpression(node.params[0], node.params[2], context, hints);
-				case '+=':
-					return new AddAssignmentExpression(node.params[0], node.params[2], context, hints);
-				case '-=':
-					return new SubtractAssignmentExpression(node.params[0], node.params[2], context, hints);
-				default:
-					throw("Unrecognised assignment operator: " + operator);
-			}
-			break;
+			constructor = ASSIGNMENT_OPERATORS[operator];
+			assert(constructor, "Unrecognised assignment operator: " + operator);
+			return new constructor(node.params[0], node.params[2], context, hints);
 		case 'BinaryOp':
 			operator = node.params[0];
-			switch (operator) {
-				case '+':
-					return new AddExpression(node.params[1], node.params[2], context, hints);
-				case '-':
-					return new SubtractExpression(node.params[1], node.params[2], context, hints);
-				case '<':
-					return new LessThanExpression(node.params[1], node.params[2], context, hints);
-				case '>':
-					return new GreaterThanExpression(node.params[1], node.params[2], context, hints);
-				case '==':
-					return new EqualExpression(node.params[1], node.params[2], context, hints);
-				case '!=':
-					return new NotEqualExpression(node.params[1], node.params[2], context, hints);
-				case '<=':
-					return new LessThanOrEqualExpression(node.params[1], node.params[2], context, hints);
-				case '>=':
-					return new GreaterThanOrEqualExpression(node.params[1], node.params[2], context, hints);
-				case '&&':
-					return new LogicalAndExpression(node.params[1], node.params[2], context, hints);
-				case '||':
-					return new LogicalOrExpression(node.params[1], node.params[2], context, hints);
-				case '*':
-					return new MultiplyExpression(node.params[1], node.params[2], context, hints);
-				case '/':
-					return new DivideExpression(node.params[1], node.params[2], context, hints);
-				case '%':
-					return new ModExpression(node.params[1], node.params[2], context, hints);
-				case '<<':
-					return new ShiftLeftExpression(node.params[1], node.params[2], context, hints);
-				case '>>':
-					return new ShiftRightExpression(node.params[1], node.params[2], context, hints);
-				default:
-					throw("Unrecognised binary operator: " + operator);
-			}
-			break;
+			constructor = BINARY_OPERATORS[operator];
+			assert(constructor, "Unrecognised binary operator: " + operator);
+			return new constructor(node.params[1], node.params[2], context, hints);
 		case 'Conditional':
 			return new ConditionalExpression(node.params[0], node.params[1], node.params[2], context, hints);
 		case 'Const':
@@ -699,30 +694,16 @@ function constructExpression(node, context, hints) {
 			return new FunctionCallExpression(node.params[0], node.params[1], context, hints);
 		case 'Postupdate':
 			operator = node.params[0];
-			switch (operator) {
-				case '--':
-					return new PostdecrementExpression(node.params[1], context, hints);
-				case '++':
-					return new PostincrementExpression(node.params[1], context, hints);
-				default:
-					throw("Unrecognised postupdate operator: " + operator);
-			}
-			break;
+			constructor = POSTUPDATE_OPERATORS[operator];
+			assert(constructor, "Unrecognised postupdate operator: " + operator);
+			return new constructor(node.params[1], context, hints);
 		case 'Sequence':
 			return new CommaExpression(node.params[0], node.params[1], context, hints);
 		case 'UnaryOp':
 			operator = node.params[0];
-			switch (operator) {
-				case '-':
-					return new NegationExpression(node.params[1], context, hints);
-				case '!':
-					return new LogicalNotExpression(node.params[1], context, hints);
-				case '*':
-					return new DereferenceExpression(node.params[1], context, hints);
-				default:
-					throw("Unrecognised unary operator: " + operator);
-			}
-			break;
+			constructor = UNARY_OPERATORS[operator];
+			assert(constructor, "Unrecognised unary operator: " + operator);
+			return new constructor(node.params[1], context, hints);
 		case 'Var':
 			return new VariableExpression(node.params[0], context, hints);
 		default:
