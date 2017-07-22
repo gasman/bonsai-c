@@ -4,10 +4,16 @@ var util = require('util');
 var cTypes = require('./c_types');
 
 
-class ArithmeticExpression {
-	constructor(left, right, context, hints) {
+class Expression {
+	constructor(hints) {
 		this.resultIsUsed = hints.resultIsUsed;
 		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+	}
+}
+
+class ArithmeticExpression extends Expression {
+	constructor(left, right, context, hints) {
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': this.resultIsUsed
@@ -119,12 +125,11 @@ class ModExpression extends ArithmeticExpression {
 	}
 }
 
-class AssignmentExpression {
+class AssignmentExpression extends Expression {
 	get expressionType() {return 'AssignmentExpression';}
 
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': true
@@ -166,12 +171,11 @@ class SubtractAssignmentExpression extends AssignmentExpression {
 	}
 }
 
-class CommaExpression {
+class CommaExpression extends Expression {
 	get expressionType() {return 'CommaExpression';}
 
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': false
@@ -195,12 +199,11 @@ class CommaExpression {
 	}
 }
 
-class ConditionalExpression {
+class ConditionalExpression extends Expression {
 	get expressionType() {return 'ConditionalExpression';}
 
 	constructor(test, consequent, alternate, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.test = constructExpression(test, context, {
 			'resultIsUsed': true,
@@ -241,12 +244,11 @@ class ConditionalExpression {
 	}
 }
 
-class ConstExpression {
+class ConstExpression extends Expression {
 	get expressionType() {return 'ConstExpression';}
 
 	constructor(numString, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		if (numString.match(/^\d+$/)) {
 			this.value = parseInt(numString, 10);
@@ -277,12 +279,11 @@ class ConstExpression {
 }
 exports.ConstExpression = ConstExpression;
 
-class DereferenceExpression {
+class DereferenceExpression extends Expression {
 	get expressionType() {return 'DereferenceExpression';}
 
 	constructor(argument, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.argument = constructExpression(argument, context, {
 			'resultIsUsed': this.resultIsUsed
@@ -303,12 +304,11 @@ class DereferenceExpression {
 	}
 }
 
-class FunctionCallExpression {
+class FunctionCallExpression extends Expression {
 	get expressionType() {return 'FunctionCallExpression';}
 
 	constructor(callee, params, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.callee = constructExpression(callee, context, {
 			'resultIsUsed': true
@@ -331,12 +331,11 @@ class FunctionCallExpression {
 }
 
 
-class LogicalAndExpression {
+class LogicalAndExpression extends Expression {
 	get expressionType() {return 'LogicalAndExpression';}
 
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': this.resultIsUsed,
@@ -373,12 +372,11 @@ class LogicalAndExpression {
 }
 
 
-class LogicalNotExpression {
+class LogicalNotExpression extends Expression {
 	get expressionType() {return 'LogicalNotExpression';}
 
 	constructor(argument, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.argument = constructExpression(argument, context, {
 			'resultIsUsed': this.resultIsUsed,
@@ -409,12 +407,11 @@ class LogicalNotExpression {
 	}
 }
 
-class LogicalOrExpression {
+class LogicalOrExpression extends Expression {
 	get expressionType() {return 'LogicalOrExpression';}
 
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': this.resultIsUsed,
@@ -451,10 +448,9 @@ class LogicalOrExpression {
 }
 
 
-class RelationalExpression {
+class RelationalExpression extends Expression {
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.type = cTypes.int;
 
@@ -521,12 +517,11 @@ class GreaterThanOrEqualExpression extends RelationalExpression {
 }
 
 
-class NegationExpression {
+class NegationExpression extends Expression {
 	get expressionType() {return 'NegationExpression';}
 
 	constructor(argument, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.argument = constructExpression(argument, context, {
 			'resultIsUsed': this.resultIsUsed
@@ -555,12 +550,12 @@ class NegationExpression {
 	}
 }
 
-class PostdecrementExpression {
+class PostdecrementExpression extends Expression {
 	get expressionType() {return 'PostdecrementExpression';}
 
 	constructor(argument, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
+
 		this.argument = constructExpression(argument, context, {
 			'resultIsUsed': true
 		});
@@ -584,12 +579,12 @@ class PostdecrementExpression {
 	}
 }
 
-class PostincrementExpression {
+class PostincrementExpression extends Expression {
 	get expressionType() {return 'PostincrementExpression';}
 
 	constructor(argument, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
+
 		this.argument = constructExpression(argument, context, {
 			'resultIsUsed': true
 		});
@@ -613,12 +608,11 @@ class PostincrementExpression {
 	}
 }
 
-class ShiftLeftExpression {
+class ShiftLeftExpression extends Expression {
 	get expressionType() {return 'ShiftLeftExpression';}
 
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': this.resultIsUsed
@@ -651,12 +645,11 @@ class ShiftLeftExpression {
 	}
 }
 
-class ShiftRightExpression {
+class ShiftRightExpression extends Expression {
 	get expressionType() {return 'ShiftRightExpression';}
 
 	constructor(left, right, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.left = constructExpression(left, context, {
 			'resultIsUsed': this.resultIsUsed
@@ -689,12 +682,11 @@ class ShiftRightExpression {
 	}
 }
 
-class VariableExpression {
+class VariableExpression extends Expression {
 	get expressionType() {return 'VariableExpression';}
 
 	constructor(variableName, context, hints) {
-		this.resultIsUsed = hints.resultIsUsed;
-		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+		super(hints);
 
 		this.variable = context.get(variableName);
 		if (this.variable === null) {
