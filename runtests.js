@@ -115,5 +115,6 @@ testCompile('tests/global_array.c', 42);
 testCompile('tests/shift_left.c', 42);
 testCompile('tests/shift_right.c', 42);
 testCompile('tests/pointer_var.c', 42);
+testCompile('tests/pointer_add.c', 42);
 
 console.log("All tests passed");

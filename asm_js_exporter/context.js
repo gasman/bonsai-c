@@ -89,10 +89,10 @@ Context.prototype.importByExprTree = function(name, exprTree) {
 	defined as the expression exprTree (in estree format). The variable must
 	have previously been allocated via allocateVariable; we return that variable. */
 
-	if (name in this.importedNames) return;
-
 	var variable = this.getByName(name);
 	assert(variable, "Variable " + name + " has not been allocated");
+
+	if (name in this.importedNames) return variable;
 
 	this.variableDeclarations.push(
 		estree.VariableDeclarator(estree.Identifier(name), exprTree)

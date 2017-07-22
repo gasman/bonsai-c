@@ -5,7 +5,7 @@ var estree = require('./estree');
 var asmJsTypes = require('./asm_js_types');
 var cTypes = require('../abstractor/c_types');
 
-function AddExpression(left, right, intendedType) {
+function AddExpression(left, right, intendedType, context) {
 	if (intendedType.category == 'int') {
 		if (
 			left.type.satisfies(asmJsTypes.int) ||
@@ -45,6 +45,48 @@ function AddExpression(left, right, intendedType) {
 			'intendedType': intendedType,
 			'isAdditiveExpression': true
 		};
+	} else if (intendedType.category == 'pointer') {
+		if (left.intendedType.category == 'pointer') {
+			/* pointer + int: a + b => a + (b * sizeOf(targetType)) */
+			assert(right.intendedType == cTypes.int);
+
+			right = MultiplyExpression(
+				right,
+				ConstExpression(intendedType.targetType.size, cTypes.int),
+				cTypes.int, context
+			);
+
+			return {
+				'tree': estree.BinaryExpression('+',
+					wrapFunctionCall(left).tree,
+					wrapFunctionCall(right).tree
+				),
+				'type': asmJsTypes.intish,
+				'intendedType': intendedType,
+				'isAdditiveExpression': true
+			};
+
+		} else {
+			/* int + pointer: a + b => (a * sizeOf(targetType)) + b */
+			assert(left.intendedType == cTypes.int);
+			assert(right.intendedType.category == 'pointer');
+
+			left = MultiplyExpression(
+				left,
+				ConstExpression(intendedType.targetType.size, cTypes.int),
+				cTypes.int, context
+			);
+
+			return {
+				'tree': estree.BinaryExpression('+',
+					wrapFunctionCall(left).tree,
+					wrapFunctionCall(right).tree
+				),
+				'type': asmJsTypes.intish,
+				'intendedType': intendedType,
+				'isAdditiveExpression': true
+			};
+		}
 	} else {
 		throw(util.format(
 			"Can't handle AddExpressions of type %s", util.inspect(intendedType)
@@ -53,24 +95,24 @@ function AddExpression(left, right, intendedType) {
 }
 exports.AddExpression = AddExpression;
 
-function AddAssignmentExpression(left, right, intendedType) {
+function AddAssignmentExpression(left, right, intendedType, context) {
 	assert(left.isRepeatable,
 		"Left hand side of an add-assignment must be a repeatable expression - got " + util.inspect(left)
 	);
 
 	return AssignmentExpression(left,
-		AddExpression(left, right, intendedType)
+		AddExpression(left, right, intendedType, context)
 	);
 }
 exports.AddAssignmentExpression = AddAssignmentExpression;
 
-function SubtractAssignmentExpression(left, right, intendedType) {
+function SubtractAssignmentExpression(left, right, intendedType, context) {
 	assert(left.isRepeatable,
 		"Left hand side of an add-assignment must be a repeatable expression - got " + util.inspect(left)
 	);
 
 	return AssignmentExpression(left,
-		SubtractExpression(left, right, intendedType)
+		SubtractExpression(left, right, intendedType, context)
 	);
 }
 exports.SubtractAssignmentExpression = SubtractAssignmentExpression;
@@ -463,7 +505,8 @@ function PostupdateExpression(internalOp, arg, resultIsUsed, context) {
 					internalOp(
 						AssignmentExpression(VariableExpression(tempVariable), arg),
 						ConstExpression(1, cTypes.int),
-						cTypes.int
+						cTypes.int,
+						context
 					)
 				),
 				VariableExpression(tempVariable)
@@ -520,7 +563,7 @@ function ShiftRightExpression(left, right, intendedType) {
 }
 exports.ShiftRightExpression = ShiftRightExpression;
 
-function SubtractExpression(left, right, intendedType) {
+function SubtractExpression(left, right, intendedType, context) {
 	if (intendedType.category == 'int') {
 		if (
 			left.type.satisfies(asmJsTypes.int) ||
@@ -598,15 +641,15 @@ function compileExpression(expression, context) {
 		case 'AddExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
-			return AddExpression(left, right, expression.type);
+			return AddExpression(left, right, expression.type, context);
 		case 'AddAssignmentExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
-			return AddAssignmentExpression(left, right, expression.type);
+			return AddAssignmentExpression(left, right, expression.type, context);
 		case 'SubtractAssignmentExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
-			return SubtractAssignmentExpression(left, right, expression.type);
+			return SubtractAssignmentExpression(left, right, expression.type, context);
 		case 'AssignmentExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
@@ -711,7 +754,7 @@ function compileExpression(expression, context) {
 		case 'SubtractExpression':
 			left = compileExpression(expression.left, context);
 			right = compileExpression(expression.right, context);
-			return SubtractExpression(left, right, expression.type);
+			return SubtractExpression(left, right, expression.type, context);
 		case 'VariableExpression':
 			var variable = context.get(expression.variable.id);
 			if (!variable) {

@@ -32,9 +32,34 @@ function ArithmeticExpression(expressionType, calcFunction, left, right, context
 				this.left.compileTimeConstantValue | 0, this.right.compileTimeConstantValue | 0
 			) | 0;
 		}
+	} else if (
+		(this.expressionType == 'AddExpression' || this.expressionType == 'SubtractExpression') &&
+		this.left.type.category == 'pointer' && this.right.type == cTypes.int
+	) {
+		this.type = this.left.type;
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = calcFunction(
+				this.left.compileTimeConstantValue,
+				this.right.compileTimeConstantValue * this.type.targetType.size
+			) >>> 0;
+		}
+	} else if (
+		(this.expressionType == 'AddExpression') &&
+		this.left.type == cTypes.int && this.right.type.category == 'pointer'
+	) {
+		this.type = this.right.type;
+		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+			this.isCompileTimeConstant = true;
+			this.compileTimeConstantValue = calcFunction(
+				this.left.compileTimeConstantValue * this.type.targetType.size,
+				this.right.compileTimeConstantValue
+			) >>> 0;
+		}
 	} else {
 		throw(
-			util.format("Don't know how to handle AddExpression with types: %s, %s",
+			util.format("Don't know how to handle %s with types: %s, %s",
+				this.expressionType,
 				util.inspect(this.left.type),
 				util.inspect(this.right.type)
 			)
