@@ -4,97 +4,119 @@ var util = require('util');
 var cTypes = require('./c_types');
 
 
-function ArithmeticExpression(expressionType, calcFunction, left, right, context, hints) {
-	this.expressionType = expressionType;
-	this.resultIsUsed = hints.resultIsUsed;
-	this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
+class ArithmeticExpression {
+	constructor(left, right, context, hints) {
+		this.resultIsUsed = hints.resultIsUsed;
+		this.resultIsUsedAsBoolean = hints.resultIsUsedAsBoolean;
 
-	this.left = constructExpression(left, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
-	this.right = constructExpression(right, context, {
-		'resultIsUsed': this.resultIsUsed
-	});
+		this.left = constructExpression(left, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
+		this.right = constructExpression(right, context, {
+			'resultIsUsed': this.resultIsUsed
+		});
 
-	if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
-		this.type = cTypes.double;
-		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = +calcFunction(
-				+this.left.compileTimeConstantValue, +this.right.compileTimeConstantValue,
-				this.type
+		if (this.left.type == cTypes.double || this.right.type == cTypes.double) {
+			this.type = cTypes.double;
+			if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = +this.calcFunction(
+					+this.left.compileTimeConstantValue, +this.right.compileTimeConstantValue,
+					this.type
+				);
+			}
+		} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
+			this.type = cTypes.int;
+			if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = this.calcFunction(
+					this.left.compileTimeConstantValue | 0, this.right.compileTimeConstantValue | 0,
+					this.type
+				) | 0;
+			}
+		} else if (
+			(this.expressionType == 'AddExpression' || this.expressionType == 'SubtractExpression') &&
+			this.left.type.category == 'pointer' && this.right.type == cTypes.int
+		) {
+			this.type = this.left.type;
+			if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = this.calcFunction(
+					this.left.compileTimeConstantValue,
+					this.right.compileTimeConstantValue * this.type.targetType.size,
+					this.type
+				) >>> 0;
+			}
+		} else if (
+			(this.expressionType == 'AddExpression') &&
+			this.left.type == cTypes.int && this.right.type.category == 'pointer'
+		) {
+			this.type = this.right.type;
+			if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
+				this.isCompileTimeConstant = true;
+				this.compileTimeConstantValue = this.calcFunction(
+					this.left.compileTimeConstantValue * this.type.targetType.size,
+					this.right.compileTimeConstantValue,
+					this.type
+				) >>> 0;
+			}
+		} else {
+			throw(
+				util.format("Don't know how to handle %s with types: %s, %s",
+					this.expressionType,
+					util.inspect(this.left.type),
+					util.inspect(this.right.type)
+				)
 			);
 		}
-	} else if (this.left.type == cTypes.int && this.right.type == cTypes.int) {
-		this.type = cTypes.int;
-		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = calcFunction(
-				this.left.compileTimeConstantValue | 0, this.right.compileTimeConstantValue | 0,
-				this.type
-			) | 0;
-		}
-	} else if (
-		(this.expressionType == 'AddExpression' || this.expressionType == 'SubtractExpression') &&
-		this.left.type.category == 'pointer' && this.right.type == cTypes.int
-	) {
-		this.type = this.left.type;
-		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = calcFunction(
-				this.left.compileTimeConstantValue,
-				this.right.compileTimeConstantValue * this.type.targetType.size,
-				this.type
-			) >>> 0;
-		}
-	} else if (
-		(this.expressionType == 'AddExpression') &&
-		this.left.type == cTypes.int && this.right.type.category == 'pointer'
-	) {
-		this.type = this.right.type;
-		if (this.left.isCompileTimeConstant && this.right.isCompileTimeConstant) {
-			this.isCompileTimeConstant = true;
-			this.compileTimeConstantValue = calcFunction(
-				this.left.compileTimeConstantValue * this.type.targetType.size,
-				this.right.compileTimeConstantValue,
-				this.type
-			) >>> 0;
-		}
-	} else {
-		throw(
-			util.format("Don't know how to handle %s with types: %s, %s",
-				this.expressionType,
-				util.inspect(this.left.type),
-				util.inspect(this.right.type)
-			)
+	}
+
+	inspect() {
+		return util.format(
+			"%s: (%s, %s) <%s>",
+			this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
 }
-AddExpression.prototype.inspect = function() {
-	return util.format(
-		"%s: (%s, %s) <%s>",
-		this.expressionType, util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
-	);
-};
 
-function AddExpression(left, right, context, hints) {
-	return new ArithmeticExpression('AddExpression', function(a, b) {return a + b;}, left, right, context, hints);
+class AddExpression extends ArithmeticExpression {
+	get expressionType() {return 'AddExpression';}
+
+	calcFunction(a, b, typ) {
+		return a + b;
+	}
 }
-function SubtractExpression(left, right, context, hints) {
-	return new ArithmeticExpression('SubtractExpression', function(a, b) {return a - b;}, left, right, context, hints);
+
+class SubtractExpression extends ArithmeticExpression {
+	get expressionType() {return 'SubtractExpression';}
+
+	calcFunction(a, b, typ) {
+		return a - b;
+	}
 }
-function MultiplyExpression(left, right, context, hints) {
-	return new ArithmeticExpression(
-		'MultiplyExpression',
-		function(a, b, typ) {return (typ.category == 'int') ? Math.imul(a, b) : (a * b);},
-		left, right, context, hints
-	);
+
+class MultiplyExpression extends ArithmeticExpression {
+	get expressionType() {return 'MultiplyExpression';}
+
+	calcFunction(a, b, typ) {
+		return (typ.category == 'int') ? Math.imul(a, b) : (a * b);
+	}
 }
-function DivideExpression(left, right, context, hints) {
-	return new ArithmeticExpression('DivideExpression', function(a, b) {return a / b;}, left, right, context, hints);
+
+class DivideExpression extends ArithmeticExpression {
+	get expressionType() {return 'DivideExpression';}
+
+	calcFunction(a, b, typ) {
+		return a / b;
+	}
 }
-function ModExpression(left, right, context, hints) {
-	return new ArithmeticExpression('ModExpression', function(a, b) {return a % b;}, left, right, context, hints);
+
+class ModExpression extends ArithmeticExpression {
+	get expressionType() {return 'ModExpression';}
+
+	calcFunction(a, b, typ) {
+		return a % b;
+	}
 }
 
 function AddAssignmentExpression(left, right, context, hints) {
@@ -212,7 +234,7 @@ function ConditionalExpression(test, consequent, alternate, context, hints) {
 
 	if (this.test.isCompileTimeConstant && this.consequent.isCompileTimeConstant && this.alternate.isCompileTimeConstant) {
 		this.isCompileTimeConstant = true;
-		this.compileTimeConstantValue = (this.test.compileTimeConstantValue ? this.consequent.compileTimeConstantValue : this.alternate.compileTimeConstantValue)
+		this.compileTimeConstantValue = (this.test.compileTimeConstantValue ? this.consequent.compileTimeConstantValue : this.alternate.compileTimeConstantValue);
 	}
 }
 ConditionalExpression.prototype.inspect = function() {
