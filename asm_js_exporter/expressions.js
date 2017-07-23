@@ -434,6 +434,22 @@ function ModExpression(left, right, intendedType) {
 }
 exports.ModExpression = ModExpression;
 
+function NegationExpression(arg) {
+	typ = null;
+	if (arg.tree.type == 'Literal' && arg.tree.value > 0 && arg.tree.value <= 0x80000000) {
+		typ = asmJsTypes.signed;
+	} else if (arg.type.satisfies(asmJsTypes.int)) {
+		typ = asmJsTypes.intish;
+	} else {
+		throw("Can't handle a NegationExpression with arg type: " + util.inspect(arg.type));
+	}
+
+	return {
+		'tree': estree.UnaryExpression('-', wrapFunctionCall(arg).tree, true),
+		'type': typ
+	};
+}
+
 function RelationalExpression(operator, left, right, intendedOperandType) {
 	assert(intendedOperandType.category == 'int' || intendedOperandType.category == 'double',
 		util.format(
@@ -728,19 +744,7 @@ function compileExpression(expression, context) {
 			return GreaterThanOrEqualExpression(left, right, expression.operandType);
 		case 'NegationExpression':
 			arg = compileExpression(expression.argument, context);
-			typ = null;
-			if (arg.tree.type == 'Literal' && arg.tree.value > 0 && arg.tree.value <= 0x80000000) {
-				typ = asmJsTypes.signed;
-			} else if (arg.type.satisfies(asmJsTypes.int)) {
-				typ = asmJsTypes.intish;
-			} else {
-				throw("Can't handle a NegationExpression with arg type: " + util.inspect(arg.type));
-			}
-
-			return {
-				'tree': estree.UnaryExpression('-', wrapFunctionCall(arg).tree, true),
-				'type': typ
-			};
+			return NegationExpression(arg);
 		case 'PostdecrementExpression':
 			arg = compileExpression(expression.argument, context);
 			return PostdecrementExpression(arg, expression.resultIsUsed, context);
