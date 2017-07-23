@@ -174,15 +174,11 @@ class ModExpression extends ArithmeticExpression {
 class AssignmentExpression extends Expression {
 	get expressionType() {return 'AssignmentExpression';}
 
-	constructor(left, right, context, hints) {
+	constructor(left, right, hints) {
 		super(hints);
 
-		this.left = constructExpression(left, context, {
-			'resultIsUsed': true
-		});
-		this.right = constructExpression(right, context, {
-			'resultIsUsed': true
-		});
+		this.left = left;
+		this.right = right;
 		this.type = this.left.type;
 	}
 
@@ -191,6 +187,16 @@ class AssignmentExpression extends Expression {
 			"Assignment: (%s = %s) <%s>",
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[0], context, {
+			'resultIsUsed': true
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': true
+		});
+		return new AssignmentExpression(left, right, hints);
 	}
 }
 
@@ -204,6 +210,16 @@ class AddAssignmentExpression extends AssignmentExpression {
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[0], context, {
+			'resultIsUsed': true
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': true
+		});
+		return new AddAssignmentExpression(left, right, hints);
+	}
 }
 
 class SubtractAssignmentExpression extends AssignmentExpression {
@@ -214,6 +230,16 @@ class SubtractAssignmentExpression extends AssignmentExpression {
 			"SubtractAssignment: (%s += %s) <%s>",
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var left = constructExpression(node.params[0], context, {
+			'resultIsUsed': true
+		});
+		var right = constructExpression(node.params[2], context, {
+			'resultIsUsed': true
+		});
+		return new SubtractAssignmentExpression(left, right, hints);
 	}
 }
 
@@ -900,7 +926,7 @@ function constructExpression(node, context, hints) {
 			operator = node.params[1];
 			constructor = ASSIGNMENT_OPERATORS[operator];
 			assert(constructor, "Unrecognised assignment operator: " + operator);
-			return new constructor(node.params[0], node.params[2], context, hints);
+			return constructor.fromNode(node, context, hints);
 		case 'BinaryOp':
 			operator = node.params[0];
 			constructor = BINARY_OPERATORS[operator];
