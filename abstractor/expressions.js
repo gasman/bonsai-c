@@ -280,21 +280,12 @@ class CommaExpression extends Expression {
 class ConditionalExpression extends Expression {
 	get expressionType() {return 'ConditionalExpression';}
 
-	constructor(test, consequent, alternate, context, hints) {
+	constructor(test, consequent, alternate, hints) {
 		super(hints);
 
-		this.test = constructExpression(test, context, {
-			'resultIsUsed': true,
-			'resultIsUsedAsBoolean': true
-		});
-		this.consequent = constructExpression(consequent, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
-		});
-		this.alternate = constructExpression(alternate, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
-		});
+		this.test = test;
+		this.consequent = consequent;
+		this.alternate = alternate;
 
 		if (this.consequent.type == cTypes.int && this.alternate.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -319,6 +310,23 @@ class ConditionalExpression extends Expression {
 			util.inspect(this.test), util.inspect(this.consequent), util.inspect(this.alternate),
 			util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var test = constructExpression(node.params[0], context, {
+			'resultIsUsed': true,
+			'resultIsUsedAsBoolean': true
+		});
+		var consequent = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': hints.resultIsUsedAsBoolean
+		});
+		var alternate = constructExpression(node.params[2], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': hints.resultIsUsedAsBoolean
+		});
+
+		return new ConditionalExpression(test, consequent, alternate, hints);
 	}
 }
 
@@ -933,7 +941,7 @@ function constructExpression(node, context, hints) {
 			assert(constructor, "Unrecognised binary operator: " + operator);
 			return constructor.fromNode(node, context, hints);
 		case 'Conditional':
-			return new ConditionalExpression(node.params[0], node.params[1], node.params[2], context, hints);
+			return ConditionalExpression.fromNode(node, context, hints);
 		case 'Const':
 			return ConstExpression.fromNode(node, context, hints);
 		case 'FunctionCall':
