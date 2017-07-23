@@ -725,12 +725,9 @@ class NegationExpression extends Expression {
 class PostdecrementExpression extends Expression {
 	get expressionType() {return 'PostdecrementExpression';}
 
-	constructor(argument, context, hints) {
+	constructor(argument, hints) {
 		super(hints);
-
-		this.argument = constructExpression(argument, context, {
-			'resultIsUsed': true
-		});
+		this.argument = argument;
 
 		if (this.argument.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -749,17 +746,22 @@ class PostdecrementExpression extends Expression {
 			util.inspect(this.argument), util.inspect(this.type)
 		);
 	}
+
+	static fromNode(node, context, hints) {
+		var argument = constructExpression(node.params[1], context, {
+			'resultIsUsed': true
+		});
+
+		return new PostdecrementExpression(argument, hints);
+	}
 }
 
 class PostincrementExpression extends Expression {
 	get expressionType() {return 'PostincrementExpression';}
 
-	constructor(argument, context, hints) {
+	constructor(argument, hints) {
 		super(hints);
-
-		this.argument = constructExpression(argument, context, {
-			'resultIsUsed': true
-		});
+		this.argument = argument;
 
 		if (this.argument.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -777,6 +779,14 @@ class PostincrementExpression extends Expression {
 			"Postdecrement: (%s) <%s>",
 			util.inspect(this.argument), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var argument = constructExpression(node.params[1], context, {
+			'resultIsUsed': true
+		});
+
+		return new PostincrementExpression(argument, hints);
 	}
 }
 
@@ -950,7 +960,7 @@ function constructExpression(node, context, hints) {
 			operator = node.params[0];
 			constructor = POSTUPDATE_OPERATORS[operator];
 			assert(constructor, "Unrecognised postupdate operator: " + operator);
-			return new constructor(node.params[1], context, hints);
+			return constructor.fromNode(node, context, hints);
 		case 'Sequence':
 			return CommaExpression.fromNode(node, context, hints);
 		case 'UnaryOp':
