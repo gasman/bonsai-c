@@ -98,6 +98,7 @@ class AddExpression extends ArithmeticExpression {
 		return new AddExpression(left, right, hints);
 	}
 }
+exports.AddExpression = AddExpression;
 
 class SubtractExpression extends ArithmeticExpression {
 	get expressionType() {return 'SubtractExpression';}
@@ -116,6 +117,7 @@ class SubtractExpression extends ArithmeticExpression {
 		return new SubtractExpression(left, right, hints);
 	}
 }
+exports.SubtractExpression = SubtractExpression;
 
 class MultiplyExpression extends ArithmeticExpression {
 	get expressionType() {return 'MultiplyExpression';}
@@ -134,6 +136,7 @@ class MultiplyExpression extends ArithmeticExpression {
 		return new MultiplyExpression(left, right, hints);
 	}
 }
+exports.MultiplyExpression = MultiplyExpression;
 
 class DivideExpression extends ArithmeticExpression {
 	get expressionType() {return 'DivideExpression';}
@@ -152,6 +155,7 @@ class DivideExpression extends ArithmeticExpression {
 		return new DivideExpression(left, right, hints);
 	}
 }
+exports.DivideExpression = DivideExpression;
 
 class ModExpression extends ArithmeticExpression {
 	get expressionType() {return 'ModExpression';}
@@ -170,6 +174,7 @@ class ModExpression extends ArithmeticExpression {
 		return new ModExpression(left, right, hints);
 	}
 }
+exports.ModExpression = ModExpression;
 
 class AssignmentExpression extends Expression {
 	get expressionType() {return 'AssignmentExpression';}
@@ -199,7 +204,7 @@ class AssignmentExpression extends Expression {
 		return new AssignmentExpression(left, right, hints);
 	}
 }
-
+exports.AssignmentExpression = AssignmentExpression;
 
 class AddAssignmentExpression extends AssignmentExpression {
 	get expressionType() {return 'AddAssignmentExpression';}
@@ -221,6 +226,7 @@ class AddAssignmentExpression extends AssignmentExpression {
 		return new AddAssignmentExpression(left, right, hints);
 	}
 }
+exports.AddAssignmentExpression = AddAssignmentExpression;
 
 class SubtractAssignmentExpression extends AssignmentExpression {
 	get expressionType() {return 'SubtractAssignmentExpression';}
@@ -242,6 +248,7 @@ class SubtractAssignmentExpression extends AssignmentExpression {
 		return new SubtractAssignmentExpression(left, right, hints);
 	}
 }
+exports.SubtractAssignmentExpression = SubtractAssignmentExpression;
 
 class CommaExpression extends Expression {
 	get expressionType() {return 'CommaExpression';}
@@ -276,6 +283,7 @@ class CommaExpression extends Expression {
 		return new CommaExpression(left, right, hints);
 	}
 }
+exports.CommaExpression = CommaExpression;
 
 class ConditionalExpression extends Expression {
 	get expressionType() {return 'ConditionalExpression';}
@@ -329,6 +337,7 @@ class ConditionalExpression extends Expression {
 		return new ConditionalExpression(test, consequent, alternate, hints);
 	}
 }
+exports.ConditionalExpression = ConditionalExpression;
 
 class ConstExpression extends Expression {
 	get expressionType() {return 'ConstExpression';}
@@ -402,6 +411,7 @@ class DereferenceExpression extends Expression {
 		return new DereferenceExpression(argument, hints);
 	}
 }
+exports.DereferenceExpression = DereferenceExpression;
 
 class FunctionCallExpression extends Expression {
 	get expressionType() {return 'FunctionCallExpression';}
@@ -436,7 +446,7 @@ class FunctionCallExpression extends Expression {
 		return new FunctionCallExpression(callee, params, hints);
 	}
 }
-
+exports.FunctionCallExpression = FunctionCallExpression;
 
 class LogicalAndExpression extends Expression {
 	get expressionType() {return 'LogicalAndExpression';}
@@ -484,7 +494,7 @@ class LogicalAndExpression extends Expression {
 		return new LogicalAndExpression(left, right, hints);
 	}
 }
-
+exports.LogicalAndExpression = LogicalAndExpression;
 
 class LogicalNotExpression extends Expression {
 	get expressionType() {return 'LogicalNotExpression';}
@@ -524,6 +534,7 @@ class LogicalNotExpression extends Expression {
 		return new LogicalNotExpression(argument, hints);
 	}
 }
+exports.LogicalNotExpression = LogicalNotExpression;
 
 class LogicalOrExpression extends Expression {
 	get expressionType() {return 'LogicalOrExpression';}
@@ -571,7 +582,7 @@ class LogicalOrExpression extends Expression {
 		return new LogicalOrExpression(left, right, hints);
 	}
 }
-
+exports.LogicalOrExpression = LogicalOrExpression;
 
 class RelationalExpression extends Expression {
 	constructor(left, right, hints) {
@@ -625,6 +636,8 @@ class LessThanExpression extends RelationalExpression {
 		return new LessThanExpression(left, right, hints);
 	}
 }
+exports.LessThanExpression = LessThanExpression;
+
 class GreaterThanExpression extends RelationalExpression {
 	get expressionType() {return 'GreaterThanExpression';}
 	calcFunction(a, b) {return a > b;}
@@ -639,6 +652,8 @@ class GreaterThanExpression extends RelationalExpression {
 		return new GreaterThanExpression(left, right, hints);
 	}
 }
+exports.GreaterThanExpression = GreaterThanExpression;
+
 class EqualExpression extends RelationalExpression {
 	get expressionType() {return 'EqualExpression';}
 	calcFunction(a, b) {return a == b;}
@@ -653,6 +668,8 @@ class EqualExpression extends RelationalExpression {
 		return new EqualExpression(left, right, hints);
 	}
 }
+exports.EqualExpression = EqualExpression;
+
 class NotEqualExpression extends RelationalExpression {
 	get expressionType() {return 'NotEqualExpression';}
 	calcFunction(a, b) {return a != b;}
@@ -667,6 +684,8 @@ class NotEqualExpression extends RelationalExpression {
 		return new NotEqualExpression(left, right, hints);
 	}
 }
+exports.NotEqualExpression = NotEqualExpression;
+
 class LessThanOrEqualExpression extends RelationalExpression {
 	get expressionType() {return 'LessThanOrEqualExpression';}
 	calcFunction(a, b) {return a <= b;}
@@ -681,6 +700,8 @@ class LessThanOrEqualExpression extends RelationalExpression {
 		return new LessThanOrEqualExpression(left, right, hints);
 	}
 }
+exports.LessThanOrEqualExpression = LessThanOrEqualExpression;
+
 class GreaterThanOrEqualExpression extends RelationalExpression {
 	get expressionType() {return 'GreaterThanOrEqualExpression';}
 	calcFunction(a, b) {return a >= b;}
@@ -695,7 +716,7 @@ class GreaterThanOrEqualExpression extends RelationalExpression {
 		return new GreaterThanOrEqualExpression(left, right, hints);
 	}
 }
-
+exports.GreaterThanOrEqualExpression = GreaterThanOrEqualExpression;
 
 class NegationExpression extends Expression {
 	get expressionType() {return 'NegationExpression';}
@@ -733,6 +754,7 @@ class NegationExpression extends Expression {
 		return new NegationExpression(argument, hints);
 	}
 }
+exports.NegationExpression = NegationExpression;
 
 class PostdecrementExpression extends Expression {
 	get expressionType() {return 'PostdecrementExpression';}
@@ -767,6 +789,7 @@ class PostdecrementExpression extends Expression {
 		return new PostdecrementExpression(argument, hints);
 	}
 }
+exports.PostdecrementExpression = PostdecrementExpression;
 
 class PostincrementExpression extends Expression {
 	get expressionType() {return 'PostincrementExpression';}
@@ -801,6 +824,7 @@ class PostincrementExpression extends Expression {
 		return new PostincrementExpression(argument, hints);
 	}
 }
+exports.PostincrementExpression = PostincrementExpression;
 
 class ShiftLeftExpression extends Expression {
 	get expressionType() {return 'ShiftLeftExpression';}
@@ -844,6 +868,7 @@ class ShiftLeftExpression extends Expression {
 		return new ShiftLeftExpression(left, right, hints);
 	}
 }
+exports.ShiftLeftExpression = ShiftLeftExpression;
 
 class ShiftRightExpression extends Expression {
 	get expressionType() {return 'ShiftRightExpression';}
@@ -887,6 +912,7 @@ class ShiftRightExpression extends Expression {
 		return new ShiftRightExpression(left, right, hints);
 	}
 }
+exports.ShiftRightExpression = ShiftRightExpression;
 
 class VariableExpression extends Expression {
 	get expressionType() {return 'VariableExpression';}
@@ -912,6 +938,7 @@ class VariableExpression extends Expression {
 		return new VariableExpression(variable, hints);
 	}
 }
+exports.VariableExpression = VariableExpression;
 
 ASSIGNMENT_OPERATORS = {
 	'=': AssignmentExpression,
