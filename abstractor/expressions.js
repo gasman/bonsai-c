@@ -270,8 +270,8 @@ class CommaExpression extends Expression {
 			'resultIsUsed': false
 		});
 		var right = constructExpression(node.params[1], context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': this.resultIsUsedAsBoolean
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': hints.resultIsUsedAsBoolean
 		});
 		return new CommaExpression(left, right, hints);
 	}
@@ -377,12 +377,9 @@ exports.ConstExpression = ConstExpression;
 class DereferenceExpression extends Expression {
 	get expressionType() {return 'DereferenceExpression';}
 
-	constructor(argument, context, hints) {
+	constructor(argument, hints) {
 		super(hints);
-
-		this.argument = constructExpression(argument, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
+		this.argument = argument;
 
 		assert(
 			this.argument.type.category == 'pointer',
@@ -396,6 +393,13 @@ class DereferenceExpression extends Expression {
 			"Dereference: (%s) <%s>",
 			util.inspect(this.argument), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var argument = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new DereferenceExpression(argument, hints);
 	}
 }
 
@@ -485,13 +489,9 @@ class LogicalAndExpression extends Expression {
 class LogicalNotExpression extends Expression {
 	get expressionType() {return 'LogicalNotExpression';}
 
-	constructor(argument, context, hints) {
+	constructor(argument, hints) {
 		super(hints);
-
-		this.argument = constructExpression(argument, context, {
-			'resultIsUsed': this.resultIsUsed,
-			'resultIsUsedAsBoolean': true
-		});
+		this.argument = argument;
 
 		if (this.argument.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -514,6 +514,14 @@ class LogicalNotExpression extends Expression {
 			"LogicalNot: (%s) <%s>",
 			util.inspect(this.argument), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var argument = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed,
+			'resultIsUsedAsBoolean': true
+		});
+		return new LogicalNotExpression(argument, hints);
 	}
 }
 
@@ -692,12 +700,9 @@ class GreaterThanOrEqualExpression extends RelationalExpression {
 class NegationExpression extends Expression {
 	get expressionType() {return 'NegationExpression';}
 
-	constructor(argument, context, hints) {
+	constructor(argument, hints) {
 		super(hints);
-
-		this.argument = constructExpression(argument, context, {
-			'resultIsUsed': this.resultIsUsed
-		});
+		this.argument = argument;
 
 		if (this.argument.type == cTypes.int) {
 			this.type = cTypes.int;
@@ -719,6 +724,13 @@ class NegationExpression extends Expression {
 			"Negation: (%s) <%s>",
 			util.inspect(this.argument), util.inspect(this.type)
 		);
+	}
+
+	static fromNode(node, context, hints) {
+		var argument = constructExpression(node.params[1], context, {
+			'resultIsUsed': hints.resultIsUsed
+		});
+		return new NegationExpression(argument, hints);
 	}
 }
 
@@ -967,7 +979,7 @@ function constructExpression(node, context, hints) {
 			operator = node.params[0];
 			constructor = UNARY_OPERATORS[operator];
 			assert(constructor, "Unrecognised unary operator: " + operator);
-			return new constructor(node.params[1], context, hints);
+			return constructor.fromNode(node, context, hints);
 		case 'Var':
 			return VariableExpression.fromNode(node, context, hints);
 		default:
