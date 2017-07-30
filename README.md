@@ -3,7 +3,7 @@ bonsai-c
 
 ***Very early work-in-progress***
 
-bonsai-c is a C-to-Javascript compiler, outputting asm.js-compatible code, operating on a fundamentally different model to Emscripten.
+bonsai-c is a compiler from C to WebAssembly and asm.js-compatible Javascript, operating on a fundamentally different model to Emscripten.
 
 Wait, what's wrong with Emscripten?
 -----------------------------------
@@ -35,4 +35,10 @@ Then, from the root of the codebase:
 Usage
 -----
 
+To compile to asm.js:
+
     node bonsai-c.js --asmjs infile.c
+
+To compile to WebAssembly text format:
+
+    node bonsai-c.js --wast infile.c
