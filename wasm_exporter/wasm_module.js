@@ -1,16 +1,18 @@
 var util = require('util');
 
 var wasmTypes = require('./types');
+var compiler = require('./compiler');
 
 function quoteString(str) {
 	return '"' + str.replace(/[\\"']/g, '\\$&') + '"';
 }
 
 class FunctionDefinition {
-	constructor(name, typ, isExported) {
+	constructor(name, typ, isExported, body) {
 		this.name = name;
 		this.type = typ;
 		this.isExported = isExported;
+		this.body = body;
 	}
 
 	asText() {
@@ -25,12 +27,24 @@ class FunctionDefinition {
 		if (this.type.returnType.category != 'void') {
 			atoms.push(this.type.returnTypeAsText());
 		}
-		return "  (" + atoms.join(' ') + ")\n";
+		var out = "  (" + atoms.join(' ') + "\n";
+
+		var body = [];
+		for (var i = 0; i < this.body.length; i++) {
+			body.push(this.body[i].asText());
+		}
+		out += "    " + body.join("\n    ");
+
+		out += ")\n";
+		return out;
 	}
 
 	static fromAbstractFunctionDefinition(fd) {
 		var typ = wasmTypes.fromCType(fd.type);
-		return new FunctionDefinition(fd.name, typ, fd.isExported);
+		var out = [];
+		compiler.compile(fd.body, out);
+
+		return new FunctionDefinition(fd.name, typ, fd.isExported, out);
 	}
 }
 
