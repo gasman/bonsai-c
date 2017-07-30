@@ -1,9 +1,12 @@
+var assert = require('assert');
 var util = require('util');
 
 var types = require('./types');
 var instructions = require('./instructions');
 
 function compileExpression(expr, context, out) {
+	var localIndex;
+
 	if (expr.isCompileTimeConstant) {
 		out.push(instructions.Const(
 			types.fromCType(expr.type),
@@ -13,15 +16,22 @@ function compileExpression(expr, context, out) {
 	}
 
 	switch (expr.expressionType) {
+		case 'AssignmentExpression':
+			assert.equal(expr.left.expressionType, 'VariableExpression');
+			localIndex = context.getIndex(expr.left.variable.id);
+			if (localIndex === null) {
+				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
+			}
+			compileExpression(expr.right, context, out);
+			out.push(instructions.TeeLocal(localIndex));
+			return;
 		case 'VariableExpression':
-			if (expr.variable.id in context.localIndexesById) {
-				var localIndex = context.localIndexesById[expr.variable.id];
-				out.push(instructions.GetLocal(localIndex));
-				return;
-			} else {
+			localIndex = context.getIndex(expr.variable.id);
+			if (localIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.variable));
 			}
-			break;
+			out.push(instructions.GetLocal(localIndex));
+			return;
 		default:
 			throw util.format(
 				"Unrecognised expression type %s: %s",
@@ -46,6 +56,10 @@ function compile(body, context, out) {
 						out.push(instructions.SetLocal(index));
 					}
 				}
+				break;
+			case 'ExpressionStatement':
+				compileExpression(statement.expression, context, out);
+				out.push(instructions.Drop);
 				break;
 			case 'ReturnStatement':
 				if (statement.expression !== null) {

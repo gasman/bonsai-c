@@ -8,6 +8,10 @@ exports.Const = function(typ, value) {
 	};
 };
 
+exports.Drop = {
+	'asText': function() {return 'drop';}
+};
+
 exports.GetLocal = function(index) {
 	return {
 		'asText': function() {
@@ -24,6 +28,14 @@ exports.SetLocal = function(index) {
 	return {
 		'asText': function() {
 			return util.format('set_local %d', index);
+		}
+	};
+};
+
+exports.TeeLocal = function(index) {
+	return {
+		'asText': function() {
+			return util.format('tee_local %d', index);
 		}
 	};
 };
