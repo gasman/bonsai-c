@@ -21,6 +21,7 @@ function compileExpression(expr, context, out) {
 			} else {
 				throw util.format("Variable not found: %s", util.inspect(expr.variable));
 			}
+			break;
 		default:
 			throw util.format(
 				"Unrecognised expression type %s: %s",
@@ -35,6 +36,17 @@ function compile(body, context, out) {
 	for (var i = 0; i < body.length; i++) {
 		var statement = body[i];
 		switch(statement.statementType) {
+			case 'DeclarationStatement':
+				for (var j = 0; j < statement.variableDeclarations.length; j++) {
+					var variableDeclaration = statement.variableDeclarations[j];
+					var variable = variableDeclaration.variable;
+					var index = context.declareVariable(variable.id, types.fromCType(variable.type));
+					if (variableDeclaration.initialValueExpression !== null) {
+						compileExpression(variableDeclaration.initialValueExpression, context, out);
+						out.push(instructions.SetLocal(index));
+					}
+				}
+				break;
 			case 'ReturnStatement':
 				if (statement.expression !== null) {
 					compileExpression(statement.expression, context, out);

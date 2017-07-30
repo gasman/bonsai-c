@@ -11,6 +11,7 @@ class Context {
 	constructor() {
 		this.localIndexesById = {};
 		this.localIndex = 0;
+		this.localDeclarations = [];
 	}
 
 	getIndex(id) {
@@ -22,20 +23,31 @@ class Context {
 	}
 
 	allocateVariable(id) {
-		this.localIndexesById[id] = this.localIndex;
+		var index = this.localIndex;
+		this.localIndexesById[id] = index;
 		this.localIndex++;
+		return index;
+	}
+
+	declareVariable(id, typ) {
+		var index = this.allocateVariable(id);
+		this.localDeclarations.push(typ);
+		return index;
 	}
 }
 
 class FunctionDefinition {
-	constructor(name, typ, isExported, body) {
+	constructor(name, typ, isExported, locals, body) {
 		this.name = name;
 		this.type = typ;
 		this.isExported = isExported;
+		this.locals = locals;
 		this.body = body;
 	}
 
 	asText() {
+		var i;
+
 		var atoms = [
 			'func',
 			util.format('(;%d;)', this.functionIndex),
@@ -47,10 +59,17 @@ class FunctionDefinition {
 		if (this.type.returnType.category != 'void') {
 			atoms.push(this.type.returnTypeAsText());
 		}
+		if (this.locals.length) {
+			var localAtoms = ['local'];
+			for (i = 0; i < this.locals.length; i++) {
+				localAtoms.push(this.locals[i].asText());
+			}
+			atoms.push('(' + localAtoms.join(' ') + ')')
+		}
 		var out = "  (" + atoms.join(' ') + "\n";
 
 		var body = [];
-		for (var i = 0; i < this.body.length; i++) {
+		for (i = 0; i < this.body.length; i++) {
 			body.push(this.body[i].asText());
 		}
 		out += "    " + body.join("\n    ");
@@ -71,7 +90,7 @@ class FunctionDefinition {
 		var out = [];
 		compiler.compile(fd.body, context, out);
 
-		return new FunctionDefinition(fd.name, typ, fd.isExported, out);
+		return new FunctionDefinition(fd.name, typ, fd.isExported, context.localDeclarations, out);
 	}
 }
 

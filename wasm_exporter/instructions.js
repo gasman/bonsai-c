@@ -19,3 +19,11 @@ exports.GetLocal = function(index) {
 exports.Return = {
 	'asText': function() {return 'return';}
 };
+
+exports.SetLocal = function(index) {
+	return {
+		'asText': function() {
+			return util.format('set_local %d', index);
+		}
+	};
+};
