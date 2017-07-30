@@ -8,6 +8,14 @@ exports.Const = function(typ, value) {
 	};
 };
 
+exports.GetLocal = function(index) {
+	return {
+		'asText': function() {
+			return util.format('get_local %d', index);
+		}
+	};
+};
+
 exports.Return = {
 	'asText': function() {return 'return';}
 };

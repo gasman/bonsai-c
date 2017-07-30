@@ -46,11 +46,10 @@ function DeclarationStatement(node, context) {
 
 	var decl = new declaration.Declaration(node, context);
 
-	this.type = decl.type;
 	this.variableDeclarations = decl.variableDeclarations;
 }
 DeclarationStatement.prototype.inspect = function() {
-	return "Declaration <" + util.inspect(this.type) + "> " + util.inspect(this.variableDeclarations);
+	return "Declaration " + util.inspect(this.variableDeclarations);
 };
 
 function DoWhileStatement(node, context) {

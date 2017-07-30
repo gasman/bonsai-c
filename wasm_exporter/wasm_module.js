@@ -41,8 +41,19 @@ class FunctionDefinition {
 
 	static fromAbstractFunctionDefinition(fd) {
 		var typ = wasmTypes.fromCType(fd.type);
+
+		var context = {
+			'localIndexesById': {}
+		};
+		var localIndex = 0;
+		for (var i = 0; i < fd.parameters.length; i++) {
+			var param = fd.parameters[i];
+			context.localIndexesById[param.id] = localIndex;
+			localIndex++;
+		}
+
 		var out = [];
-		compiler.compile(fd.body, out);
+		compiler.compile(fd.body, context, out);
 
 		return new FunctionDefinition(fd.name, typ, fd.isExported, out);
 	}

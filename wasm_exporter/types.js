@@ -10,12 +10,11 @@ exports.func = function(returnType, paramTypes) {
 		'returnType': returnType,
 		'paramTypes': paramTypes,
 		'paramsAsText': function() {
-			var paramAtoms = ['param'];
+			var atoms = ['param'];
 			for (var i = 0; i < paramTypes.length; i++) {
-				paramAtoms.push(paramTypes[i].asText());
+				atoms.push(paramTypes[i].asText());
 			}
-			atoms.push('(' + paramAtoms.join(' ') + ')');
-			return '(' + paramAtoms.join(' ') + ')';
+			return '(' + atoms.join(' ') + ')';
 		},
 		'returnTypeAsText': function() {
 			return '(result ' + returnType.asText() + ')';

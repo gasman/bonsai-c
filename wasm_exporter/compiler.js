@@ -3,7 +3,7 @@ var util = require('util');
 var types = require('./types');
 var instructions = require('./instructions');
 
-function compileExpression(expr, out) {
+function compileExpression(expr, context, out) {
 	if (expr.isCompileTimeConstant) {
 		out.push(instructions.Const(
 			types.fromCType(expr.type),
@@ -13,6 +13,14 @@ function compileExpression(expr, out) {
 	}
 
 	switch (expr.expressionType) {
+		case 'VariableExpression':
+			if (expr.variable.id in context.localIndexesById) {
+				var localIndex = context.localIndexesById[expr.variable.id];
+				out.push(instructions.GetLocal(localIndex));
+				return;
+			} else {
+				throw util.format("Variable not found: %s", util.inspect(expr.variable));
+			}
 		default:
 			throw util.format(
 				"Unrecognised expression type %s: %s",
@@ -23,13 +31,13 @@ function compileExpression(expr, out) {
 
 }
 
-function compile(body, out) {
+function compile(body, context, out) {
 	for (var i = 0; i < body.length; i++) {
 		var statement = body[i];
 		switch(statement.statementType) {
 			case 'ReturnStatement':
 				if (statement.expression !== null) {
-					compileExpression(statement.expression, out);
+					compileExpression(statement.expression, context, out);
 				}
 				/* TODO: omit the 'return' when it's the final statement */
 				out.push(instructions.Return);
