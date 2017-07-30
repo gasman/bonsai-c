@@ -4,11 +4,13 @@ var util = require('util');
 var types = require('./types');
 var instructions = require('./instructions');
 
-function compileExpression(expr, context, out) {
+function compileExpression(expr, context, out, hints) {
 	/* compile the code for evaluating 'expr' into 'out', and return the number of values
 	pushed onto the stack; this will usually be 1, but may be 0 if the expression is a void
 	function call or its resultIsUsed flag is false. */
 	var localIndex;
+
+	if (!hints) hints = {};
 
 	if (expr.isCompileTimeConstant) {
 		out.push(instructions.Const(
@@ -19,6 +21,12 @@ function compileExpression(expr, context, out) {
 	}
 
 	switch (expr.expressionType) {
+		case 'AddExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int AddExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Add(types.i32));
+			return 1;
 		case 'AssignmentExpression':
 			assert.equal(expr.left.expressionType, 'VariableExpression');
 			localIndex = context.getIndex(expr.left.variable.id);
@@ -26,13 +34,14 @@ function compileExpression(expr, context, out) {
 				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
 			}
 			compileExpression(expr.right, context, out);
-			if (expr.resultIsUsed) {
+			if (expr.resultIsUsed && hints.canDiscardResult) {
 				out.push(instructions.TeeLocal(localIndex));
 				return 1;
 			} else {
 				out.push(instructions.SetLocal(localIndex));
 				return 0;
 			}
+			break;
 		case 'VariableExpression':
 			localIndex = context.getIndex(expr.variable.id);
 			if (localIndex === null) {
@@ -67,7 +76,9 @@ function compile(body, context, out) {
 				}
 				break;
 			case 'ExpressionStatement':
-				var pushCount = compileExpression(statement.expression, context, out);
+				var pushCount = compileExpression(statement.expression, context, out, {
+					canDiscardResult: true
+				});
 				/* drop any results that were pushed */
 				for (j = 0; j < pushCount; j++) {
 					out.push(instructions.Drop);
