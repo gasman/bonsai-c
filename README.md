@@ -35,4 +35,4 @@ Then, from the root of the codebase:
 Usage
 -----
 
-    node bonsai-c.js infile.c
+    node bonsai-c.js --asmjs infile.c

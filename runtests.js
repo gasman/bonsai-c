@@ -8,7 +8,7 @@ function testCompile(filename, expectedResult, opts) {
 	if (!opts) opts = {};
 
 	console.log('running test: ' + filename);
-	js = BonsaiC.compile(filename);
+	js = BonsaiC.compile(filename, 'asmjs');
 
 	if (!opts.skipValidate) {
 		try {
