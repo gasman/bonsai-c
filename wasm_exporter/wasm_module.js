@@ -7,6 +7,26 @@ function quoteString(str) {
 	return '"' + str.replace(/[\\"']/g, '\\$&') + '"';
 }
 
+class Context {
+	constructor() {
+		this.localIndexesById = {};
+		this.localIndex = 0;
+	}
+
+	getIndex(id) {
+		if (id in this.localIndexesById) {
+			return this.localIndexesById[id];
+		} else {
+			return null;
+		}
+	}
+
+	allocateVariable(id) {
+		this.localIndexesById[id] = this.localIndex;
+		this.localIndex++;
+	}
+}
+
 class FunctionDefinition {
 	constructor(name, typ, isExported, body) {
 		this.name = name;
@@ -42,14 +62,10 @@ class FunctionDefinition {
 	static fromAbstractFunctionDefinition(fd) {
 		var typ = wasmTypes.fromCType(fd.type);
 
-		var context = {
-			'localIndexesById': {}
-		};
-		var localIndex = 0;
+		var context = new Context();
+
 		for (var i = 0; i < fd.parameters.length; i++) {
-			var param = fd.parameters[i];
-			context.localIndexesById[param.id] = localIndex;
-			localIndex++;
+			context.allocateVariable(fd.parameters[i].id);
 		}
 
 		var out = [];
