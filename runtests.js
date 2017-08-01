@@ -1,13 +1,33 @@
 var BonsaiC = require('./bonsai-c');
 var asmjs = require('asm.js');
 var assert = require('assert');
+var fs = require('fs');
+var execFileSync = require('child_process').execFileSync;
+var tmp = require('tmp');
 
 var js, module;
 
-function testCompile(filename, expectedResult, opts) {
+var runAll = true;
+var runAsmJS = false;
+var runWast = false;
+
+for (var i = 2; i < process.argv.length; i++) {
+	var arg = process.argv[i];
+	if (arg == '--asmjs') {
+		runAll = false;
+		runAsmJS = true;
+	} else if (arg == '--wast') {
+		runAll = false;
+		runWast = true;
+	} else {
+		throw("Unrecognised arg: " + arg);
+	}
+}
+
+function testAsmJSCompile(filename, expectedResult, opts) {
 	if (!opts) opts = {};
 
-	console.log('running test: ' + filename);
+	console.log('running asm.js test: ' + filename);
 	js = BonsaiC.compile(filename, 'asmjs');
 
 	if (!opts.skipValidate) {
@@ -46,76 +66,113 @@ function testCompile(filename, expectedResult, opts) {
 	}
 }
 
-testCompile('tests/fortytwo.c', 42);
-testCompile('tests/add.c', 42);
-testCompile('tests/var.c', 42);
-testCompile('tests/initvar.c', 42);
-testCompile('tests/param.c', 42, {params: [42]});
-testCompile('tests/call.c', 42, {shouldExport: ['add']});
-testCompile('tests/return_negative.c', -42);
-testCompile('tests/initvar_negative.c', -42);
-testCompile('tests/type_coercion.c', 42);
-testCompile('tests/call_assign.c', 42);
-testCompile('tests/call_add.c', 42);
-testCompile('tests/computed_init.c', 42);
-testCompile('tests/inner_block.c', 42);
-testCompile('tests/subtract.c', 42);
-testCompile('tests/simple_postdecrement.c', 42);
-testCompile('tests/simple_postincrement.c', 42);
-testCompile('tests/comma.c', 42);
-testCompile('tests/postincrement_result.c', 43);
-testCompile('tests/postdecrement_result.c', 41);
-testCompile('tests/while.c', 55);
-testCompile('tests/variable_shadowing.c', 65);
-testCompile('tests/chained_add.c', 42);
-testCompile('tests/chained_subtract.c', 42);
-testCompile('tests/less_than.c', 2);
-testCompile('tests/greater_than.c', 1);
-testCompile('tests/equal.c', 2);
-testCompile('tests/not_equal.c', 1);
-testCompile('tests/greater_than_or_equal.c', 2);
-testCompile('tests/less_than_or_equal.c', 2);
-testCompile('tests/for.c', 45);
-testCompile('tests/for_with_declarator.c', 45);
-testCompile('tests/add_assign.c', 42);
-testCompile('tests/subtract_assign.c', 42);
-testCompile('tests/for_without_init.c', 45);
-testCompile('tests/if.c', 42);
-testCompile('tests/if_no_else.c', 42);
-testCompile('tests/break.c', 42);
-testCompile('tests/for_without_test.c', 45);
-testCompile('tests/for_without_update.c', 45);
-testCompile('tests/continue.c', 42);
-testCompile('tests/conditional.c', 42);
-testCompile('tests/logical_not.c', 0);
-testCompile('tests/double.c', 42);
-testCompile('tests/logical_and.c', 42);
-testCompile('tests/logical_or.c', 42);
-testCompile('tests/double_var.c', 42);
-testCompile('tests/double_add.c', 42);
-testCompile('tests/reserved_vars.c', 42);
-testCompile('tests/reserved_vars_as_params.c', 42);
-testCompile('tests/empty_params.c', 42);
-testCompile('tests/void_return.c', 42);
-testCompile('tests/void_function_without_return.c', 42);
-testCompile('tests/do_while.c', 55);
-testCompile('tests/logical_shortcuts.c', 42);
-testCompile('tests/double_mul.c', 42);
-testCompile('tests/int_div.c', 42);
-testCompile('tests/late_declaration.c', 52);
-testCompile('tests/nonconstant_declare.c', 42);
-testCompile('tests/int_mod.c', 42);
-testCompile('tests/double_mod.c', 42);
-testCompile('tests/double_to_signed.c', 42);
-testCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
-testCompile('tests/global_var.c', 42);
-testCompile('tests/double_subtract.c', 42);
-testCompile('tests/int_mul.c', 42);
-testCompile('tests/global_array.c', 42);
-testCompile('tests/shift_left.c', 42);
-testCompile('tests/shift_right.c', 42);
-testCompile('tests/pointer_var.c', 42);
-testCompile('tests/pointer_add.c', 42);
-testCompile('tests/add_var.c', 42);
+if (runAll || runAsmJS) {
+	testAsmJSCompile('tests/fortytwo.c', 42);
+	testAsmJSCompile('tests/add.c', 42);
+	testAsmJSCompile('tests/var.c', 42);
+	testAsmJSCompile('tests/initvar.c', 42);
+	testAsmJSCompile('tests/param.c', 42, {params: [42]});
+	testAsmJSCompile('tests/call.c', 42, {shouldExport: ['add']});
+	testAsmJSCompile('tests/return_negative.c', -42);
+	testAsmJSCompile('tests/initvar_negative.c', -42);
+	testAsmJSCompile('tests/type_coercion.c', 42);
+	testAsmJSCompile('tests/call_assign.c', 42);
+	testAsmJSCompile('tests/call_add.c', 42);
+	testAsmJSCompile('tests/computed_init.c', 42);
+	testAsmJSCompile('tests/inner_block.c', 42);
+	testAsmJSCompile('tests/subtract.c', 42);
+	testAsmJSCompile('tests/simple_postdecrement.c', 42);
+	testAsmJSCompile('tests/simple_postincrement.c', 42);
+	testAsmJSCompile('tests/comma.c', 42);
+	testAsmJSCompile('tests/postincrement_result.c', 43);
+	testAsmJSCompile('tests/postdecrement_result.c', 41);
+	testAsmJSCompile('tests/while.c', 55);
+	testAsmJSCompile('tests/variable_shadowing.c', 65);
+	testAsmJSCompile('tests/chained_add.c', 42);
+	testAsmJSCompile('tests/chained_subtract.c', 42);
+	testAsmJSCompile('tests/less_than.c', 2);
+	testAsmJSCompile('tests/greater_than.c', 1);
+	testAsmJSCompile('tests/equal.c', 2);
+	testAsmJSCompile('tests/not_equal.c', 1);
+	testAsmJSCompile('tests/greater_than_or_equal.c', 2);
+	testAsmJSCompile('tests/less_than_or_equal.c', 2);
+	testAsmJSCompile('tests/for.c', 45);
+	testAsmJSCompile('tests/for_with_declarator.c', 45);
+	testAsmJSCompile('tests/add_assign.c', 42);
+	testAsmJSCompile('tests/subtract_assign.c', 42);
+	testAsmJSCompile('tests/for_without_init.c', 45);
+	testAsmJSCompile('tests/if.c', 42);
+	testAsmJSCompile('tests/if_no_else.c', 42);
+	testAsmJSCompile('tests/break.c', 42);
+	testAsmJSCompile('tests/for_without_test.c', 45);
+	testAsmJSCompile('tests/for_without_update.c', 45);
+	testAsmJSCompile('tests/continue.c', 42);
+	testAsmJSCompile('tests/conditional.c', 42);
+	testAsmJSCompile('tests/logical_not.c', 0);
+	testAsmJSCompile('tests/double.c', 42);
+	testAsmJSCompile('tests/logical_and.c', 42);
+	testAsmJSCompile('tests/logical_or.c', 42);
+	testAsmJSCompile('tests/double_var.c', 42);
+	testAsmJSCompile('tests/double_add.c', 42);
+	testAsmJSCompile('tests/reserved_vars.c', 42);
+	testAsmJSCompile('tests/reserved_vars_as_params.c', 42);
+	testAsmJSCompile('tests/empty_params.c', 42);
+	testAsmJSCompile('tests/void_return.c', 42);
+	testAsmJSCompile('tests/void_function_without_return.c', 42);
+	testAsmJSCompile('tests/do_while.c', 55);
+	testAsmJSCompile('tests/logical_shortcuts.c', 42);
+	testAsmJSCompile('tests/double_mul.c', 42);
+	testAsmJSCompile('tests/int_div.c', 42);
+	testAsmJSCompile('tests/late_declaration.c', 52);
+	testAsmJSCompile('tests/nonconstant_declare.c', 42);
+	testAsmJSCompile('tests/int_mod.c', 42);
+	testAsmJSCompile('tests/double_mod.c', 42);
+	testAsmJSCompile('tests/double_to_signed.c', 42);
+	testAsmJSCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
+	testAsmJSCompile('tests/global_var.c', 42);
+	testAsmJSCompile('tests/double_subtract.c', 42);
+	testAsmJSCompile('tests/int_mul.c', 42);
+	testAsmJSCompile('tests/global_array.c', 42);
+	testAsmJSCompile('tests/shift_left.c', 42);
+	testAsmJSCompile('tests/shift_right.c', 42);
+	testAsmJSCompile('tests/pointer_var.c', 42);
+	testAsmJSCompile('tests/pointer_add.c', 42);
+	testAsmJSCompile('tests/add_var.c', 42);
+}
+
+function testWastCompile(filename, expectedResult, opts) {
+	if (!opts) opts = {};
+
+	console.log('running WebAssembly text test: ' + filename);
+	wastText = BonsaiC.compile(filename, 'wast');
+
+	var wastFile = tmp.fileSync();
+	fs.writeSync(wastFile.fd, wastText, 'utf8');
+	fs.closeSync(wastFile.fd);
+
+	var wasmFilename = tmp.tmpNameSync();
+	execFileSync('wast2wasm', [wastFile.name, '-o', wasmFilename]);
+	buf = fs.readFileSync(wasmFilename);
+	fs.unlinkSync(wasmFilename);
+
+	assert(WebAssembly.validate(buf));
+	var mdl = new WebAssembly.Module(buf);
+	var instance = new WebAssembly.Instance(mdl);
+
+	if (!opts.params) {
+		assert.equal(expectedResult, instance.exports.main());
+	} else {
+		assert.equal(expectedResult, instance.exports.main.apply(null, opts.params));
+	}
+}
+
+if (runAll || runWast) {
+	testWastCompile('tests/fortytwo.c', 42);
+	testWastCompile('tests/param.c', 42, {params: [42]});
+	testWastCompile('tests/var.c', 42);
+	testWastCompile('tests/initvar.c', 42);
+	testWastCompile('tests/add_var.c', 42);
+	testWastCompile('tests/nonconstant_declare.c', 42);
+}
 
 console.log("All tests passed");

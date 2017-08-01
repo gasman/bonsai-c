@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "asm.js": "git+https://git@github.com/gasman/asm.js.git",
-    "escodegen": "^1.6.1"
+    "escodegen": "^1.6.1",
+    "tmp": "0.0.31"
   }
 }
