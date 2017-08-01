@@ -19,7 +19,7 @@ bonsai-c won't provide a full C implementation from day one. It won't have fancy
 Build
 -----
 
-Install Node.js <https://nodejs.org/>.
+Install [Node.js](https://nodejs.org/).
 
 Install jison:
 
@@ -42,3 +42,14 @@ To compile to asm.js:
 To compile to WebAssembly text format:
 
     node bonsai-c.js --wast infile.c
+
+Running tests
+-------------
+
+From the root of the codebase:
+
+    node ./runtests.js  # run all tests
+    node ./runtests.js --asmjs  # run asm.js output tests only
+    node ./runtests.js --wast  # run WebAssembly text output tests only
+
+To run the `--wast` tests, you must be running Node 8.2 or later, and have `wast2wasm` from [the WABT suite](https://github.com/WebAssembly/wabt) in your path.
