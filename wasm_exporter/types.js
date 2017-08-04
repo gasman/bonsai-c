@@ -4,6 +4,12 @@ exports.i32 = {
 	'equals': function(other) {return (other.category == 'i32');}
 };
 
+exports.void = {
+	'category': 'void',
+	'asText': function() {return '(void)';},
+	'equals': function(other) {return (other.category == 'void');}
+};
+
 exports.func = function(returnType, paramTypes) {
 	return {
 		'category': 'function',
@@ -54,6 +60,8 @@ function fromCType(typ) {
 				fromCType(typ.returnType),
 				paramTypes
 			);
+		case 'void':
+			return exports.void;
 		default:
 			throw util.format("Don't know how to convert %s to a WebAssembly type",
 				util.inspect(typ)

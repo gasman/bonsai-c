@@ -194,6 +194,8 @@ if (runAll || runWast) {
 	testWastCompile('tests/subtract.c', 42);
 	testWastCompile('tests/subtract_var.c', 42);
 	testWastCompile('tests/call.c', 42, {shouldExport: ['add']});
+	testWastCompile('tests/void_return.c', 42);
+	testWastCompile('tests/void_function_without_return.c', 42);
 }
 
 console.log("All tests passed");
