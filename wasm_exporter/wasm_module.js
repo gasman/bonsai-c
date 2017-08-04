@@ -1,3 +1,4 @@
+var assert = require('assert');
 var util = require('util');
 
 var wasmTypes = require('./types');
@@ -8,15 +9,25 @@ function quoteString(str) {
 }
 
 class Context {
-	constructor() {
+	constructor(parentContext) {
+		this.parentContext = parentContext;
+		if (parentContext) {
+			this.globalContext = parentContext.globalContext;
+		} else {
+			this.globalContext = this;
+		}
+
 		this.localIndexesById = {};
 		this.localIndex = 0;
 		this.localDeclarations = [];
+		this.functionIndexesById = {};
 	}
 
 	getIndex(id) {
 		if (id in this.localIndexesById) {
 			return this.localIndexesById[id];
+		} else if (this.parentContext) {
+			return this.parentContext.getIndex(id);
 		} else {
 			return null;
 		}
@@ -33,6 +44,24 @@ class Context {
 		var index = this.allocateVariable(id);
 		this.localDeclarations.push(typ);
 		return index;
+	}
+
+	declareFunction(id, index) {
+		assert(!this.parentContext, "Functions can only be declared in the global context");
+		this.functionIndexesById[id] = index;
+	}
+
+	getFunctionIndex(id) {
+		assert(!this.parentContext, "Functions can only be looked up in the global context");
+		if (id in this.functionIndexesById) {
+			return this.functionIndexesById[id];
+		} else {
+			return null;
+		}
+	}
+
+	createChildContext() {
+		return new Context(this);
 	}
 }
 
@@ -64,7 +93,7 @@ class FunctionDefinition {
 			for (i = 0; i < this.locals.length; i++) {
 				localAtoms.push(this.locals[i].asText());
 			}
-			atoms.push('(' + localAtoms.join(' ') + ')')
+			atoms.push('(' + localAtoms.join(' ') + ')');
 		}
 		var out = "  (" + atoms.join(' ') + "\n";
 
@@ -78,10 +107,10 @@ class FunctionDefinition {
 		return out;
 	}
 
-	static fromAbstractFunctionDefinition(fd) {
+	static fromAbstractFunctionDefinition(fd, globalContext) {
 		var typ = wasmTypes.fromCType(fd.type);
 
-		var context = new Context();
+		var context = globalContext.createChildContext();
 
 		for (var i = 0; i < fd.parameters.length; i++) {
 			context.allocateVariable(fd.parameters[i].id);
@@ -126,6 +155,8 @@ class WasmModule {
 				[functionDefinition.name, functionIndex]
 			);
 		}
+
+		return functionIndex;
 	}
 
 	asText() {
@@ -154,13 +185,16 @@ class WasmModule {
 
 	static fromAbstractModule(module) {
 		var wasm = new WasmModule();
+		var globalContext = new Context();
+
 		for (var i = 0; i < module.declarations.length; i++) {
 			var declaration = module.declarations[i];
 
 			switch (declaration.declarationType) {
 				case 'FunctionDefinition':
-					var fd = FunctionDefinition.fromAbstractFunctionDefinition(declaration);
-					wasm.defineFunction(fd);
+					var fd = FunctionDefinition.fromAbstractFunctionDefinition(declaration, globalContext);
+					var functionIndex = wasm.defineFunction(fd);
+					globalContext.declareFunction(declaration.variable.id, functionIndex);
 					break;
 				default:
 					throw util.format("Unsupported declaration type: %s", declaration.declarationType);

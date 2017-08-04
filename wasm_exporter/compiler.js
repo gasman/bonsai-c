@@ -8,7 +8,7 @@ function compileExpression(expr, context, out, hints) {
 	/* compile the code for evaluating 'expr' into 'out', and return the number of values
 	pushed onto the stack; this will usually be 1, but may be 0 if the expression is a void
 	function call or its resultIsUsed flag is false. */
-	var localIndex;
+	var i, localIndex;
 
 	if (!hints) hints = {};
 
@@ -42,6 +42,18 @@ function compileExpression(expr, context, out, hints) {
 				return 0;
 			}
 			break;
+		case 'FunctionCallExpression':
+			assert.equal(expr.callee.expressionType, 'VariableExpression');
+			var functionVariable = expr.callee.variable;
+			var functionIndex = context.globalContext.getFunctionIndex(functionVariable.id);
+			if (functionIndex === null) {
+				throw util.format("Function not found: %s", util.inspect(functionVariable));
+			}
+			for (i = 0; i < expr.parameters.length; i++) {
+				compileExpression(expr.parameters[i], context, out);
+			}
+			out.push(instructions.Call(functionIndex));
+			return (functionVariable.type.returnType.category == 'void') ? 0 : 1;
 		case 'SubtractExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int SubtractExpression");
 			compileExpression(expr.left, context, out);

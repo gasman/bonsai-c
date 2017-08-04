@@ -8,6 +8,14 @@ exports.Add = function(typ) {
 	};
 };
 
+exports.Call = function(index) {
+	return {
+		'asText': function() {
+			return util.format('call %d', index);
+		}
+	};
+};
+
 exports.Const = function(typ, value) {
 	return {
 		'asText': function() {

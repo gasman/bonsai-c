@@ -164,6 +164,23 @@ function testWastCompile(filename, expectedResult, opts) {
 	} else {
 		assert.equal(expectedResult, instance.exports.main.apply(null, opts.params));
 	}
+
+	var i;
+	if (opts.shouldExport) {
+		for (i = 0; i < opts.shouldExport.length; i++) {
+			if (!(opts.shouldExport[i] in instance.exports)) {
+				throw "Expected to find export: " + opts.shouldExport[i];
+			}
+		}
+	}
+
+	if (opts.shouldNotExport) {
+		for (i = 0; i < opts.shouldNotExport.length; i++) {
+			if (opts.shouldNotExport[i] in instance.exports) {
+				throw "Name exported, but should not be: " + opts.shouldNotExport[i];
+			}
+		}
+	}
 }
 
 if (runAll || runWast) {
@@ -176,6 +193,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/nonconstant_declare.c', 42);
 	testWastCompile('tests/subtract.c', 42);
 	testWastCompile('tests/subtract_var.c', 42);
+	testWastCompile('tests/call.c', 42, {shouldExport: ['add']});
 }
 
 console.log("All tests passed");
