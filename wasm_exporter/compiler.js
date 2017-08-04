@@ -42,6 +42,12 @@ function compileExpression(expr, context, out, hints) {
 				return 0;
 			}
 			break;
+		case 'SubtractExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int SubtractExpression");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Sub(types.i32));
+			return 1;
 		case 'VariableExpression':
 			localIndex = context.getIndex(expr.variable.id);
 			if (localIndex === null) {

@@ -171,8 +171,11 @@ if (runAll || runWast) {
 	testWastCompile('tests/param.c', 42, {params: [42]});
 	testWastCompile('tests/var.c', 42);
 	testWastCompile('tests/initvar.c', 42);
+	testWastCompile('tests/add.c', 42);
 	testWastCompile('tests/add_var.c', 42);
 	testWastCompile('tests/nonconstant_declare.c', 42);
+	testWastCompile('tests/subtract.c', 42);
+	testWastCompile('tests/subtract_var.c', 42);
 }
 
 console.log("All tests passed");

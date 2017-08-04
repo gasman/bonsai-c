@@ -40,6 +40,15 @@ exports.SetLocal = function(index) {
 	};
 };
 
+exports.Sub = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.sub', typ.asText());
+		}
+	};
+};
+
+
 exports.TeeLocal = function(index) {
 	return {
 		'asText': function() {
