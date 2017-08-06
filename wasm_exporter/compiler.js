@@ -202,12 +202,15 @@ function compileExpression(expr, context, out, hints) {
 
 }
 
-function compileStatement(statement, context, out) {
+function compileStatement(statement, context, out, breakDepth) {
 	var j, pushCount;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
-			compile(statement.statements, context, out);
+			compile(statement.statements, context, out, breakDepth);
+			break;
+		case 'BreakStatement':
+			out.push(instructions.Br(breakDepth));
 			break;
 		case 'DeclarationStatement':
 			for (j = 0; j < statement.variableDeclarations.length; j++) {
@@ -234,20 +237,23 @@ function compileStatement(statement, context, out) {
 			'for (init; test; update) do_stuff' compiles to:
 
 			init
-			loop
-				test
-				if
-					do_stuff
-					update
-					br 1  ; repeat loop
+			block  ; only required for 'break'
+				loop
+					test
+					if
+						do_stuff  ; break statements here need 'br 2'
+						update
+						br 1  ; repeat loop
+					end
 				end
 			end
 			*/
-			compileStatement(statement.init, context, out);
+			compileStatement(statement.init, context, out, null);
+			out.push(instructions.Block);
 			out.push(instructions.Loop);
 			compileExpression(statement.test, context, out);
 			out.push(instructions.If);
-			compileStatement(statement.body, context, out);
+			compileStatement(statement.body, context, out, 2);
 			pushCount = compileExpression(statement.update, context, out, {
 				canDiscardResult: true
 			});
@@ -256,6 +262,7 @@ function compileStatement(statement, context, out) {
 				out.push(instructions.Drop);
 			}
 			out.push(instructions.Br(1));
+			out.push(instructions.End);
 			out.push(instructions.End);
 			out.push(instructions.End);
 			break;
@@ -290,11 +297,12 @@ function compileStatement(statement, context, out) {
 			*/
 			compileExpression(statement.test, context, out);
 			out.push(instructions.If);
-			compileStatement(statement.thenStatement, context, out);
+			var innerBreakDepth = (breakDepth === null ? null : breakDepth + 1);
+			compileStatement(statement.thenStatement, context, out, innerBreakDepth);
 			if (statement.elseStatement) {
 				out.push(instructions.Br(0));
 				out.push(instructions.Else);
-				compileStatement(statement.elseStatement, context, out);
+				compileStatement(statement.elseStatement, context, out, innerBreakDepth);
 			}
 			out.push(instructions.End);
 			break;
@@ -311,20 +319,24 @@ function compileStatement(statement, context, out) {
 			/*
 			'while (condition) do_stuff' compiles to:
 
-			loop
-				condition
-				if
-					do_stuff
-					br 1  ; repeat loop
+			block
+				loop
+					condition
+					if
+						do_stuff  ; break statements here need 'br 2'
+						br 1  ; repeat loop
+					end
 				end
 			end
 			*/
 
+			out.push(instructions.Block);
 			out.push(instructions.Loop);
 			compileExpression(statement.condition, context, out);
 			out.push(instructions.If);
-			compileStatement(statement.body, context, out);
+			compileStatement(statement.body, context, out, 2);
 			out.push(instructions.Br(1));
+			out.push(instructions.End);
 			out.push(instructions.End);
 			out.push(instructions.End);
 			break;
@@ -337,9 +349,9 @@ function compileStatement(statement, context, out) {
 	}
 }
 
-function compile(body, context, out) {
+function compile(body, context, out, breakDepth) {
 	for (var i = 0; i < body.length; i++) {
-		compileStatement(body[i], context, out);
+		compileStatement(body[i], context, out, breakDepth);
 	}
 }
 
