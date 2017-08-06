@@ -276,13 +276,26 @@ function compileStatement(statement, context, out) {
 			else
 				do_other_stuff
 			end
+
+			if (condition) {
+				do_stuff
+			}
+
+			compiles to
+
+			condition
+			if
+				do_stuff
+			end
 			*/
 			compileExpression(statement.test, context, out);
 			out.push(instructions.If);
 			compileStatement(statement.thenStatement, context, out);
-			out.push(instructions.Br(0));
-			out.push(instructions.Else);
-			compileStatement(statement.elseStatement, context, out);
+			if (statement.elseStatement) {
+				out.push(instructions.Br(0));
+				out.push(instructions.Else);
+				compileStatement(statement.elseStatement, context, out);
+			}
 			out.push(instructions.End);
 			break;
 		case 'NullStatement':
