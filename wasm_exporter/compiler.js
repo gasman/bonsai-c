@@ -77,7 +77,12 @@ function compileExpression(expr, context, out, hints) {
 				out.push(instructions.SetLocal(localIndex));
 				return 0;
 			} else {
-				throw("Results of postdecrement expressions are not supported yet");
+				out.push(instructions.GetLocal(localIndex));
+				out.push(instructions.GetLocal(localIndex));
+				out.push(instructions.Const(types.i32, 1));
+				out.push(instructions.Sub(types.i32));
+				out.push(instructions.SetLocal(localIndex));
+				return 1;
 			}
 			break;
 		case 'PostincrementExpression':
@@ -94,7 +99,12 @@ function compileExpression(expr, context, out, hints) {
 				out.push(instructions.SetLocal(localIndex));
 				return 0;
 			} else {
-				throw("Results of postincrement expressions are not supported yet");
+				out.push(instructions.GetLocal(localIndex));
+				out.push(instructions.GetLocal(localIndex));
+				out.push(instructions.Const(types.i32, 1));
+				out.push(instructions.Add(types.i32));
+				out.push(instructions.SetLocal(localIndex));
+				return 1;
 			}
 			break;
 		case 'SubtractExpression':
