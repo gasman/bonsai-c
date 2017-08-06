@@ -238,6 +238,8 @@ if (runAll || runWast) {
 	testWastCompile('tests/if.c', 42);
 	testWastCompile('tests/if_no_else.c', 42);
 	testWastCompile('tests/break.c', 42);
+	testWastCompile('tests/for_without_test.c', 45);
+	testWastCompile('tests/for_without_update.c', 45);
 }
 
 console.log("All tests passed");

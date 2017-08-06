@@ -247,22 +247,52 @@ function compileStatement(statement, context, out, breakDepth) {
 					end
 				end
 			end
+
+			'for (init; ; update) do_stuff' compiles to:
+			init
+			block  ; only required for 'break'
+				loop
+					do_stuff  ; break statements here need 'br 1'
+					update
+					br 0  ; repeat loop
+				end
+			end
 			*/
 			compileStatement(statement.init, context, out, null);
 			out.push(instructions.Block);
 			out.push(instructions.Loop);
-			compileExpression(statement.test, context, out);
-			out.push(instructions.If);
-			compileStatement(statement.body, context, out, 2);
-			pushCount = compileExpression(statement.update, context, out, {
-				canDiscardResult: true
-			});
-			/* drop any results that were pushed */
-			for (j = 0; j < pushCount; j++) {
-				out.push(instructions.Drop);
+			if (statement.test) {
+				compileExpression(statement.test, context, out);
+				out.push(instructions.If);
+				compileStatement(statement.body, context, out, 2);
+
+				if (statement.update) {
+					pushCount = compileExpression(statement.update, context, out, {
+						canDiscardResult: true
+					});
+					/* drop any results that were pushed */
+					for (j = 0; j < pushCount; j++) {
+						out.push(instructions.Drop);
+					}
+				}
+
+				out.push(instructions.Br(1));
+				out.push(instructions.End);
+			} else {
+				compileStatement(statement.body, context, out, 1);
+
+				if (statement.update) {
+					pushCount = compileExpression(statement.update, context, out, {
+						canDiscardResult: true
+					});
+					/* drop any results that were pushed */
+					for (j = 0; j < pushCount; j++) {
+						out.push(instructions.Drop);
+					}
+				}
+
+				out.push(instructions.Br(0));
 			}
-			out.push(instructions.Br(1));
-			out.push(instructions.End);
 			out.push(instructions.End);
 			out.push(instructions.End);
 			break;
