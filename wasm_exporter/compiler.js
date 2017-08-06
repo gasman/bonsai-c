@@ -34,12 +34,12 @@ function compileExpression(expr, context, out, hints) {
 				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
 			}
 			compileExpression(expr.right, context, out);
-			if (expr.resultIsUsed && hints.canDiscardResult) {
-				out.push(instructions.TeeLocal(localIndex));
-				return 1;
-			} else {
+			if (!expr.resultIsUsed && hints.canDiscardResult) {
 				out.push(instructions.SetLocal(localIndex));
 				return 0;
+			} else {
+				out.push(instructions.TeeLocal(localIndex));
+				return 1;
 			}
 			break;
 		case 'FunctionCallExpression':
@@ -54,6 +54,40 @@ function compileExpression(expr, context, out, hints) {
 			}
 			out.push(instructions.Call(functionIndex));
 			return (functionVariable.type.returnType.category == 'void') ? 0 : 1;
+		case 'PostdecrementExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostdecrementExpression");
+			assert.equal(expr.argument.expressionType, 'VariableExpression');
+			localIndex = context.getIndex(expr.argument.variable.id);
+			if (localIndex === null) {
+				throw util.format("Variable not found: %s", util.inspect(expr.argument.variable));
+			}
+			if (!expr.resultIsUsed && hints.canDiscardResult) {
+				out.push(instructions.GetLocal(localIndex));
+				out.push(instructions.Const(types.i32, 1));
+				out.push(instructions.Sub(types.i32));
+				out.push(instructions.SetLocal(localIndex));
+				return 0;
+			} else {
+				throw("Results of postdecrement expressions are not supported yet");
+			}
+			break;
+		case 'PostincrementExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostincrementExpression");
+			assert.equal(expr.argument.expressionType, 'VariableExpression');
+			localIndex = context.getIndex(expr.argument.variable.id);
+			if (localIndex === null) {
+				throw util.format("Variable not found: %s", util.inspect(expr.argument.variable));
+			}
+			if (!expr.resultIsUsed && hints.canDiscardResult) {
+				out.push(instructions.GetLocal(localIndex));
+				out.push(instructions.Const(types.i32, 1));
+				out.push(instructions.Add(types.i32));
+				out.push(instructions.SetLocal(localIndex));
+				return 0;
+			} else {
+				throw("Results of postincrement expressions are not supported yet");
+			}
+			break;
 		case 'SubtractExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int SubtractExpression");
 			compileExpression(expr.left, context, out);

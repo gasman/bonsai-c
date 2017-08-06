@@ -203,6 +203,8 @@ if (runAll || runWast) {
 	testWastCompile('tests/type_coercion.c', 42);
 	testWastCompile('tests/computed_init.c', 42);
 	testWastCompile('tests/inner_block.c', 42);
+	testWastCompile('tests/simple_postdecrement.c', 42);
+	testWastCompile('tests/simple_postincrement.c', 42);
 }
 
 console.log("All tests passed");
