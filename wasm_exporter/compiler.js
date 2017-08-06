@@ -63,6 +63,18 @@ function compileExpression(expr, context, out, hints) {
 			}
 			out.push(instructions.Call(functionIndex));
 			return (functionVariable.type.returnType.category == 'void') ? 0 : 1;
+		case 'GreaterThanExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int GreaterThanExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.GtS(types.i32));
+			return 1;
+		case 'LessThanExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LessThanExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.LtS(types.i32));
+			return 1;
 		case 'PostdecrementExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostdecrementExpression");
 			assert.equal(expr.argument.expressionType, 'VariableExpression');

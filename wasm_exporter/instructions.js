@@ -52,12 +52,28 @@ exports.GetLocal = function(index) {
 	};
 };
 
+exports.GtS = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.gt_s', typ.asText());
+		}
+	};
+};
+
 exports.If = {
 	'asText': function() {return 'if';}
 };
 
 exports.Loop = {
 	'asText': function() {return 'loop';}
+};
+
+exports.LtS = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.lt_s', typ.asText());
+		}
+	};
 };
 
 exports.Return = {
