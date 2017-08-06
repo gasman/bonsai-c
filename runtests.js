@@ -205,6 +205,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/inner_block.c', 42);
 	testWastCompile('tests/simple_postdecrement.c', 42);
 	testWastCompile('tests/simple_postincrement.c', 42);
+	testWastCompile('tests/comma.c', 42);
 }
 
 console.log("All tests passed");

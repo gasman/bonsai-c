@@ -42,6 +42,15 @@ function compileExpression(expr, context, out, hints) {
 				return 1;
 			}
 			break;
+		case 'CommaExpression':
+			var pushCount = compileExpression(expr.left, context, out, {
+				canDiscardResult: true
+			});
+			/* drop any results that were pushed */
+			for (j = 0; j < pushCount; j++) {
+				out.push(instructions.Drop);
+			}
+			return compileExpression(expr.right, context, out, hints);
 		case 'FunctionCallExpression':
 			assert.equal(expr.callee.expressionType, 'VariableExpression');
 			var functionVariable = expr.callee.variable;
