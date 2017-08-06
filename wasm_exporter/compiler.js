@@ -75,11 +75,23 @@ function compileExpression(expr, context, out, hints) {
 			compileExpression(expr.right, context, out);
 			out.push(instructions.GtS(types.i32));
 			return 1;
+		case 'GreaterThanOrEqualExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int GreaterThanOrEqualExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.GeS(types.i32));
+			return 1;
 		case 'LessThanExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LessThanExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
 			out.push(instructions.LtS(types.i32));
+			return 1;
+		case 'LessThanOrEqualExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LessThanOrEqualExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.LeS(types.i32));
 			return 1;
 		case 'NotEqualExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int NotEqualExpressions");

@@ -60,6 +60,14 @@ exports.GetLocal = function(index) {
 	};
 };
 
+exports.GeS = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.ge_s', typ.asText());
+		}
+	};
+};
+
 exports.GtS = function(typ) {
 	return {
 		'asText': function() {
@@ -74,6 +82,14 @@ exports.If = {
 
 exports.Loop = {
 	'asText': function() {return 'loop';}
+};
+
+exports.LeS = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.le_s', typ.asText());
+		}
+	};
 };
 
 exports.LtS = function(typ) {
