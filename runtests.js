@@ -196,6 +196,10 @@ if (runAll || runWast) {
 	testWastCompile('tests/call.c', 42, {shouldExport: ['add']});
 	testWastCompile('tests/void_return.c', 42);
 	testWastCompile('tests/void_function_without_return.c', 42);
+	testWastCompile('tests/return_negative.c', -42);
+	testWastCompile('tests/initvar_negative.c', -42);
+	testWastCompile('tests/call_assign.c', 42);
+	testWastCompile('tests/call_add.c', 42);
 }
 
 console.log("All tests passed");

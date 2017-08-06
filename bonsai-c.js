@@ -32,7 +32,7 @@ exports.main = function(argv) {
 	} else if (argv[2] == '--wast') {
 		outputFormat = 'wast';
 	} else {
-		throw "Output format must be specified (--asmjs)";
+		throw "Output format must be specified (--asmjs or --wast)";
 	}
 
 	var cSource = fs.readFileSync(argv[3], "utf8");
