@@ -1,14 +1,19 @@
 function Context(parentContext) {
 	this.parentContext = parentContext;
-	this.isGlobalContext = !parentContext;
-	if (this.isGlobalContext) {
+	if (this.parentContext) {
+		this.isGlobalContext = false;
+		this.globalContext = this.parentContext.globalContext;
+	} else {
+		this.isGlobalContext = true;
+		this.globalContext = this;
 		this.nextHeapAddress = 0;
+		this.nextId = 0;
 	}
 	this.variables = {};
 }
-var id = 0;
+
 Context.prototype.define = function(name, type) {
-	var definition = {'name': name, 'type': type, 'id': id++};
+	var definition = {'name': name, 'type': type, 'id': this.globalContext.nextId++};
 	this.variables[name] = definition;
 	return definition;
 };

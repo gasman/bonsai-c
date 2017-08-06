@@ -233,7 +233,7 @@ class SubtractAssignmentExpression extends AssignmentExpression {
 
 	inspect() {
 		return util.format(
-			"SubtractAssignment: (%s += %s) <%s>",
+			"SubtractAssignment: (%s -= %s) <%s>",
 			util.inspect(this.left), util.inspect(this.right), util.inspect(this.type)
 		);
 	}
