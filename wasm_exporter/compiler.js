@@ -259,6 +259,8 @@ function compileStatement(statement, context, out) {
 			out.push(instructions.End);
 			out.push(instructions.End);
 			break;
+		case 'NullStatement':
+			break;
 		case 'ReturnStatement':
 			if (statement.expression !== null) {
 				compileExpression(statement.expression, context, out);
