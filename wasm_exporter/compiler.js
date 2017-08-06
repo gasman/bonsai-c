@@ -130,48 +130,73 @@ function compileExpression(expr, context, out, hints) {
 
 }
 
-function compile(body, context, out) {
+function compileStatement(statement, context, out) {
 	var j;
+
+	switch(statement.statementType) {
+		case 'BlockStatement':
+			compile(statement.statements, context, out);
+			break;
+		case 'DeclarationStatement':
+			for (j = 0; j < statement.variableDeclarations.length; j++) {
+				var variableDeclaration = statement.variableDeclarations[j];
+				var variable = variableDeclaration.variable;
+				var index = context.declareVariable(variable.id, types.fromCType(variable.type));
+				if (variableDeclaration.initialValueExpression !== null) {
+					compileExpression(variableDeclaration.initialValueExpression, context, out);
+					out.push(instructions.SetLocal(index));
+				}
+			}
+			break;
+		case 'ExpressionStatement':
+			var pushCount = compileExpression(statement.expression, context, out, {
+				canDiscardResult: true
+			});
+			/* drop any results that were pushed */
+			for (j = 0; j < pushCount; j++) {
+				out.push(instructions.Drop);
+			}
+			break;
+		case 'ReturnStatement':
+			if (statement.expression !== null) {
+				compileExpression(statement.expression, context, out);
+			}
+			/* TODO: omit the 'return' when it's the final statement */
+			out.push(instructions.Return);
+			break;
+		case 'WhileStatement':
+			/*
+			'while (condition) do_stuff' compiles to:
+
+			loop
+				condition
+				if
+					do_stuff
+					br 1  ; repeat loop
+				end
+			end
+			*/
+
+			out.push(instructions.Loop);
+			compileExpression(statement.condition, context, out);
+			out.push(instructions.If);
+			compileStatement(statement.body, context, out);
+			out.push(instructions.Br(1));
+			out.push(instructions.End);
+			out.push(instructions.End);
+			break;
+		default:
+			throw util.format(
+				"Unrecognised statement type %s: %s",
+				statement.statementType,
+				util.inspect(statement)
+			);
+	}
+}
+
+function compile(body, context, out) {
 	for (var i = 0; i < body.length; i++) {
-		var statement = body[i];
-		switch(statement.statementType) {
-			case 'BlockStatement':
-				compile(statement.statements, context, out);
-				break;
-			case 'DeclarationStatement':
-				for (j = 0; j < statement.variableDeclarations.length; j++) {
-					var variableDeclaration = statement.variableDeclarations[j];
-					var variable = variableDeclaration.variable;
-					var index = context.declareVariable(variable.id, types.fromCType(variable.type));
-					if (variableDeclaration.initialValueExpression !== null) {
-						compileExpression(variableDeclaration.initialValueExpression, context, out);
-						out.push(instructions.SetLocal(index));
-					}
-				}
-				break;
-			case 'ExpressionStatement':
-				var pushCount = compileExpression(statement.expression, context, out, {
-					canDiscardResult: true
-				});
-				/* drop any results that were pushed */
-				for (j = 0; j < pushCount; j++) {
-					out.push(instructions.Drop);
-				}
-				break;
-			case 'ReturnStatement':
-				if (statement.expression !== null) {
-					compileExpression(statement.expression, context, out);
-				}
-				/* TODO: omit the 'return' when it's the final statement */
-				out.push(instructions.Return);
-				break;
-			default:
-				throw util.format(
-					"Unrecognised statement type %s: %s",
-					statement.statementType,
-					util.inspect(statement)
-				);
-		}
+		compileStatement(body[i], context, out);
 	}
 }
 
