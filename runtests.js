@@ -230,6 +230,8 @@ if (runAll || runWast) {
 	testWastCompile('tests/greater_than_or_equal_var.c', 2);
 	testWastCompile('tests/less_than_or_equal.c', 2);
 	testWastCompile('tests/less_than_or_equal_var.c', 2);
+	testWastCompile('tests/for.c', 45);
+	testWastCompile('tests/for_with_declarator.c', 45);
 }
 
 console.log("All tests passed");

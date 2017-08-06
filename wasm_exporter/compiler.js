@@ -167,7 +167,7 @@ function compileExpression(expr, context, out, hints) {
 }
 
 function compileStatement(statement, context, out) {
-	var j;
+	var j, pushCount;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
@@ -185,13 +185,43 @@ function compileStatement(statement, context, out) {
 			}
 			break;
 		case 'ExpressionStatement':
-			var pushCount = compileExpression(statement.expression, context, out, {
+			pushCount = compileExpression(statement.expression, context, out, {
 				canDiscardResult: true
 			});
 			/* drop any results that were pushed */
 			for (j = 0; j < pushCount; j++) {
 				out.push(instructions.Drop);
 			}
+			break;
+		case 'ForStatement':
+			/*
+			'for (init; test; update) do_stuff' compiles to:
+
+			init
+			loop
+				test
+				if
+					do_stuff
+					update
+					br 1  ; repeat loop
+				end
+			end
+			*/
+			compileStatement(statement.init, context, out);
+			out.push(instructions.Loop);
+			compileExpression(statement.test, context, out);
+			out.push(instructions.If);
+			compileStatement(statement.body, context, out);
+			pushCount = compileExpression(statement.update, context, out, {
+				canDiscardResult: true
+			});
+			/* drop any results that were pushed */
+			for (j = 0; j < pushCount; j++) {
+				out.push(instructions.Drop);
+			}
+			out.push(instructions.Br(1));
+			out.push(instructions.End);
+			out.push(instructions.End);
 			break;
 		case 'ReturnStatement':
 			if (statement.expression !== null) {
