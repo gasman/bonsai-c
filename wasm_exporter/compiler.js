@@ -82,6 +82,9 @@ function compile(body, context, out) {
 	for (var i = 0; i < body.length; i++) {
 		var statement = body[i];
 		switch(statement.statementType) {
+			case 'BlockStatement':
+				compile(statement.statements, context, out);
+				break;
 			case 'DeclarationStatement':
 				for (j = 0; j < statement.variableDeclarations.length; j++) {
 					var variableDeclaration = statement.variableDeclarations[j];

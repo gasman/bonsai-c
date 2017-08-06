@@ -200,6 +200,9 @@ if (runAll || runWast) {
 	testWastCompile('tests/initvar_negative.c', -42);
 	testWastCompile('tests/call_assign.c', 42);
 	testWastCompile('tests/call_add.c', 42);
+	testWastCompile('tests/type_coercion.c', 42);
+	testWastCompile('tests/computed_init.c', 42);
+	testWastCompile('tests/inner_block.c', 42);
 }
 
 console.log("All tests passed");
