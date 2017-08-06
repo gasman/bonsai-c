@@ -95,7 +95,9 @@ if (runAll || runAsmJS) {
 	testAsmJSCompile('tests/greater_than.c', 1);
 	testAsmJSCompile('tests/greater_than_var.c', 1);
 	testAsmJSCompile('tests/equal.c', 2);
+	testAsmJSCompile('tests/equal_var.c', 2);
 	testAsmJSCompile('tests/not_equal.c', 1);
+	testAsmJSCompile('tests/not_equal_var.c', 1);
 	testAsmJSCompile('tests/greater_than_or_equal.c', 2);
 	testAsmJSCompile('tests/less_than_or_equal.c', 2);
 	testAsmJSCompile('tests/for.c', 45);
@@ -218,6 +220,10 @@ if (runAll || runWast) {
 	testWastCompile('tests/less_than_var.c', 2);
 	testWastCompile('tests/greater_than.c', 1);
 	testWastCompile('tests/greater_than_var.c', 1);
+	testWastCompile('tests/equal.c', 2);
+	testWastCompile('tests/equal_var.c', 2);
+	testWastCompile('tests/not_equal.c', 1);
+	testWastCompile('tests/not_equal_var.c', 1);
 }
 
 console.log("All tests passed");

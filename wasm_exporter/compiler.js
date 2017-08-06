@@ -51,6 +51,12 @@ function compileExpression(expr, context, out, hints) {
 				out.push(instructions.Drop);
 			}
 			return compileExpression(expr.right, context, out, hints);
+		case 'EqualExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int EqualExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Eq(types.i32));
+			return 1;
 		case 'FunctionCallExpression':
 			assert.equal(expr.callee.expressionType, 'VariableExpression');
 			var functionVariable = expr.callee.variable;
@@ -74,6 +80,12 @@ function compileExpression(expr, context, out, hints) {
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
 			out.push(instructions.LtS(types.i32));
+			return 1;
+		case 'NotEqualExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int NotEqualExpressions");
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Ne(types.i32));
 			return 1;
 		case 'PostdecrementExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostdecrementExpression");

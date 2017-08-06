@@ -44,6 +44,14 @@ exports.End = {
 	'asText': function() {return 'end';}
 };
 
+exports.Eq = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.eq', typ.asText());
+		}
+	};
+};
+
 exports.GetLocal = function(index) {
 	return {
 		'asText': function() {
@@ -72,6 +80,14 @@ exports.LtS = function(typ) {
 	return {
 		'asText': function() {
 			return util.format('%s.lt_s', typ.asText());
+		}
+	};
+};
+
+exports.Ne = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.ne', typ.asText());
 		}
 	};
 };
