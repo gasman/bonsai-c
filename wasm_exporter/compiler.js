@@ -202,15 +202,20 @@ function compileExpression(expr, context, out, hints) {
 
 }
 
-function compileStatement(statement, context, out, breakDepth) {
+function compileStatement(statement, context, out, breakDepth, continueDepth) {
 	var j, pushCount;
 
 	switch(statement.statementType) {
 		case 'BlockStatement':
-			compile(statement.statements, context, out, breakDepth);
+			compile(statement.statements, context, out, breakDepth, continueDepth);
 			break;
 		case 'BreakStatement':
+			assert(breakDepth !== null);
 			out.push(instructions.Br(breakDepth));
+			break;
+		case 'ContinueStatement':
+			assert(continueDepth !== null);
+			out.push(instructions.Br(continueDepth));
 			break;
 		case 'DeclarationStatement':
 			for (j = 0; j < statement.variableDeclarations.length; j++) {
@@ -237,11 +242,15 @@ function compileStatement(statement, context, out, breakDepth) {
 			'for (init; test; update) do_stuff' compiles to:
 
 			init
-			block  ; only required for 'break'
+			block  ; required for 'break'
 				loop
 					test
 					if
-						do_stuff  ; break statements here need 'br 2'
+						block ; required for 'continue'
+							do_stuff
+							; break statements here need 'br 3'
+							; continue statements here need 'br 0'
+						end
 						update
 						br 1  ; repeat loop
 					end
@@ -252,19 +261,25 @@ function compileStatement(statement, context, out, breakDepth) {
 			init
 			block  ; only required for 'break'
 				loop
-					do_stuff  ; break statements here need 'br 1'
+					block ; required for 'continue'
+						do_stuff
+						; break statements here need 'br 2'
+						; continue statements here need 'br 0'
+					end
 					update
 					br 0  ; repeat loop
 				end
 			end
 			*/
-			compileStatement(statement.init, context, out, null);
+			compileStatement(statement.init, context, out, null, null);
 			out.push(instructions.Block);
 			out.push(instructions.Loop);
 			if (statement.test) {
 				compileExpression(statement.test, context, out);
 				out.push(instructions.If);
-				compileStatement(statement.body, context, out, 2);
+				out.push(instructions.Block);
+				compileStatement(statement.body, context, out, 3, 0);
+				out.push(instructions.End);
 
 				if (statement.update) {
 					pushCount = compileExpression(statement.update, context, out, {
@@ -279,7 +294,9 @@ function compileStatement(statement, context, out, breakDepth) {
 				out.push(instructions.Br(1));
 				out.push(instructions.End);
 			} else {
-				compileStatement(statement.body, context, out, 1);
+				out.push(instructions.Block);
+				compileStatement(statement.body, context, out, 2, 0);
+				out.push(instructions.End);
 
 				if (statement.update) {
 					pushCount = compileExpression(statement.update, context, out, {
@@ -328,11 +345,12 @@ function compileStatement(statement, context, out, breakDepth) {
 			compileExpression(statement.test, context, out);
 			out.push(instructions.If);
 			var innerBreakDepth = (breakDepth === null ? null : breakDepth + 1);
-			compileStatement(statement.thenStatement, context, out, innerBreakDepth);
+			var innerContinueDepth = (continueDepth === null ? null : continueDepth + 1);
+			compileStatement(statement.thenStatement, context, out, innerBreakDepth, innerContinueDepth);
 			if (statement.elseStatement) {
 				out.push(instructions.Br(0));
 				out.push(instructions.Else);
-				compileStatement(statement.elseStatement, context, out, innerBreakDepth);
+				compileStatement(statement.elseStatement, context, out, innerBreakDepth, innerContinueDepth);
 			}
 			out.push(instructions.End);
 			break;
@@ -353,7 +371,9 @@ function compileStatement(statement, context, out, breakDepth) {
 				loop
 					condition
 					if
-						do_stuff  ; break statements here need 'br 2'
+						do_stuff
+						; break statements here need 'br 2'
+						; continue statements here need 'br 1'
 						br 1  ; repeat loop
 					end
 				end
@@ -364,7 +384,7 @@ function compileStatement(statement, context, out, breakDepth) {
 			out.push(instructions.Loop);
 			compileExpression(statement.condition, context, out);
 			out.push(instructions.If);
-			compileStatement(statement.body, context, out, 2);
+			compileStatement(statement.body, context, out, 2, 1);
 			out.push(instructions.Br(1));
 			out.push(instructions.End);
 			out.push(instructions.End);
@@ -379,9 +399,9 @@ function compileStatement(statement, context, out, breakDepth) {
 	}
 }
 
-function compile(body, context, out, breakDepth) {
+function compile(body, context, out, breakDepth, continueDepth) {
 	for (var i = 0; i < body.length; i++) {
-		compileStatement(body[i], context, out, breakDepth);
+		compileStatement(body[i], context, out, breakDepth, continueDepth);
 	}
 }
 

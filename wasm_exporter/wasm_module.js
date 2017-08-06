@@ -118,7 +118,7 @@ class FunctionDefinition {
 		}
 
 		var out = [];
-		compiler.compile(fd.body, context, out, null);
+		compiler.compile(fd.body, context, out, null, null);
 
 		/*
 		non-void functions that don't end in an explicit return
