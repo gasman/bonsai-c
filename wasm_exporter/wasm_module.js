@@ -3,6 +3,7 @@ var util = require('util');
 
 var wasmTypes = require('./types');
 var compiler = require('./compiler');
+var instructions = require('./instructions');
 
 function quoteString(str) {
 	return '"' + str.replace(/[\\"']/g, '\\$&') + '"';
@@ -118,6 +119,14 @@ class FunctionDefinition {
 
 		var out = [];
 		compiler.compile(fd.body, context, out);
+
+		/*
+		non-void functions that don't end in an explicit return
+		must terminate with 'unreachable'
+		*/
+		if (typ.returnType.category != 'void' && !out[out.length - 1].isReturn) {
+			out.push(instructions.Unreachable);
+		}
 
 		return new FunctionDefinition(fd.name, typ, fd.isExported, context.localDeclarations, out);
 	}

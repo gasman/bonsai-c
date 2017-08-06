@@ -235,6 +235,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/add_assign.c', 42);
 	testWastCompile('tests/subtract_assign.c', 42);
 	testWastCompile('tests/for_without_init.c', 45);
+	testWastCompile('tests/if.c', 42);
 }
 
 console.log("All tests passed");

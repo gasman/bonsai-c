@@ -259,6 +259,32 @@ function compileStatement(statement, context, out) {
 			out.push(instructions.End);
 			out.push(instructions.End);
 			break;
+		case 'IfStatement':
+			/*
+			if (condition) {
+				do_stuff
+			} else {
+				do_other_stuff
+			}
+
+			compiles to
+
+			condition
+			if
+				do_stuff
+				br 0  ; exit if
+			else
+				do_other_stuff
+			end
+			*/
+			compileExpression(statement.test, context, out);
+			out.push(instructions.If);
+			compileStatement(statement.thenStatement, context, out);
+			out.push(instructions.Br(0));
+			out.push(instructions.Else);
+			compileStatement(statement.elseStatement, context, out);
+			out.push(instructions.End);
+			break;
 		case 'NullStatement':
 			break;
 		case 'ReturnStatement':

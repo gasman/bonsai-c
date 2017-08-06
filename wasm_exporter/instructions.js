@@ -40,6 +40,10 @@ exports.Drop = {
 	'asText': function() {return 'drop';}
 };
 
+exports.Else = {
+	'asText': function() {return 'else';}
+};
+
 exports.End = {
 	'asText': function() {return 'end';}
 };
@@ -109,7 +113,8 @@ exports.Ne = function(typ) {
 };
 
 exports.Return = {
-	'asText': function() {return 'return';}
+	'asText': function() {return 'return';},
+	'isReturn': true
 };
 
 exports.SetLocal = function(index) {
@@ -135,4 +140,8 @@ exports.TeeLocal = function(index) {
 			return util.format('tee_local %d', index);
 		}
 	};
+};
+
+exports.Unreachable = {
+	'asText': function() {return 'unreachable';}
 };
