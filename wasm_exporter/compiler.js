@@ -167,6 +167,24 @@ function compileExpression(expr, context, out, hints) {
 			compileExpression(expr.right, context, out);
 			out.push(instructions.Sub(types.i32));
 			return 1;
+		case 'SubtractAssignmentExpression':
+			assert.equal(expr.left.expressionType, 'VariableExpression');
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int SubtractAssignmentExpressions");
+			localIndex = context.getIndex(expr.left.variable.id);
+			if (localIndex === null) {
+				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
+			}
+			out.push(instructions.GetLocal(localIndex));
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Sub(types.i32));
+			if (!expr.resultIsUsed && hints.canDiscardResult) {
+				out.push(instructions.SetLocal(localIndex));
+				return 0;
+			} else {
+				out.push(instructions.TeeLocal(localIndex));
+				return 1;
+			}
+			break;
 		case 'VariableExpression':
 			localIndex = context.getIndex(expr.variable.id);
 			if (localIndex === null) {
