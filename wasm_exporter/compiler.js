@@ -78,7 +78,6 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.If);
 			compileExpression(expr.consequent, context, out);
 			out.push(instructions.SetLocal(resultIndex));
-			out.push(instructions.Br(0));
 			out.push(instructions.Else);
 			compileExpression(expr.alternate, context, out);
 			out.push(instructions.SetLocal(resultIndex));
@@ -330,41 +329,12 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 			out.push(instructions.End);
 			break;
 		case 'IfStatement':
-			/*
-			if (condition) {
-				do_stuff
-			} else {
-				do_other_stuff
-			}
-
-			compiles to
-
-			condition
-			if
-				do_stuff
-				br 0  ; exit if
-			else
-				do_other_stuff
-			end
-
-			if (condition) {
-				do_stuff
-			}
-
-			compiles to
-
-			condition
-			if
-				do_stuff
-			end
-			*/
 			compileExpression(statement.test, context, out);
 			out.push(instructions.If);
 			var innerBreakDepth = (breakDepth === null ? null : breakDepth + 1);
 			var innerContinueDepth = (continueDepth === null ? null : continueDepth + 1);
 			compileStatement(statement.thenStatement, context, out, innerBreakDepth, innerContinueDepth);
 			if (statement.elseStatement) {
-				out.push(instructions.Br(0));
 				out.push(instructions.Else);
 				compileStatement(statement.elseStatement, context, out, innerBreakDepth, innerContinueDepth);
 			}
