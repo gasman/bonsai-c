@@ -72,10 +72,26 @@ exports.GetLocal = function(index) {
 	};
 };
 
+exports.Ge = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.ge', typ.asText());
+		}
+	};
+};
+
 exports.GeS = function(typ) {
 	return {
 		'asText': function() {
 			return util.format('%s.ge_s', typ.asText());
+		}
+	};
+};
+
+exports.Gt = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.gt', typ.asText());
 		}
 	};
 };
@@ -96,10 +112,26 @@ exports.Loop = {
 	'asText': function() {return 'loop';}
 };
 
+exports.Le = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.le', typ.asText());
+		}
+	};
+};
+
 exports.LeS = function(typ) {
 	return {
 		'asText': function() {
 			return util.format('%s.le_s', typ.asText());
+		}
+	};
+};
+
+exports.Lt = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.lt', typ.asText());
 		}
 	};
 };

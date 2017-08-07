@@ -4,6 +4,12 @@ exports.i32 = {
 	'equals': function(other) {return (other.category == 'i32');}
 };
 
+exports.f64 = {
+	'category': 'f64',
+	'asText': function() {return 'f64';},
+	'equals': function(other) {return (other.category == 'f64');}
+};
+
 exports.void = {
 	'category': 'void',
 	'asText': function() {return '(void)';},
@@ -51,6 +57,8 @@ function fromCType(typ) {
 	switch (typ.category) {
 		case 'int':
 			return exports.i32;
+		case 'double':
+			return exports.f64;
 		case 'function':
 			var paramTypes = [];
 			for (var i = 0; i < typ.paramTypes.length; i++) {

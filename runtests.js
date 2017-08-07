@@ -243,6 +243,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/continue.c', 42);
 	testWastCompile('tests/conditional.c', 42);
 	testWastCompile('tests/logical_not.c', 0);
+	testWastCompile('tests/double.c', 42);
 }
 
 console.log("All tests passed");

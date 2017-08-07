@@ -85,10 +85,17 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.GetLocal(resultIndex));
 			return 1;
 		case 'EqualExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int EqualExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.Eq(types.i32));
+			if (expr.left.type.category == 'int' && expr.right.type.category == 'int') {
+				out.push(instructions.Eq(types.i32));
+			} else if (expr.left.type.category == 'double' && expr.right.type.category == 'double') {
+				out.push(instructions.Eq(types.f64));
+			} else {
+				throw util.format("Don't know how to handle EqualExpressions of types: %s, %s",
+					util.inspect(expr.left.type), util.inspect(expr.right.type)
+				);
+			}
 			return 1;
 		case 'FunctionCallExpression':
 			assert.equal(expr.callee.expressionType, 'VariableExpression');
@@ -103,40 +110,75 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.Call(functionIndex));
 			return (functionVariable.type.returnType.category == 'void') ? 0 : 1;
 		case 'GreaterThanExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int GreaterThanExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.GtS(types.i32));
+			if (expr.left.type.category == 'int' && expr.right.type.category == 'int') {
+				out.push(instructions.GtS(types.i32));
+			} else if (expr.left.type.category == 'double' && expr.right.type.category == 'double') {
+				out.push(instructions.Gt(types.f64));
+			} else {
+				throw util.format("Don't know how to handle GreaterThanExpressions of types: %s, %s",
+					util.inspect(expr.left.type), util.inspect(expr.right.type)
+				);
+			}
 			return 1;
 		case 'GreaterThanOrEqualExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int GreaterThanOrEqualExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.GeS(types.i32));
+			if (expr.left.type.category == 'int' && expr.right.type.category == 'int') {
+				out.push(instructions.GeS(types.i32));
+			} else if (expr.left.type.category == 'double' && expr.right.type.category == 'double') {
+				out.push(instructions.Ge(types.f64));
+			} else {
+				throw util.format("Don't know how to handle GreaterThanOrEqualExpressions of types: %s, %s",
+					util.inspect(expr.left.type), util.inspect(expr.right.type)
+				);
+			}
 			return 1;
 		case 'LessThanExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LessThanExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.LtS(types.i32));
+			if (expr.left.type.category == 'int' && expr.right.type.category == 'int') {
+				out.push(instructions.LtS(types.i32));
+			} else if (expr.left.type.category == 'double' && expr.right.type.category == 'double') {
+				out.push(instructions.Lt(types.f64));
+			} else {
+				throw util.format("Don't know how to handle LessThanExpressions of types: %s, %s",
+					util.inspect(expr.left.type), util.inspect(expr.right.type)
+				);
+			}
 			return 1;
 		case 'LessThanOrEqualExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LessThanOrEqualExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.LeS(types.i32));
+			if (expr.left.type.category == 'int' && expr.right.type.category == 'int') {
+				out.push(instructions.LeS(types.i32));
+			} else if (expr.left.type.category == 'double' && expr.right.type.category == 'double') {
+				out.push(instructions.Le(types.f64));
+			} else {
+				throw util.format("Don't know how to handle LessThanOrEqualExpressions of types: %s, %s",
+					util.inspect(expr.left.type), util.inspect(expr.right.type)
+				);
+			}
 			return 1;
 		case 'LogicalNotExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LogicalNotExpressions");
+			assert.equal(expr.argument.type.category, 'int', "Don't know how to handle non-int LogicalNotExpressions");
 			compileExpression(expr.argument, context, out);
 			/* logical not is equivalent to 'equals zero' */
 			out.push(instructions.Eqz(types.i32));
 			return 1;
 		case 'NotEqualExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int NotEqualExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.Ne(types.i32));
+			if (expr.left.type.category == 'int' && expr.right.type.category == 'int') {
+				out.push(instructions.Ne(types.i32));
+			} else if (expr.left.type.category == 'double' && expr.right.type.category == 'double') {
+				out.push(instructions.Ne(types.f64));
+			} else {
+				throw util.format("Don't know how to handle NotEqualExpressions of types: %s, %s",
+					util.inspect(expr.left.type), util.inspect(expr.right.type)
+				);
+			}
 			return 1;
 		case 'PostdecrementExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostdecrementExpression");

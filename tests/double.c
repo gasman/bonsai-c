@@ -1,6 +1,7 @@
 int main(void)
 {
-    if (99.5 > 99.4 ? 99.4 < 99.5 : 0) {
+    double lower = 99.4, higher = 99.5;
+    if (higher > lower ? lower < higher : 0) {
         return 42;
     } else {
         return 0;
