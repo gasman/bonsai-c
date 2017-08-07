@@ -8,7 +8,7 @@ function compileExpression(expr, context, out, hints) {
 	/* compile the code for evaluating 'expr' into 'out', and return the number of values
 	pushed onto the stack; this will usually be 1, but may be 0 if the expression is a void
 	function call or its resultIsUsed flag is false. */
-	var i, localIndex;
+	var i, localIndex, resultIndex;
 
 	if (!hints) hints = {};
 
@@ -73,7 +73,7 @@ function compileExpression(expr, context, out, hints) {
 			/* The blocks within an 'if' must balance the stack, and so
 			can't leave a result behind; we need to store it in a local var
 			instead */
-			var resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+			resultIndex = context.declareVariable(null, types.fromCType(expr.type));
 			compileExpression(expr.test, context, out);
 			out.push(instructions.If);
 			compileExpression(expr.consequent, context, out);
@@ -161,6 +161,37 @@ function compileExpression(expr, context, out, hints) {
 				);
 			}
 			return 1;
+		case 'LogicalAndExpression':
+			/* left && right compiles to:
+			left
+			if
+				right
+				i32.eqz
+				i32.eqz
+				set_local result
+			else
+				i32.const 0
+				set_local result
+			end
+			get_local result
+			*/
+			assert.equal(expr.left.type.category, 'int');
+			assert.equal(expr.right.type.category, 'int');
+
+			resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+
+			compileExpression(expr.left, context, out);
+			out.push(instructions.If);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Eqz(types.i32));
+			out.push(instructions.Eqz(types.i32));
+			out.push(instructions.SetLocal(resultIndex));
+			out.push(instructions.Else);
+			out.push(instructions.Const(types.i32, 0));
+			out.push(instructions.SetLocal(resultIndex));
+			out.push(instructions.End);
+			out.push(instructions.GetLocal(resultIndex));
+			break;
 		case 'LogicalNotExpression':
 			assert.equal(expr.argument.type.category, 'int', "Don't know how to handle non-int LogicalNotExpressions");
 			compileExpression(expr.argument, context, out);
