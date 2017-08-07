@@ -126,6 +126,12 @@ function compileExpression(expr, context, out, hints) {
 			compileExpression(expr.right, context, out);
 			out.push(instructions.LeS(types.i32));
 			return 1;
+		case 'LogicalNotExpression':
+			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int LogicalNotExpressions");
+			compileExpression(expr.argument, context, out);
+			/* logical not is equivalent to 'equals zero' */
+			out.push(instructions.Eqz(types.i32));
+			return 1;
 		case 'NotEqualExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int NotEqualExpressions");
 			compileExpression(expr.left, context, out);

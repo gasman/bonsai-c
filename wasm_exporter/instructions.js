@@ -56,6 +56,14 @@ exports.Eq = function(typ) {
 	};
 };
 
+exports.Eqz = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.eqz', typ.asText());
+		}
+	};
+};
+
 exports.GetLocal = function(index) {
 	return {
 		'asText': function() {
