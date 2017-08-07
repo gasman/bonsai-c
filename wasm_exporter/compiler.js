@@ -22,10 +22,15 @@ function compileExpression(expr, context, out, hints) {
 
 	switch (expr.expressionType) {
 		case 'AddExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int AddExpressions");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.Add(types.i32));
+			if (expr.type.category == 'int') {
+				out.push(instructions.Add(types.i32));
+			} else if (expr.type.category == 'double') {
+				out.push(instructions.Add(types.f64));
+			} else {
+				assert.equal(expr.type.category, 'int', "Don't know how to handle non-int AddExpressions");
+			}
 			return 1;
 		case 'AddAssignmentExpression':
 			assert.equal(expr.left.expressionType, 'VariableExpression');

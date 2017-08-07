@@ -122,6 +122,7 @@ if (runAll || runAsmJS) {
 	testAsmJSCompile('tests/logical_or_var.c', 42);
 	testAsmJSCompile('tests/double_var.c', 42);
 	testAsmJSCompile('tests/double_add.c', 42);
+	testAsmJSCompile('tests/double_add_var.c', 42);
 	testAsmJSCompile('tests/reserved_vars.c', 42);
 	testAsmJSCompile('tests/reserved_vars_as_params.c', 42);
 	testAsmJSCompile('tests/empty_params.c', 42);
@@ -250,6 +251,9 @@ if (runAll || runWast) {
 	testWastCompile('tests/logical_and_var.c', 42);
 	testWastCompile('tests/logical_or.c', 42);
 	testWastCompile('tests/logical_or_var.c', 42);
+	testWastCompile('tests/double_var.c', 42);
+	testWastCompile('tests/double_add.c', 42);
+	testWastCompile('tests/double_add_var.c', 42);
 }
 
 console.log("All tests passed");
