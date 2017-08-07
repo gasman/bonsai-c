@@ -191,12 +191,43 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.End);
 			out.push(instructions.GetLocal(resultIndex));
-			break;
+			return 1;
 		case 'LogicalNotExpression':
 			assert.equal(expr.argument.type.category, 'int', "Don't know how to handle non-int LogicalNotExpressions");
 			compileExpression(expr.argument, context, out);
 			/* logical not is equivalent to 'equals zero' */
 			out.push(instructions.Eqz(types.i32));
+			return 1;
+		case 'LogicalOrExpression':
+			/* left || right compiles to: 
+			left
+			if
+				const 1
+				set_local result
+			else
+				right
+				eqz
+				eqz
+				set_local result
+			end
+			get_local result
+			*/
+			assert.equal(expr.left.type.category, 'int');
+			assert.equal(expr.right.type.category, 'int');
+
+			resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+
+			compileExpression(expr.left, context, out);
+			out.push(instructions.If);
+			out.push(instructions.Const(types.i32, 1));
+			out.push(instructions.SetLocal(resultIndex));
+			out.push(instructions.Else);
+			compileExpression(expr.right, context, out);
+			out.push(instructions.Eqz(types.i32));
+			out.push(instructions.Eqz(types.i32));
+			out.push(instructions.SetLocal(resultIndex));
+			out.push(instructions.End);
+			out.push(instructions.GetLocal(resultIndex));
 			return 1;
 		case 'NotEqualExpression':
 			compileExpression(expr.left, context, out);

@@ -249,7 +249,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/logical_and.c', 42);
 	testWastCompile('tests/logical_and_var.c', 42);
 	testWastCompile('tests/logical_or.c', 42);
-	//testWastCompile('tests/logical_or_var.c', 42);
+	testWastCompile('tests/logical_or_var.c', 42);
 }
 
 console.log("All tests passed");
