@@ -358,6 +358,36 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 				}
 			}
 			break;
+		case 'DoWhileStatement':
+			/*
+			do {stuff} while (condition); compiles to:
+
+			block
+				loop
+					block
+						stuff
+						; continue needs br 0
+						; break needs br 2
+					end
+					condition
+					if
+						br 1
+					end
+				end
+			end
+			*/
+			out.push(instructions.Block);
+			out.push(instructions.Loop);
+			out.push(instructions.Block);
+			compileStatement(statement.body, context, out, 2, 0);
+			out.push(instructions.End);
+			compileExpression(statement.condition, context, out);
+			out.push(instructions.If);
+			out.push(instructions.Br(1));
+			out.push(instructions.End);
+			out.push(instructions.End);
+			out.push(instructions.End);
+			break;
 		case 'ExpressionStatement':
 			pushCount = compileExpression(statement.expression, context, out, {
 				canDiscardResult: true

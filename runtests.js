@@ -254,6 +254,10 @@ if (runAll || runWast) {
 	testWastCompile('tests/double_var.c', 42);
 	testWastCompile('tests/double_add.c', 42);
 	testWastCompile('tests/double_add_var.c', 42);
+	testWastCompile('tests/empty_params.c', 42);
+	testWastCompile('tests/void_return.c', 42);
+	testWastCompile('tests/void_function_without_return.c', 42);
+	testWastCompile('tests/do_while.c', 55);
 }
 
 console.log("All tests passed");
