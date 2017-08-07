@@ -36,7 +36,9 @@ class Context {
 
 	allocateVariable(id) {
 		var index = this.localIndex;
-		this.localIndexesById[id] = index;
+		if (id !== null) {
+			this.localIndexesById[id] = index;
+		}
 		this.localIndex++;
 		return index;
 	}

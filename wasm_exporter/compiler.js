@@ -69,6 +69,22 @@ function compileExpression(expr, context, out, hints) {
 				out.push(instructions.Drop);
 			}
 			return compileExpression(expr.right, context, out, hints);
+		case 'ConditionalExpression':
+			/* The blocks within an 'if' must balance the stack, and so
+			can't leave a result behind; we need to store it in a local var
+			instead */
+			var resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+			compileExpression(expr.test, context, out);
+			out.push(instructions.If);
+			compileExpression(expr.consequent, context, out);
+			out.push(instructions.SetLocal(resultIndex));
+			out.push(instructions.Br(0));
+			out.push(instructions.Else);
+			compileExpression(expr.alternate, context, out);
+			out.push(instructions.SetLocal(resultIndex));
+			out.push(instructions.End);
+			out.push(instructions.GetLocal(resultIndex));
+			return 1;
 		case 'EqualExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int EqualExpressions");
 			compileExpression(expr.left, context, out);
