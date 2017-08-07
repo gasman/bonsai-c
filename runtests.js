@@ -131,7 +131,9 @@ if (runAll || runAsmJS) {
 	testAsmJSCompile('tests/do_while.c', 55);
 	testAsmJSCompile('tests/logical_shortcuts.c', 42);
 	testAsmJSCompile('tests/double_mul.c', 42);
+	testAsmJSCompile('tests/double_mul_var.c', 42);
 	testAsmJSCompile('tests/int_div.c', 42);
+	testAsmJSCompile('tests/int_div_var.c', 42);
 	testAsmJSCompile('tests/late_declaration.c', 52);
 	testAsmJSCompile('tests/nonconstant_declare.c', 42);
 	testAsmJSCompile('tests/int_mod.c', 42);
@@ -258,6 +260,12 @@ if (runAll || runWast) {
 	testWastCompile('tests/void_return.c', 42);
 	testWastCompile('tests/void_function_without_return.c', 42);
 	testWastCompile('tests/do_while.c', 55);
+	testWastCompile('tests/logical_shortcuts.c', 42);
+	testWastCompile('tests/double_mul.c', 42);
+	testWastCompile('tests/double_mul_var.c', 42);
+	testWastCompile('tests/int_mul.c', 42);
+	testWastCompile('tests/int_div.c', 42);
+	testWastCompile('tests/int_div_var.c', 42);
 }
 
 console.log("All tests passed");

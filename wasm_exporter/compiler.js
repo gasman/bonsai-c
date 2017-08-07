@@ -29,7 +29,7 @@ function compileExpression(expr, context, out, hints) {
 			} else if (expr.type.category == 'double') {
 				out.push(instructions.Add(types.f64));
 			} else {
-				assert.equal(expr.type.category, 'int', "Don't know how to handle non-int AddExpressions");
+				throw util.format("Don't know how to handle MultiplyExpressions of type %s", util.inspect(expr.type));
 			}
 			return 1;
 		case 'AddAssignmentExpression':
@@ -88,6 +88,17 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.End);
 			out.push(instructions.GetLocal(resultIndex));
+			return 1;
+		case 'DivideExpression':
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			if (expr.type.category == 'int') {
+				out.push(instructions.DivS(types.i32));
+			} else if (expr.type.category == 'double') {
+				out.push(instructions.Div(types.f64));
+			} else {
+				throw util.format("Don't know how to handle DivideExpressions of type %s", util.inspect(expr.type));
+			}
 			return 1;
 		case 'EqualExpression':
 			compileExpression(expr.left, context, out);
@@ -233,6 +244,17 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.End);
 			out.push(instructions.GetLocal(resultIndex));
+			return 1;
+		case 'MultiplyExpression':
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			if (expr.type.category == 'int') {
+				out.push(instructions.Mul(types.i32));
+			} else if (expr.type.category == 'double') {
+				out.push(instructions.Mul(types.f64));
+			} else {
+				throw util.format("Don't know how to handle MultiplyExpressions of type %s", util.inspect(expr.type));
+			}
 			return 1;
 		case 'NotEqualExpression':
 			compileExpression(expr.left, context, out);

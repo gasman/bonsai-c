@@ -36,6 +36,22 @@ exports.Const = function(typ, value) {
 	};
 };
 
+exports.Div = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.div', typ.asText());
+		}
+	};
+};
+
+exports.DivS = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.div_s', typ.asText());
+		}
+	};
+};
+
 exports.Drop = {
 	'asText': function() {return 'drop';}
 };
@@ -140,6 +156,14 @@ exports.LtS = function(typ) {
 	return {
 		'asText': function() {
 			return util.format('%s.lt_s', typ.asText());
+		}
+	};
+};
+
+exports.Mul = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.mul', typ.asText());
 		}
 	};
 };
