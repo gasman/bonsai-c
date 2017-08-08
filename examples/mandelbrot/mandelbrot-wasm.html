@@ -1,0 +1,69 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<title>Mandelbrot set</title>
+		<script>
+			SHADES = [
+				'#000', '#00f', '#f00', '#f0f', '#0f0', '#0ff', '#ff0', '#fff'
+			];
+
+			function start() {
+				var url = 'mandelbrot.wasm';
+
+				var request = new XMLHttpRequest();
+
+				request.addEventListener('error', function(e) {
+					console.log('XHR error', e);
+				});
+
+				request.addEventListener('load', function(e) {
+					buffer = request.response;
+					WebAssembly.instantiate(buffer).then(function(result) {
+						drawMandelbrot(result.instance.exports.calc);
+					}).catch(function(err) {
+						console.log("Compilation error:", err);
+					});
+				});
+
+				/* trigger XHR */
+				request.open('GET', url, true);
+				request.responseType = "arraybuffer";
+				request.send();
+			}
+
+			function drawMandelbrot(calc) {
+				var canvas = document.getElementById('canvas');
+				var ctx = canvas.getContext('2d');
+
+				var CENTRE_X = -0.5;
+				var CENTRE_Y = 0;
+				var SCALE_X = 4;
+				var SCALE_Y = SCALE_X * canvas.height / canvas.width;
+
+				for (var screenY = 0; screenY < canvas.height; screenY++) {
+					for (var screenX = 0; screenX < canvas.width; screenX++) {
+						var x = (screenX / canvas.width - 0.5) * SCALE_X + CENTRE_X;
+						var y = (screenY / canvas.height - 0.5) * SCALE_Y + CENTRE_Y;
+
+						ctx.fillStyle = SHADES[calc(x, y) % 8];
+						ctx.fillRect(screenX, screenY, 1, 1);
+					}
+				}
+			}
+		</script>
+		<!--
+			Equivalent pure-js example:
+
+			<script src="mandelbrot-pure-js.js"></script>
+			<script>
+				function start() {
+					var mandel = Module();
+					drawMandelbrot(mandel.calc);
+				}
+			</script>
+		-->
+	</head>
+	<body onload="start()">
+		<canvas id="canvas" width="640" height="480"></canvas>
+	</body>
+</html>
