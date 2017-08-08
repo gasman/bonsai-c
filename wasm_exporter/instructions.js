@@ -176,6 +176,14 @@ exports.Ne = function(typ) {
 	};
 };
 
+exports.RemS = function(typ) {
+	return {
+		'asText': function() {
+			return util.format('%s.rem_s', typ.asText());
+		}
+	};
+};
+
 exports.Return = {
 	'asText': function() {return 'return';},
 	'isReturn': true

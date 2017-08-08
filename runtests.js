@@ -137,7 +137,12 @@ if (runAll || runAsmJS) {
 	testAsmJSCompile('tests/late_declaration.c', 52);
 	testAsmJSCompile('tests/nonconstant_declare.c', 42);
 	testAsmJSCompile('tests/int_mod.c', 42);
-	testAsmJSCompile('tests/double_mod.c', 42);
+	testAsmJSCompile('tests/int_mod_var.c', 42);
+
+	/* not actually valid C, but work on the asm.js backend anyway: */
+		testAsmJSCompile('tests/double_mod.c', 42);
+		testAsmJSCompile('tests/double_mod_var.c', 42);
+
 	testAsmJSCompile('tests/double_to_signed.c', 42);
 	testAsmJSCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 	testAsmJSCompile('tests/global_var.c', 42);
@@ -266,6 +271,14 @@ if (runAll || runWast) {
 	testWastCompile('tests/int_mul.c', 42);
 	testWastCompile('tests/int_div.c', 42);
 	testWastCompile('tests/int_div_var.c', 42);
+	testWastCompile('tests/late_declaration.c', 52);
+	testWastCompile('tests/nonconstant_declare.c', 42);
+	testWastCompile('tests/int_mod.c', 42);
+	testWastCompile('tests/int_mod_var.c', 42);
+
+	// not implemented - WebAssembly doesn't implement floating-point mod (and it's not valid C either...)
+	// testWastCompile('tests/double_mod.c', 42);
+	// testWastCompile('tests/double_mod_var.c', 42);
 }
 
 console.log("All tests passed");

@@ -245,6 +245,15 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.End);
 			out.push(instructions.GetLocal(resultIndex));
 			return 1;
+		case 'ModExpression':
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			if (expr.type.category == 'int') {
+				out.push(instructions.RemS(types.i32));
+			} else {
+				throw util.format("Don't know how to handle ModExpressions of type %s", util.inspect(expr.type));
+			}
+			return 1;
 		case 'MultiplyExpression':
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
