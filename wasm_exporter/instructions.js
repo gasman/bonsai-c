@@ -80,6 +80,14 @@ exports.Eqz = function(typ) {
 	};
 };
 
+exports.GetGlobal = function(index) {
+	return {
+		'asText': function() {
+			return util.format('get_global %d', index);
+		}
+	};
+};
+
 exports.GetLocal = function(index) {
 	return {
 		'asText': function() {
@@ -187,6 +195,14 @@ exports.RemS = function(typ) {
 exports.Return = {
 	'asText': function() {return 'return';},
 	'isReturn': true
+};
+
+exports.SetGlobal = function(index) {
+	return {
+		'asText': function() {
+			return util.format('set_global %d', index);
+		}
+	};
 };
 
 exports.SetLocal = function(index) {

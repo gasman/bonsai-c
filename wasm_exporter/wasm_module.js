@@ -18,15 +18,15 @@ class Context {
 			this.globalContext = this;
 		}
 
-		this.localIndexesById = {};
-		this.localIndex = 0;
-		this.localDeclarations = [];
+		this.variableIndexesById = {};
+		this.variableIndex = 0;
+		this.variableDeclarations = [];
 		this.functionIndexesById = {};
 	}
 
 	getIndex(id) {
-		if (id in this.localIndexesById) {
-			return this.localIndexesById[id];
+		if (id in this.variableIndexesById) {
+			return this.variableIndexesById[id];
 		} else if (this.parentContext) {
 			return this.parentContext.getIndex(id);
 		} else {
@@ -35,17 +35,20 @@ class Context {
 	}
 
 	allocateVariable(id) {
-		var index = this.localIndex;
+		var index = this.variableIndex;
 		if (id !== null) {
-			this.localIndexesById[id] = index;
+			this.variableIndexesById[id] = index;
 		}
-		this.localIndex++;
+		this.variableIndex++;
 		return index;
 	}
 
-	declareVariable(id, typ) {
+	declareVariable(id, typ, initialValue) {
+		if (this.parentContext && initialValue !== null) {
+			throw "Initial variable values are only valid in the global context";
+		}
 		var index = this.allocateVariable(id);
-		this.localDeclarations.push(typ);
+		this.variableDeclarations.push({'type': typ, 'initialValue': initialValue});
 		return index;
 	}
 
@@ -94,7 +97,7 @@ class FunctionDefinition {
 		if (this.locals.length) {
 			var localAtoms = ['local'];
 			for (i = 0; i < this.locals.length; i++) {
-				localAtoms.push(this.locals[i].asText());
+				localAtoms.push(this.locals[i].type.asText());
 			}
 			atoms.push('(' + localAtoms.join(' ') + ')');
 		}
@@ -130,7 +133,7 @@ class FunctionDefinition {
 			out.push(instructions.Unreachable);
 		}
 
-		return new FunctionDefinition(fd.name, typ, fd.isExported, context.localDeclarations, out);
+		return new FunctionDefinition(fd.name, typ, fd.isExported, context.variableDeclarations, out);
 	}
 }
 
@@ -138,6 +141,7 @@ class WasmModule {
 	constructor() {
 		this.types = [];
 		this.functions = [];
+		this.globals = [];
 		this.exports = [];
 	}
 
@@ -170,6 +174,14 @@ class WasmModule {
 		return functionIndex;
 	}
 
+	defineGlobal(typ, isMutable, initialValueInstruction) {
+		this.globals.push({
+			'type': typ,
+			'isMutable': isMutable,
+			'initialValueInstruction': initialValueInstruction
+		});
+	}
+
 	asText() {
 		var output = "(module\n";
 		var i;
@@ -180,6 +192,21 @@ class WasmModule {
 
 		for (i = 0; i < this.functions.length; i++) {
 			output += this.functions[i].asText();
+		}
+
+		for (i = 0; i < this.globals.length; i++) {
+			var globl = this.globals[i];
+			var globalType;
+			if (globl.isMutable) {
+				globalType = util.format("(mut %s)", globl.type.asText());
+			} else {
+				globalType = globl.type.asText();
+			}
+
+			output += util.format(
+				"  (global (;%d;) %s %s)\n",
+				i, globalType, globl.initialValueInstruction.asText()
+			);
 		}
 
 		for (i = 0; i < this.exports.length; i++) {
@@ -198,7 +225,9 @@ class WasmModule {
 		var wasm = new WasmModule();
 		var globalContext = new Context();
 
-		for (var i = 0; i < module.declarations.length; i++) {
+		var i;
+
+		for (i = 0; i < module.declarations.length; i++) {
 			var declaration = module.declarations[i];
 
 			switch (declaration.declarationType) {
@@ -207,10 +236,32 @@ class WasmModule {
 					var functionIndex = wasm.defineFunction(fd);
 					globalContext.declareFunction(declaration.variable.id, functionIndex);
 					break;
+				case 'VariableDeclaration':
+					for (var j = 0; j < declaration.variableDeclarations.length; j++) {
+						var variableDeclaration = declaration.variableDeclarations[j];
+						var initialValue = null;
+						if (variableDeclaration.initialValueExpression) {
+							assert(variableDeclaration.initialValueExpression.isCompileTimeConstant);
+							initialValue = variableDeclaration.initialValueExpression.compileTimeConstantValue;
+						}
+						globalContext.declareVariable(
+							variableDeclaration.variable.id,
+							wasmTypes.fromCType(variableDeclaration.variable.type),
+							initialValue
+						);
+					}
+					break;
 				default:
 					throw util.format("Unsupported declaration type: %s", declaration.declarationType);
 			}
 		}
+
+		for (i = 0; i < globalContext.variableDeclarations.length; i++) {
+			var variable = globalContext.variableDeclarations[i];
+			var initialValueInstruction = instructions.Const(variable.type, variable.initialValue || 0);
+			wasm.defineGlobal(variable.type, true, initialValueInstruction);
+		}
+
 		return wasm;
 	}
 }

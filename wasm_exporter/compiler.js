@@ -8,7 +8,7 @@ function compileExpression(expr, context, out, hints) {
 	/* compile the code for evaluating 'expr' into 'out', and return the number of values
 	pushed onto the stack; this will usually be 1, but may be 0 if the expression is a void
 	function call or its resultIsUsed flag is false. */
-	var i, localIndex, resultIndex;
+	var i, varIndex, resultIndex;
 
 	if (!hints) hints = {};
 
@@ -35,35 +35,60 @@ function compileExpression(expr, context, out, hints) {
 		case 'AddAssignmentExpression':
 			assert.equal(expr.left.expressionType, 'VariableExpression');
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int AddAssignmentExpressions");
-			localIndex = context.getIndex(expr.left.variable.id);
-			if (localIndex === null) {
+			varIndex = context.getIndex(expr.left.variable.id);
+			if (varIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
 			}
-			out.push(instructions.GetLocal(localIndex));
-			compileExpression(expr.right, context, out);
-			out.push(instructions.Add(types.i32));
-			if (!expr.resultIsUsed && hints.canDiscardResult) {
-				out.push(instructions.SetLocal(localIndex));
-				return 0;
+			if (expr.left.variable.isGlobal) {
+				out.push(instructions.GetGlobal(varIndex));
+				compileExpression(expr.right, context, out);
+				out.push(instructions.Add(types.i32));
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.SetGlobal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.SetGlobal(varIndex));
+					out.push(instructions.GetGlobal(varIndex));
+					return 1;
+				}
 			} else {
-				out.push(instructions.TeeLocal(localIndex));
-				return 1;
+				out.push(instructions.GetLocal(varIndex));
+				compileExpression(expr.right, context, out);
+				out.push(instructions.Add(types.i32));
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.SetLocal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.TeeLocal(varIndex));
+					return 1;
+				}
 			}
 			break;
 		case 'AssignmentExpression':
 			assert.equal(expr.left.expressionType, 'VariableExpression');
-			localIndex = context.getIndex(expr.left.variable.id);
-			if (localIndex === null) {
+			varIndex = context.getIndex(expr.left.variable.id);
+			if (varIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
 			}
 			compileExpression(expr.right, context, out);
 			castResult(expr.right.type, expr.left.type, out);
-			if (!expr.resultIsUsed && hints.canDiscardResult) {
-				out.push(instructions.SetLocal(localIndex));
-				return 0;
+			if (expr.left.variable.isGlobal) {
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.SetGlobal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.SetGlobal(varIndex));
+					out.push(instructions.GetGlobal(varIndex));
+					return 1;
+				}
 			} else {
-				out.push(instructions.TeeLocal(localIndex));
-				return 1;
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.SetLocal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.TeeLocal(varIndex));
+					return 1;
+				}
 			}
 			break;
 		case 'CommaExpression':
@@ -79,7 +104,7 @@ function compileExpression(expr, context, out, hints) {
 			/* The blocks within an 'if' must balance the stack, and so
 			can't leave a result behind; we need to store it in a local var
 			instead */
-			resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+			resultIndex = context.declareVariable(null, types.fromCType(expr.type), null);
 			compileExpression(expr.test, context, out);
 			out.push(instructions.If);
 			compileExpression(expr.consequent, context, out);
@@ -195,7 +220,7 @@ function compileExpression(expr, context, out, hints) {
 			assert.equal(expr.left.type.category, 'int');
 			assert.equal(expr.right.type.category, 'int');
 
-			resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+			resultIndex = context.declareVariable(null, types.fromCType(expr.type), null);
 
 			compileExpression(expr.left, context, out);
 			out.push(instructions.If);
@@ -232,7 +257,7 @@ function compileExpression(expr, context, out, hints) {
 			assert.equal(expr.left.type.category, 'int');
 			assert.equal(expr.right.type.category, 'int');
 
-			resultIndex = context.declareVariable(null, types.fromCType(expr.type));
+			resultIndex = context.declareVariable(null, types.fromCType(expr.type), null);
 
 			compileExpression(expr.left, context, out);
 			out.push(instructions.If);
@@ -282,45 +307,79 @@ function compileExpression(expr, context, out, hints) {
 		case 'PostdecrementExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostdecrementExpression");
 			assert.equal(expr.argument.expressionType, 'VariableExpression');
-			localIndex = context.getIndex(expr.argument.variable.id);
-			if (localIndex === null) {
+			varIndex = context.getIndex(expr.argument.variable.id);
+			if (varIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.argument.variable));
 			}
-			if (!expr.resultIsUsed && hints.canDiscardResult) {
-				out.push(instructions.GetLocal(localIndex));
-				out.push(instructions.Const(types.i32, 1));
-				out.push(instructions.Sub(types.i32));
-				out.push(instructions.SetLocal(localIndex));
-				return 0;
+			if (expr.argument.variable.isGlobal) {
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.GetGlobal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Sub(types.i32));
+					out.push(instructions.SetGlobal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.GetGlobal(varIndex));
+					out.push(instructions.GetGlobal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Sub(types.i32));
+					out.push(instructions.SetGlobal(varIndex));
+					return 1;
+				}
 			} else {
-				out.push(instructions.GetLocal(localIndex));
-				out.push(instructions.GetLocal(localIndex));
-				out.push(instructions.Const(types.i32, 1));
-				out.push(instructions.Sub(types.i32));
-				out.push(instructions.SetLocal(localIndex));
-				return 1;
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.GetLocal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Sub(types.i32));
+					out.push(instructions.SetLocal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.GetLocal(varIndex));
+					out.push(instructions.GetLocal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Sub(types.i32));
+					out.push(instructions.SetLocal(varIndex));
+					return 1;
+				}
 			}
 			break;
 		case 'PostincrementExpression':
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int PostincrementExpression");
 			assert.equal(expr.argument.expressionType, 'VariableExpression');
-			localIndex = context.getIndex(expr.argument.variable.id);
-			if (localIndex === null) {
+			varIndex = context.getIndex(expr.argument.variable.id);
+			if (varIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.argument.variable));
 			}
-			if (!expr.resultIsUsed && hints.canDiscardResult) {
-				out.push(instructions.GetLocal(localIndex));
-				out.push(instructions.Const(types.i32, 1));
-				out.push(instructions.Add(types.i32));
-				out.push(instructions.SetLocal(localIndex));
-				return 0;
+			if (expr.argument.variable.isGlobal) {
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.GetGlobal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Add(types.i32));
+					out.push(instructions.SetGlobal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.GetGlobal(varIndex));
+					out.push(instructions.GetGlobal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Add(types.i32));
+					out.push(instructions.SetGlobal(varIndex));
+					return 1;
+				}
 			} else {
-				out.push(instructions.GetLocal(localIndex));
-				out.push(instructions.GetLocal(localIndex));
-				out.push(instructions.Const(types.i32, 1));
-				out.push(instructions.Add(types.i32));
-				out.push(instructions.SetLocal(localIndex));
-				return 1;
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.GetLocal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Add(types.i32));
+					out.push(instructions.SetLocal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.GetLocal(varIndex));
+					out.push(instructions.GetLocal(varIndex));
+					out.push(instructions.Const(types.i32, 1));
+					out.push(instructions.Add(types.i32));
+					out.push(instructions.SetLocal(varIndex));
+					return 1;
+				}
 			}
 			break;
 		case 'SubtractExpression':
@@ -332,27 +391,45 @@ function compileExpression(expr, context, out, hints) {
 		case 'SubtractAssignmentExpression':
 			assert.equal(expr.left.expressionType, 'VariableExpression');
 			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int SubtractAssignmentExpressions");
-			localIndex = context.getIndex(expr.left.variable.id);
-			if (localIndex === null) {
+			varIndex = context.getIndex(expr.left.variable.id);
+			if (varIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
 			}
-			out.push(instructions.GetLocal(localIndex));
-			compileExpression(expr.right, context, out);
-			out.push(instructions.Sub(types.i32));
-			if (!expr.resultIsUsed && hints.canDiscardResult) {
-				out.push(instructions.SetLocal(localIndex));
-				return 0;
+			if (expr.left.variable.isGlobal) {
+				out.push(instructions.GetGlobal(varIndex));
+				compileExpression(expr.right, context, out);
+				out.push(instructions.Sub(types.i32));
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.SetGlobal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.SetGlobal(varIndex));
+					out.push(instructions.GetGlobal(varIndex));
+					return 1;
+				}
 			} else {
-				out.push(instructions.TeeLocal(localIndex));
-				return 1;
+				out.push(instructions.GetLocal(varIndex));
+				compileExpression(expr.right, context, out);
+				out.push(instructions.Sub(types.i32));
+				if (!expr.resultIsUsed && hints.canDiscardResult) {
+					out.push(instructions.SetLocal(varIndex));
+					return 0;
+				} else {
+					out.push(instructions.TeeLocal(varIndex));
+					return 1;
+				}
 			}
 			break;
 		case 'VariableExpression':
-			localIndex = context.getIndex(expr.variable.id);
-			if (localIndex === null) {
+			varIndex = context.getIndex(expr.variable.id);
+			if (varIndex === null) {
 				throw util.format("Variable not found: %s", util.inspect(expr.variable));
 			}
-			out.push(instructions.GetLocal(localIndex));
+			if (expr.variable.isGlobal) {
+				out.push(instructions.GetGlobal(varIndex));
+			} else {
+				out.push(instructions.GetLocal(varIndex));
+			}
 			return 1;
 		default:
 			throw util.format(
@@ -396,7 +473,7 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 			for (j = 0; j < statement.variableDeclarations.length; j++) {
 				var variableDeclaration = statement.variableDeclarations[j];
 				var variable = variableDeclaration.variable;
-				var index = context.declareVariable(variable.id, types.fromCType(variable.type));
+				var index = context.declareVariable(variable.id, types.fromCType(variable.type), null);
 				if (variableDeclaration.initialValueExpression !== null) {
 					compileExpression(variableDeclaration.initialValueExpression, context, out);
 					castResult(variableDeclaration.initialValueExpression.type, variable.type, out);

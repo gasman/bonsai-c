@@ -14,7 +14,12 @@ function Context(parentContext, returnType) {
 }
 
 Context.prototype.define = function(name, type) {
-	var definition = {'name': name, 'type': type, 'id': this.globalContext.nextId++};
+	var definition = {
+		'name': name,
+		'type': type,
+		'id': this.globalContext.nextId++,
+		'isGlobal': this.isGlobalContext
+	};
 	this.variables[name] = definition;
 	return definition;
 };
