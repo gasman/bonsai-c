@@ -283,6 +283,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/double_to_signed.c', 42);
 	testWastCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 	testWastCompile('tests/global_var.c', 42);
+	testWastCompile('tests/double_subtract.c', 42);
 }
 
 console.log("All tests passed");

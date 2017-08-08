@@ -29,7 +29,7 @@ function compileExpression(expr, context, out, hints) {
 			} else if (expr.type.category == 'double') {
 				out.push(instructions.Add(types.f64));
 			} else {
-				throw util.format("Don't know how to handle MultiplyExpressions of type %s", util.inspect(expr.type));
+				throw util.format("Don't know how to handle AddExpressions of type %s", util.inspect(expr.type));
 			}
 			return 1;
 		case 'AddAssignmentExpression':
@@ -383,10 +383,15 @@ function compileExpression(expr, context, out, hints) {
 			}
 			break;
 		case 'SubtractExpression':
-			assert.equal(expr.type.category, 'int', "Don't know how to handle non-int SubtractExpression");
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);
-			out.push(instructions.Sub(types.i32));
+			if (expr.type.category == 'int') {
+				out.push(instructions.Sub(types.i32));
+			} else if (expr.type.category == 'double') {
+				out.push(instructions.Sub(types.f64));
+			} else {
+				throw util.format("Don't know how to handle SubtractExpressions of type %s", util.inspect(expr.type));
+			}
 			return 1;
 		case 'SubtractAssignmentExpression':
 			assert.equal(expr.left.expressionType, 'VariableExpression');
