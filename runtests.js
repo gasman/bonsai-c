@@ -279,6 +279,8 @@ if (runAll || runWast) {
 	// not implemented - WebAssembly doesn't implement floating-point mod (and it's not valid C either...)
 	// testWastCompile('tests/double_mod.c', 42);
 	// testWastCompile('tests/double_mod_var.c', 42);
+
+	testWastCompile('tests/double_to_signed.c', 42);
 }
 
 console.log("All tests passed");

@@ -57,6 +57,7 @@ function compileExpression(expr, context, out, hints) {
 				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
 			}
 			compileExpression(expr.right, context, out);
+			castResult(expr.right.type, expr.left.type, out);
 			if (!expr.resultIsUsed && hints.canDiscardResult) {
 				out.push(instructions.SetLocal(localIndex));
 				return 0;
@@ -360,7 +361,20 @@ function compileExpression(expr, context, out, hints) {
 				util.inspect(expr)
 			);
 	}
+}
 
+function castResult(fromType, toType, out) {
+	if (fromType.category == 'int' && toType.category == 'int') {
+		// no cast necessary
+	} else if (fromType.category == 'double' && toType.category == 'double') {
+		// no cast necessary
+	} else if (fromType.category == 'double' && toType.category == 'int') {
+		out.push(instructions.TruncS(types.f64, types.i32));
+	} else {
+		throw util.format(
+			"Don't know how to cast result from %s to %s", util.inspect(fromType), util.inspect(toType)
+		);
+	}
 }
 
 function compileStatement(statement, context, out, breakDepth, continueDepth) {
@@ -385,6 +399,7 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 				var index = context.declareVariable(variable.id, types.fromCType(variable.type));
 				if (variableDeclaration.initialValueExpression !== null) {
 					compileExpression(variableDeclaration.initialValueExpression, context, out);
+					castResult(variableDeclaration.initialValueExpression.type, variable.type, out);
 					out.push(instructions.SetLocal(index));
 				}
 			}
@@ -521,6 +536,7 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 		case 'ReturnStatement':
 			if (statement.expression !== null) {
 				compileExpression(statement.expression, context, out);
+				castResult(statement.expression.type, statement.returnType, out);
 			}
 			/* TODO: omit the 'return' when it's the final statement */
 			out.push(instructions.Return);

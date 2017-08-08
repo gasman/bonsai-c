@@ -1,4 +1,4 @@
-function Context(parentContext) {
+function Context(parentContext, returnType) {
 	this.parentContext = parentContext;
 	if (this.parentContext) {
 		this.isGlobalContext = false;
@@ -9,6 +9,7 @@ function Context(parentContext) {
 		this.nextHeapAddress = 0;
 		this.nextId = 0;
 	}
+	this.returnType = returnType;
 	this.variables = {};
 }
 
@@ -26,7 +27,10 @@ Context.prototype.get = function(name) {
 	return null;
 };
 Context.prototype.createChildContext = function() {
-	return new Context(this);
+	return new Context(this, this.returnType);
+};
+Context.prototype.createFunctionContext = function(returnType) {
+	return new Context(this, returnType);
 };
 Context.prototype.allocateFromHeap = function(size) {
 	if (!this.isGlobalContext) {

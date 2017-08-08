@@ -45,7 +45,7 @@ function FunctionDefinition(node, parentContext) {
 		"Non-empty declarator list on function definition is not supported"
 	);
 
-	var functionContext = parentContext.createChildContext();
+	var functionContext = parentContext.createFunctionContext(this.returnType);
 
 	this.parameters = [];
 	this.parameterTypes = [];

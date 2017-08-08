@@ -139,6 +139,7 @@ NullStatement.prototype.inspect = function() {
 
 function ReturnStatement(node, context) {
 	this.statementType = 'ReturnStatement';
+	this.returnType = context.returnType;
 	if (node.params.length === 0) {
 		this.expression = null;
 	} else {
@@ -148,7 +149,7 @@ function ReturnStatement(node, context) {
 	}
 }
 ReturnStatement.prototype.inspect = function() {
-	return "Return " + util.inspect(this.expression);
+	return "Return <" + util.inspect(this.returnType) + "> " + util.inspect(this.expression);
 };
 
 function WhileStatement(node, context) {

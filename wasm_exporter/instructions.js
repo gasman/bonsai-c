@@ -214,6 +214,14 @@ exports.TeeLocal = function(index) {
 	};
 };
 
+exports.TruncS = function(fromType, toType) {
+	return {
+		'asText': function() {
+			return util.format('%s.trunc_s/%s', toType.asText(), fromType.asText());
+		}
+	};
+};
+
 exports.Unreachable = {
 	'asText': function() {return 'unreachable';}
 };
