@@ -140,6 +140,26 @@ class FunctionDefinition {
 	}
 }
 
+class FunctionExport {
+	constructor(name, functionIndex) {
+		this.name = name;
+		this.functionIndex = functionIndex;
+	}
+	asText() {
+		return util.format("  (export %s (func %d))\n",
+			quoteString(this.name),
+			this.functionIndex
+		);
+	}
+	asBinary(out) {
+		var nameBuf = Buffer.from(this.name, 'utf8');
+		out.write(leb.encodeUInt32(nameBuf.length));
+		out.write(nameBuf);
+		out.write(Buffer.from([0x00]));  // identify as a function export
+		out.write(leb.encodeUInt32(this.functionIndex));
+	}
+}
+
 class WasmModule {
 	constructor() {
 		this.types = [];
@@ -169,9 +189,9 @@ class WasmModule {
 		this.functions[functionIndex] = functionDefinition;
 
 		if (functionDefinition.isExported) {
-			this.exports.push(
-				[functionDefinition.name, functionIndex]
-			);
+			this.exports.push(new FunctionExport(
+				functionDefinition.name, functionIndex
+			));
 		}
 
 		return functionIndex;
@@ -213,10 +233,7 @@ class WasmModule {
 		}
 
 		for (i = 0; i < this.exports.length; i++) {
-			output += util.format("  (export %s (func %d))\n",
-				quoteString(this.exports[i][0]),
-				this.exports[i][1]
-			);
+			output += this.exports[i].asText();
 		}
 
 		output += ")\n";
@@ -243,6 +260,23 @@ class WasmModule {
 		// write type section
 		writeSection(1, out, (out) => {
 			binary.writeVector(this.types, out);
+		});
+
+		// write function section (list of type indices)
+		writeSection(3, out, (out) => {
+			out.write(leb.encodeUInt32(this.functions.length));
+			for (var i = 0; i < this.functions.length; i++) {
+				out.write(leb.encodeUInt32(this.functions[i].typeIndex));
+			}
+		});
+
+		if (this.globals.length) {
+			throw("Global section of wasm output not implemented yet");
+		}
+
+		// write exports section
+		writeSection(7, out, (out) => {
+			binary.writeVector(this.exports, out);
 		});
 	}
 
