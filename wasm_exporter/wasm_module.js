@@ -1,9 +1,12 @@
 var assert = require('assert');
 var util = require('util');
+var leb = require('leb');
+var streamBuffers = require('stream-buffers');
 
 var wasmTypes = require('./types');
 var compiler = require('./compiler');
 var instructions = require('./instructions');
+var binary = require('./wasm_binary');
 
 function quoteString(str) {
 	return '"' + str.replace(/[\\"']/g, '\\$&') + '"';
@@ -224,6 +227,23 @@ class WasmModule {
 	asBinary(out) {
 		// magic number / version number
 		out.write(Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]));
+
+		function writeSection(id, out, callback) {
+			var sectionOut = new streamBuffers.WritableStreamBuffer();
+			callback(sectionOut);
+			sectionOut.end();
+			var buf = sectionOut.getContents();
+			if (buf.length) {
+				out.write(Buffer.from([id]));
+				out.write(leb.encodeUInt32(buf.length));
+				out.write(buf);
+			}
+		}
+
+		// write type section
+		writeSection(1, out, (out) => {
+			binary.writeVector(this.types, out);
+		});
 	}
 
 	static fromAbstractModule(module) {

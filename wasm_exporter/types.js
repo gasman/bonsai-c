@@ -1,12 +1,20 @@
+var binary = require('./wasm_binary');
+
 exports.i32 = {
 	'category': 'i32',
 	'asText': function() {return 'i32';},
+	'asBinary': function(out) {
+		out.write(Buffer.from([0x7f]));
+	},
 	'equals': function(other) {return (other.category == 'i32');}
 };
 
 exports.f64 = {
 	'category': 'f64',
 	'asText': function() {return 'f64';},
+	'asBinary': function(out) {
+		out.write(Buffer.from([0x7c]));
+	},
 	'equals': function(other) {return (other.category == 'f64');}
 };
 
@@ -40,6 +48,15 @@ exports.func = function(returnType, paramTypes) {
 				atoms.push(this.returnTypeAsText());
 			}
 			return '(' + atoms.join(' ') + ')';
+		},
+		'asBinary': function(out) {
+			out.write(Buffer.from([0x60]));
+			if (this.returnType.category != 'void') {
+				binary.writeVector([], out);
+			} else {
+				binary.writeVector([returnType], out);
+			}
+			binary.writeVector(paramTypes, out);
 		},
 		'equals': function(other) {
 			if (other.category != 'function') return false;
