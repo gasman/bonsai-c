@@ -10,15 +10,19 @@ var escodegen = require('escodegen');
 
 var WasmModule = require("./wasm_exporter/wasm_module").WasmModule;
 
-exports.compile = function(filename, outputFormat) {
+exports.compile = function(filename, outputFormat, stream) {
 	var cSource = fs.readFileSync(filename, "utf8");
 	var cTree = parser.parse(cSource);
 	var module = new abstractor.Module(cTree);
+	var wasmModule;
 	if (outputFormat == 'asmjs') {
 		var jsTree = asmJsExporter.compileModule(module);
 		return escodegen.generate(jsTree, {'verbatim': 'x-verbatim-property'});
+	} else if (outputFormat == 'wasm') {
+		wasmModule = WasmModule.fromAbstractModule(module);
+		return wasmModule.asBinary(stream);
 	} else if (outputFormat == 'wast') {
-		var wasmModule = WasmModule.fromAbstractModule(module);
+		wasmModule = WasmModule.fromAbstractModule(module);
 		return wasmModule.asText();
 	} else {
 		throw util.format("Unrecognised output format: %s", outputFormat);
@@ -26,13 +30,15 @@ exports.compile = function(filename, outputFormat) {
 };
 
 exports.main = function(argv) {
-	var outputFormat;
+	var outputFormat, wasmModule;
 	if (argv[2] == '--asmjs') {
 		outputFormat = 'asmjs';
+	} else if (argv[2] == '--wasm') {
+		outputFormat = 'wasm';
 	} else if (argv[2] == '--wast') {
 		outputFormat = 'wast';
 	} else {
-		throw "Output format must be specified (--asmjs or --wast)";
+		throw "Output format must be specified (--asmjs, --wasm or --wast)";
 	}
 
 	var cSource = fs.readFileSync(argv[3], "utf8");
@@ -53,9 +59,14 @@ exports.main = function(argv) {
 
 		var out = escodegen.generate(jsTree, {'verbatim': 'x-verbatim-property'});
 		console.log(out);
+	} else if (outputFormat == 'wasm') {
+		wasmModule = WasmModule.fromAbstractModule(module);
+		var outStream = fs.createWriteStream(argv[4]);
+		wasmModule.asBinary(outStream);
+		outStream.end();
 	} else if (outputFormat == 'wast') {
 		console.log("\n---------\n");
-		var wasmModule = WasmModule.fromAbstractModule(module);
+		wasmModule = WasmModule.fromAbstractModule(module);
 		console.log(wasmModule.asText());
 	}
 };
