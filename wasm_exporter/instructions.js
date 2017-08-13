@@ -1,6 +1,29 @@
 var util = require('util');
 var leb = require('leb');
 
+function SimpleInstruction(name, opcode) {
+	return {
+		'asText': function() {return name;},
+		'asBinary': function(out) {
+			out.write(Buffer.from([opcode]));
+		}
+	};
+}
+
+function IndexedInstruction(name, opcode) {
+	return function(index) {
+		return {
+			'asText': function() {
+				return util.format('%s %d', name, index);
+			},
+			'asBinary': function(out) {
+				out.write(Buffer.from([opcode]));
+				out.write(leb.encodeUInt32(index));
+			}
+		};
+	};
+}
+
 function TypedInstruction(name, opcodesByType) {
 	return function(typ) {
 		var opcode = opcodesByType[typ.category] || null;
@@ -25,21 +48,8 @@ exports.Block = {
 	'asText': function() {return 'block';}
 };
 
-exports.Br = function(level) {
-	return {
-		'asText': function() {
-			return util.format('br %d', level);
-		}
-	};
-};
-
-exports.Call = function(index) {
-	return {
-		'asText': function() {
-			return util.format('call %d', index);
-		}
-	};
-};
+exports.Br = IndexedInstruction('br', 0x0c);
+exports.Call = IndexedInstruction('call', 0x10);
 
 exports.Const = function(typ, value) {
 	if (typ.category == 'i32') {
@@ -70,45 +80,13 @@ exports.Const = function(typ, value) {
 
 exports.Div = TypedInstruction('div', {'f32': 0x95, 'f64': 0xa3});
 exports.DivS = TypedInstruction('div_s', {'i32': 0x6d, 'i64': 0x7f});
-
-exports.Drop = {
-	'asText': function() {return 'drop';}
-};
-
-exports.Else = {
-	'asText': function() {return 'else';}
-};
-
-exports.End = {
-	'asText': function() {return 'end';},
-	'asBinary': function(out) {
-		out.write(Buffer.from([0x0b]));
-	}
-};
-
+exports.Drop = SimpleInstruction('drop', 0x1a);
+exports.Else = SimpleInstruction('else', 0x05);
+exports.End = SimpleInstruction('end', 0x0b);
 exports.Eq = TypedInstruction('eq', {'i32': 0x46, 'i64': 0x51, 'f32': 0x5b, 'f64': 0x61});
 exports.Eqz = TypedInstruction('eqz', {'i32': 0x45, 'i64': 0x50});
-
-exports.GetGlobal = function(index) {
-	return {
-		'asText': function() {
-			return util.format('get_global %d', index);
-		}
-	};
-};
-
-exports.GetLocal = function(index) {
-	return {
-		'asText': function() {
-			return util.format('get_local %d', index);
-		},
-		'asBinary': function(out) {
-			out.write(Buffer.from([0x20]));
-			out.write(leb.encodeUInt32(index));
-		}
-	};
-};
-
+exports.GetGlobal = IndexedInstruction('get_global', 0x23);
+exports.GetLocal = IndexedInstruction('get_local', 0x20);
 exports.Ge = TypedInstruction('ge', {'f32': 0x60, 'f64': 0x66});
 exports.GeS = TypedInstruction('ge_s', {'i32': 0x4e, 'i64': 0x59});
 exports.Gt = TypedInstruction('gt', {'f32': 0x5e, 'f64': 0x64});
@@ -138,36 +116,10 @@ exports.Return = {
 	'isReturn': true
 };
 
-exports.SetGlobal = function(index) {
-	return {
-		'asText': function() {
-			return util.format('set_global %d', index);
-		}
-	};
-};
-
-exports.SetLocal = function(index) {
-	return {
-		'asText': function() {
-			return util.format('set_local %d', index);
-		},
-		'asBinary': function(out) {
-			out.write(Buffer.from([0x21]));
-			out.write(leb.encodeUInt32(index));
-		}
-	};
-};
-
+exports.SetGlobal = IndexedInstruction('set_global', 0x24);
+exports.SetLocal = IndexedInstruction('set_local', 0x21);
 exports.Sub = TypedInstruction('sub', {'i32': 0x6b, 'i64': 0x7d, 'f32': 0x93, 'f64': 0xa1});
-
-
-exports.TeeLocal = function(index) {
-	return {
-		'asText': function() {
-			return util.format('tee_local %d', index);
-		}
-	};
-};
+exports.TeeLocal = IndexedInstruction('tee_local', 0x22);
 
 exports.TruncS = function(fromType, toType) {
 	return {
@@ -177,6 +129,4 @@ exports.TruncS = function(fromType, toType) {
 	};
 };
 
-exports.Unreachable = {
-	'asText': function() {return 'unreachable';}
-};
+exports.Unreachable = SimpleInstruction('unreachable', 0x00);

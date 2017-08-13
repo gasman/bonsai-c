@@ -332,8 +332,29 @@ function testWasmCompile(filename, expectedResult, opts) {
 
 if (runAll || runWasm) {
 	testWasmCompile('tests/fortytwo.c', 42);
+	testWasmCompile('tests/param.c', 42, {params: [42]});
+	testWasmCompile('tests/var.c', 42);
+	testWasmCompile('tests/initvar.c', 42);
 	testWasmCompile('tests/add.c', 42);
 	testWasmCompile('tests/add_var.c', 42);
+	testWasmCompile('tests/nonconstant_declare.c', 42);
+	testWasmCompile('tests/subtract.c', 42);
+	testWasmCompile('tests/subtract_var.c', 42);
+	testWasmCompile('tests/call.c', 42, {shouldExport: ['add']});
+	testWasmCompile('tests/void_return.c', 42);
+	testWasmCompile('tests/void_function_without_return.c', 42);
+	testWasmCompile('tests/return_negative.c', -42);
+	testWasmCompile('tests/initvar_negative.c', -42);
+	testWasmCompile('tests/call_assign.c', 42);
+	testWasmCompile('tests/call_add.c', 42);
+	testWasmCompile('tests/type_coercion.c', 42);
+	testWasmCompile('tests/computed_init.c', 42);
+	testWasmCompile('tests/inner_block.c', 42);
+	testWasmCompile('tests/simple_postdecrement.c', 42);
+	testWasmCompile('tests/simple_postincrement.c', 42);
+	testWasmCompile('tests/comma.c', 42);
+	testWasmCompile('tests/postincrement_result.c', 43);
+	testWasmCompile('tests/postdecrement_result.c', 41);
 }
 
 console.log("All tests passed");
