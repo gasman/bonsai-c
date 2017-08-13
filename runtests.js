@@ -355,6 +355,35 @@ if (runAll || runWasm) {
 	testWasmCompile('tests/comma.c', 42);
 	testWasmCompile('tests/postincrement_result.c', 43);
 	testWasmCompile('tests/postdecrement_result.c', 41);
+	testWasmCompile('tests/while.c', 55);
+	testWasmCompile('tests/variable_shadowing.c', 65);
+	testWasmCompile('tests/chained_add.c', 42);
+	testWasmCompile('tests/chained_subtract.c', 42);
+	testWasmCompile('tests/less_than.c', 2);
+	testWasmCompile('tests/less_than_var.c', 2);
+	testWasmCompile('tests/greater_than.c', 1);
+	testWasmCompile('tests/greater_than_var.c', 1);
+	testWasmCompile('tests/equal.c', 2);
+	testWasmCompile('tests/equal_var.c', 2);
+	testWasmCompile('tests/not_equal.c', 1);
+	testWasmCompile('tests/not_equal_var.c', 1);
+	testWasmCompile('tests/greater_than_or_equal.c', 2);
+	testWasmCompile('tests/greater_than_or_equal_var.c', 2);
+	testWasmCompile('tests/less_than_or_equal.c', 2);
+	testWasmCompile('tests/less_than_or_equal_var.c', 2);
+	testWasmCompile('tests/for.c', 45);
+	testWasmCompile('tests/for_with_declarator.c', 45);
+	testWasmCompile('tests/add_assign.c', 42);
+	testWasmCompile('tests/subtract_assign.c', 42);
+	testWasmCompile('tests/for_without_init.c', 45);
+	testWasmCompile('tests/if.c', 42);
+	testWasmCompile('tests/if_no_else.c', 42);
+	testWasmCompile('tests/break.c', 42);
+	testWasmCompile('tests/for_without_test.c', 45);
+	testWasmCompile('tests/for_without_update.c', 45);
+	testWasmCompile('tests/continue.c', 42);
+	testWasmCompile('tests/conditional.c', 42);
+	testWasmCompile('tests/logical_not.c', 0);
 }
 
 console.log("All tests passed");

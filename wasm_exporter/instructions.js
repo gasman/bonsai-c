@@ -42,14 +42,33 @@ function TypedInstruction(name, opcodesByType) {
 	};
 }
 
-exports.Add = TypedInstruction('add', {'i32': 0x6a, 'i64': 0x7c, 'f32': 0x92, 'f64': 0xa0});
-
-exports.Block = function() {
-	return {
-		'asText': function() {return 'block';}
+function BlockInstruction(name, opcode) {
+	return function(typ) {
+		if (typ && typ.category != 'void') {
+			return {
+				'asText': function() {
+					return util.format("%s (result %s)", name, typ.asText());
+				},
+				'asBinary': function(out) {
+					out.write(Buffer.from([opcode]));
+					typ.asBinary(out);
+				}
+			};
+		} else {
+			return {
+				'asText': function() {
+					return name;
+				},
+				'asBinary': function(out) {
+					out.write(Buffer.from([opcode, 0x40]));
+				}
+			};
+		}
 	};
-};
+}
 
+exports.Add = TypedInstruction('add', {'i32': 0x6a, 'i64': 0x7c, 'f32': 0x92, 'f64': 0xa0});
+exports.Block = BlockInstruction('block', 0x02);
 exports.Br = IndexedInstruction('br', 0x0c);
 exports.Call = IndexedInstruction('call', 0x10);
 
@@ -93,25 +112,8 @@ exports.Ge = TypedInstruction('ge', {'f32': 0x60, 'f64': 0x66});
 exports.GeS = TypedInstruction('ge_s', {'i32': 0x4e, 'i64': 0x59});
 exports.Gt = TypedInstruction('gt', {'f32': 0x5e, 'f64': 0x64});
 exports.GtS = TypedInstruction('gt_s', {'i32': 0x4a, 'i64': 0x55});
-
-exports.If = function(typ) {
-	return {
-		'asText': function() {
-			if (typ && typ.category != 'void') {
-				return util.format("if (result %s)", typ.asText());
-			} else {
-				return 'if';
-			}
-		}
-	};
-};
-
-exports.Loop = function() {
-	return {
-		'asText': function() {return 'loop';}
-	};
-};
-
+exports.If = BlockInstruction('if', 0x04);
+exports.Loop = BlockInstruction('loop', 0x03);
 exports.Le = TypedInstruction('le', {'f32': 0x5f, 'f64': 0x65});
 exports.LeS = TypedInstruction('le_s', {'i32': 0x4c, 'i64': 0x57});
 exports.Lt = TypedInstruction('lt', {'f32': 0x5d, 'f64': 0x63});
