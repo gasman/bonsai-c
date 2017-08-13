@@ -116,6 +116,29 @@ class FunctionDefinition {
 		return out;
 	}
 
+	asBinary(out) {
+		var i;
+
+		var code = new streamBuffers.WritableStreamBuffer();
+
+		// TODO: group consecutive locals of the same type into the same 'locals' entry
+		// (also, for bonus points: reorder them so all of the same type ones appear together)
+		code.write(leb.encodeUInt32(this.locals.length));
+		for (i = 0; i < this.locals.length; i++) {
+			code.write(leb.encodeUInt32(1));
+			this.locals[i].type.asBinary(code);
+		}
+		for (i = 0; i < this.body.length; i++) {
+			this.body[i].asBinary(code);
+		}
+		instructions.End.asBinary(code);
+
+		code.end();
+		var codeBuf = code.getContents();
+		out.write(leb.encodeUInt32(codeBuf.length));
+		out.write(codeBuf);
+	}
+
 	static fromAbstractFunctionDefinition(fd, globalContext) {
 		var typ = wasmTypes.fromCType(fd.type);
 
@@ -277,6 +300,11 @@ class WasmModule {
 		// write exports section
 		writeSection(7, out, (out) => {
 			binary.writeVector(this.exports, out);
+		});
+
+		// write code section
+		writeSection(10, out, (out) => {
+			binary.writeVector(this.functions, out);
 		});
 	}
 

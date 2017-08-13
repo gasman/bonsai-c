@@ -51,12 +51,12 @@ exports.func = function(returnType, paramTypes) {
 		},
 		'asBinary': function(out) {
 			out.write(Buffer.from([0x60]));
-			if (this.returnType.category != 'void') {
+			binary.writeVector(paramTypes, out);
+			if (this.returnType.category == 'void') {
 				binary.writeVector([], out);
 			} else {
 				binary.writeVector([returnType], out);
 			}
-			binary.writeVector(paramTypes, out);
 		},
 		'equals': function(other) {
 			if (other.category != 'function') return false;

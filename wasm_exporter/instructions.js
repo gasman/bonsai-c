@@ -1,4 +1,5 @@
 var util = require('util');
+var leb = require('leb');
 
 exports.Add = function(typ) {
 	return {
@@ -29,11 +30,30 @@ exports.Call = function(index) {
 };
 
 exports.Const = function(typ, value) {
-	return {
-		'asText': function() {
-			return util.format('%s.const %d', typ.asText(), value);
-		}
-	};
+	if (typ.category == 'i32') {
+		return {
+			'asText': function() {
+				return util.format('%s.const %d', typ.asText(), value);
+			},
+			'asBinary': function(out) {
+				out.write(Buffer.from([0x41]));
+				out.write(leb.encodeInt32(value));
+			}
+		};
+	} else if (typ.category == 'f64') {
+		return {
+			'asText': function() {
+				return util.format('%s.const %d', typ.asText(), value);
+			},
+			'asBinary': function(out) {
+				out.write(Buffer.from([0x44]));
+				throw("Binary representation of f64.const instruction not implemented yet");
+				// out.write(leb.encodeInt32(value));
+			}
+		};
+	} else {
+		throw(util.format("Unsupported instruction %s.const", typ.asText()));
+	}
 };
 
 exports.Div = function(typ) {
@@ -61,7 +81,10 @@ exports.Else = {
 };
 
 exports.End = {
-	'asText': function() {return 'end';}
+	'asText': function() {return 'end';},
+	'asBinary': function(out) {
+		out.write(Buffer.from([0x0b]));
+	}
 };
 
 exports.Eq = function(typ) {
@@ -194,6 +217,9 @@ exports.RemS = function(typ) {
 
 exports.Return = {
 	'asText': function() {return 'return';},
+	'asBinary': function(out) {
+		out.write(Buffer.from([0x0f]));
+	},
 	'isReturn': true
 };
 
