@@ -408,7 +408,7 @@ if (runAll || runWasm) {
 	testWasmCompile('tests/int_mod_var.c', 42);
 	testWasmCompile('tests/double_to_signed.c', 42);
 	testWasmCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
-	//testWasmCompile('tests/global_var.c', 42);
+	testWasmCompile('tests/global_var.c', 42);
 	testWasmCompile('tests/double_subtract.c', 42);
 }
 

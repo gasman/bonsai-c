@@ -186,6 +186,37 @@ class FunctionExport {
 	}
 }
 
+class GlobalDeclaration {
+	constructor(typ, isMutable, initialValueInstruction) {
+		this.type = typ;
+		this.isMutable = isMutable;
+		this.initialValueInstruction = initialValueInstruction;
+	}
+	asText() {
+		var globalType;
+		if (this.isMutable) {
+			globalType = util.format("(mut %s)", this.type.asText());
+		} else {
+			globalType = this.type.asText();
+		}
+
+		return util.format(
+			"  (global (;%d;) %s %s)\n",
+			i, globalType, this.initialValueInstruction.asText()
+		);
+	}
+	asBinary(out) {
+		this.type.asBinary(out);
+		if (this.isMutable) {
+			out.write(Buffer.from([0x01]));
+		} else {
+			out.write(Buffer.from([0x00]));
+		}
+		this.initialValueInstruction.asBinary(out);
+		instructions.End.asBinary(out);
+	}
+}
+
 class WasmModule {
 	constructor() {
 		this.types = [];
@@ -224,11 +255,7 @@ class WasmModule {
 	}
 
 	defineGlobal(typ, isMutable, initialValueInstruction) {
-		this.globals.push({
-			'type': typ,
-			'isMutable': isMutable,
-			'initialValueInstruction': initialValueInstruction
-		});
+		this.globals.push(new GlobalDeclaration(typ, isMutable, initialValueInstruction));
 	}
 
 	asText() {
@@ -244,18 +271,7 @@ class WasmModule {
 		}
 
 		for (i = 0; i < this.globals.length; i++) {
-			var globl = this.globals[i];
-			var globalType;
-			if (globl.isMutable) {
-				globalType = util.format("(mut %s)", globl.type.asText());
-			} else {
-				globalType = globl.type.asText();
-			}
-
-			output += util.format(
-				"  (global (;%d;) %s %s)\n",
-				i, globalType, globl.initialValueInstruction.asText()
-			);
+			output += this.globals[i].asText();
 		}
 
 		for (i = 0; i < this.exports.length; i++) {
@@ -296,9 +312,10 @@ class WasmModule {
 			}
 		});
 
-		if (this.globals.length) {
-			throw("Global section of wasm output not implemented yet");
-		}
+		// write globals section
+		writeSection(6, out, (out) => {
+			binary.writeVector(this.globals, out);
+		});
 
 		// write exports section
 		writeSection(7, out, (out) => {
