@@ -129,6 +129,9 @@ class FunctionDefinition {
 			this.locals[i].type.asBinary(code);
 		}
 		for (i = 0; i < this.body.length; i++) {
+			if (!this.body[i].asBinary) {
+				throw("No binary representation provided for instruction: " + this.body[i].asText());
+			}
 			this.body[i].asBinary(code);
 		}
 		instructions.End.asBinary(code);

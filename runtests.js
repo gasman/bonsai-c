@@ -332,6 +332,8 @@ function testWasmCompile(filename, expectedResult, opts) {
 
 if (runAll || runWasm) {
 	testWasmCompile('tests/fortytwo.c', 42);
+	testWasmCompile('tests/add.c', 42);
+	testWasmCompile('tests/add_var.c', 42);
 }
 
 console.log("All tests passed");

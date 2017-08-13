@@ -1,13 +1,25 @@
 var util = require('util');
 var leb = require('leb');
 
-exports.Add = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.add', typ.asText());
-		}
+function TypedInstruction(name, opcodesByType) {
+	return function(typ) {
+		var opcode = opcodesByType[typ.category] || null;
+		return {
+			'asText': function() {
+				return util.format('%s.%s', typ.asText(), name);
+			},
+			'asBinary': function(out) {
+				if (opcode === null) {
+					throw(util.format("Unknown opcode for %s.%s", typ.asText(), name));
+				} else {
+					out.write(Buffer.from([opcode]));
+				}
+			}
+		};
 	};
-};
+}
+
+exports.Add = TypedInstruction('add', {'i32': 0x6a, 'i64': 0x7c, 'f32': 0x92, 'f64': 0xa0});
 
 exports.Block = {
 	'asText': function() {return 'block';}
@@ -56,21 +68,8 @@ exports.Const = function(typ, value) {
 	}
 };
 
-exports.Div = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.div', typ.asText());
-		}
-	};
-};
-
-exports.DivS = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.div_s', typ.asText());
-		}
-	};
-};
+exports.Div = TypedInstruction('div', {'f32': 0x95, 'f64': 0xa3});
+exports.DivS = TypedInstruction('div_s', {'i32': 0x6d, 'i64': 0x7f});
 
 exports.Drop = {
 	'asText': function() {return 'drop';}
@@ -87,21 +86,8 @@ exports.End = {
 	}
 };
 
-exports.Eq = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.eq', typ.asText());
-		}
-	};
-};
-
-exports.Eqz = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.eqz', typ.asText());
-		}
-	};
-};
+exports.Eq = TypedInstruction('eq', {'i32': 0x46, 'i64': 0x51, 'f32': 0x5b, 'f64': 0x61});
+exports.Eqz = TypedInstruction('eqz', {'i32': 0x45, 'i64': 0x50});
 
 exports.GetGlobal = function(index) {
 	return {
@@ -115,41 +101,18 @@ exports.GetLocal = function(index) {
 	return {
 		'asText': function() {
 			return util.format('get_local %d', index);
+		},
+		'asBinary': function(out) {
+			out.write(Buffer.from([0x20]));
+			out.write(leb.encodeUInt32(index));
 		}
 	};
 };
 
-exports.Ge = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.ge', typ.asText());
-		}
-	};
-};
-
-exports.GeS = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.ge_s', typ.asText());
-		}
-	};
-};
-
-exports.Gt = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.gt', typ.asText());
-		}
-	};
-};
-
-exports.GtS = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.gt_s', typ.asText());
-		}
-	};
-};
+exports.Ge = TypedInstruction('ge', {'f32': 0x60, 'f64': 0x66});
+exports.GeS = TypedInstruction('ge_s', {'i32': 0x4e, 'i64': 0x59});
+exports.Gt = TypedInstruction('gt', {'f32': 0x5e, 'f64': 0x64});
+exports.GtS = TypedInstruction('gt_s', {'i32': 0x4a, 'i64': 0x55});
 
 exports.If = {
 	'asText': function() {return 'if';}
@@ -159,61 +122,13 @@ exports.Loop = {
 	'asText': function() {return 'loop';}
 };
 
-exports.Le = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.le', typ.asText());
-		}
-	};
-};
-
-exports.LeS = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.le_s', typ.asText());
-		}
-	};
-};
-
-exports.Lt = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.lt', typ.asText());
-		}
-	};
-};
-
-exports.LtS = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.lt_s', typ.asText());
-		}
-	};
-};
-
-exports.Mul = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.mul', typ.asText());
-		}
-	};
-};
-
-exports.Ne = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.ne', typ.asText());
-		}
-	};
-};
-
-exports.RemS = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.rem_s', typ.asText());
-		}
-	};
-};
+exports.Le = TypedInstruction('le', {'f32': 0x5f, 'f64': 0x65});
+exports.LeS = TypedInstruction('le_s', {'i32': 0x4c, 'i64': 0x57});
+exports.Lt = TypedInstruction('lt', {'f32': 0x5d, 'f64': 0x63});
+exports.LtS = TypedInstruction('lt_s', {'i32': 0x48, 'i64': 0x53});
+exports.Mul = TypedInstruction('mul', {'i32': 0x63, 'i64': 0x7e, 'f32': 0x94, 'f64': 0xa2});
+exports.Ne = TypedInstruction('ne', {'i32': 0x47, 'i64': 0x52, 'f32': 0x5c, 'f64': 0x62});
+exports.RemS = TypedInstruction('rem_s', {'i32': 0x6f, 'i64': 0x81});
 
 exports.Return = {
 	'asText': function() {return 'return';},
@@ -235,17 +150,15 @@ exports.SetLocal = function(index) {
 	return {
 		'asText': function() {
 			return util.format('set_local %d', index);
+		},
+		'asBinary': function(out) {
+			out.write(Buffer.from([0x21]));
+			out.write(leb.encodeUInt32(index));
 		}
 	};
 };
 
-exports.Sub = function(typ) {
-	return {
-		'asText': function() {
-			return util.format('%s.sub', typ.asText());
-		}
-	};
-};
+exports.Sub = TypedInstruction('sub', {'i32': 0x6b, 'i64': 0x7d, 'f32': 0x93, 'f64': 0xa1});
 
 
 exports.TeeLocal = function(index) {
