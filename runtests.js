@@ -4,12 +4,14 @@ var assert = require('assert');
 var fs = require('fs');
 var execFileSync = require('child_process').execFileSync;
 var tmp = require('tmp');
+var streamBuffers = require('stream-buffers');
 
 var js, module;
 
 var runAll = true;
 var runAsmJS = false;
 var runWast = false;
+var runWasm = false;
 
 for (var i = 2; i < process.argv.length; i++) {
 	var arg = process.argv[i];
@@ -19,6 +21,9 @@ for (var i = 2; i < process.argv.length; i++) {
 	} else if (arg == '--wast') {
 		runAll = false;
 		runWast = true;
+	} else if (arg == '--wasm') {
+		runAll = false;
+		runWasm = true;
 	} else {
 		throw("Unrecognised arg: " + arg);
 	}
@@ -284,6 +289,49 @@ if (runAll || runWast) {
 	testWastCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 	testWastCompile('tests/global_var.c', 42);
 	testWastCompile('tests/double_subtract.c', 42);
+}
+
+
+function testWasmCompile(filename, expectedResult, opts) {
+	if (!opts) opts = {};
+
+	console.log('running WebAssembly binary test: ' + filename);
+	var outStream = new streamBuffers.WritableStreamBuffer();
+	BonsaiC.compile(filename, 'wasm', outStream);
+	outStream.end();
+
+	buf = outStream.getContents();
+
+	assert(WebAssembly.validate(buf));
+	var mdl = new WebAssembly.Module(buf);
+	var instance = new WebAssembly.Instance(mdl);
+
+	if (!opts.params) {
+		assert.equal(expectedResult, instance.exports.main());
+	} else {
+		assert.equal(expectedResult, instance.exports.main.apply(null, opts.params));
+	}
+
+	var i;
+	if (opts.shouldExport) {
+		for (i = 0; i < opts.shouldExport.length; i++) {
+			if (!(opts.shouldExport[i] in instance.exports)) {
+				throw "Expected to find export: " + opts.shouldExport[i];
+			}
+		}
+	}
+
+	if (opts.shouldNotExport) {
+		for (i = 0; i < opts.shouldNotExport.length; i++) {
+			if (opts.shouldNotExport[i] in instance.exports) {
+				throw "Name exported, but should not be: " + opts.shouldNotExport[i];
+			}
+		}
+	}
+}
+
+if (runAll || runWasm) {
+	testWasmCompile('tests/fortytwo.c', 42);
 }
 
 console.log("All tests passed");
