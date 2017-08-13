@@ -44,8 +44,10 @@ function TypedInstruction(name, opcodesByType) {
 
 exports.Add = TypedInstruction('add', {'i32': 0x6a, 'i64': 0x7c, 'f32': 0x92, 'f64': 0xa0});
 
-exports.Block = {
-	'asText': function() {return 'block';}
+exports.Block = function() {
+	return {
+		'asText': function() {return 'block';}
+	};
 };
 
 exports.Br = IndexedInstruction('br', 0x0c);
@@ -92,12 +94,22 @@ exports.GeS = TypedInstruction('ge_s', {'i32': 0x4e, 'i64': 0x59});
 exports.Gt = TypedInstruction('gt', {'f32': 0x5e, 'f64': 0x64});
 exports.GtS = TypedInstruction('gt_s', {'i32': 0x4a, 'i64': 0x55});
 
-exports.If = {
-	'asText': function() {return 'if';}
+exports.If = function(typ) {
+	return {
+		'asText': function() {
+			if (typ && typ.category != 'void') {
+				return util.format("if (result %s)", typ.asText());
+			} else {
+				return 'if';
+			}
+		}
+	};
 };
 
-exports.Loop = {
-	'asText': function() {return 'loop';}
+exports.Loop = function() {
+	return {
+		'asText': function() {return 'loop';}
+	};
 };
 
 exports.Le = TypedInstruction('le', {'f32': 0x5f, 'f64': 0x65});

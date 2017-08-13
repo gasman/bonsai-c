@@ -8,7 +8,7 @@ function compileExpression(expr, context, out, hints) {
 	/* compile the code for evaluating 'expr' into 'out', and return the number of values
 	pushed onto the stack; this will usually be 1, but may be 0 if the expression is a void
 	function call or its resultIsUsed flag is false. */
-	var i, varIndex, resultIndex;
+	var i, varIndex;
 
 	if (!hints) hints = {};
 
@@ -101,19 +101,12 @@ function compileExpression(expr, context, out, hints) {
 			}
 			return compileExpression(expr.right, context, out, hints);
 		case 'ConditionalExpression':
-			/* The blocks within an 'if' must balance the stack, and so
-			can't leave a result behind; we need to store it in a local var
-			instead */
-			resultIndex = context.declareVariable(null, types.fromCType(expr.type), null);
 			compileExpression(expr.test, context, out);
-			out.push(instructions.If);
+			out.push(instructions.If(types.fromCType(expr.type)));
 			compileExpression(expr.consequent, context, out);
-			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.Else);
 			compileExpression(expr.alternate, context, out);
-			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.End);
-			out.push(instructions.GetLocal(resultIndex));
 			return 1;
 		case 'DivideExpression':
 			compileExpression(expr.left, context, out);
@@ -206,33 +199,26 @@ function compileExpression(expr, context, out, hints) {
 		case 'LogicalAndExpression':
 			/* left && right compiles to:
 			left
-			if
+			if (result i32)
 				right
 				i32.eqz
 				i32.eqz
-				set_local result
 			else
 				i32.const 0
-				set_local result
 			end
 			get_local result
 			*/
 			assert.equal(expr.left.type.category, 'int');
 			assert.equal(expr.right.type.category, 'int');
 
-			resultIndex = context.declareVariable(null, types.fromCType(expr.type), null);
-
 			compileExpression(expr.left, context, out);
-			out.push(instructions.If);
+			out.push(instructions.If(types.i32));
 			compileExpression(expr.right, context, out);
 			out.push(instructions.Eqz(types.i32));
 			out.push(instructions.Eqz(types.i32));
-			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.Else);
 			out.push(instructions.Const(types.i32, 0));
-			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.End);
-			out.push(instructions.GetLocal(resultIndex));
 			return 1;
 		case 'LogicalNotExpression':
 			assert.equal(expr.argument.type.category, 'int', "Don't know how to handle non-int LogicalNotExpressions");
@@ -243,33 +229,25 @@ function compileExpression(expr, context, out, hints) {
 		case 'LogicalOrExpression':
 			/* left || right compiles to: 
 			left
-			if
+			if (result i32)
 				const 1
-				set_local result
 			else
 				right
 				eqz
 				eqz
-				set_local result
 			end
-			get_local result
 			*/
 			assert.equal(expr.left.type.category, 'int');
 			assert.equal(expr.right.type.category, 'int');
 
-			resultIndex = context.declareVariable(null, types.fromCType(expr.type), null);
-
 			compileExpression(expr.left, context, out);
-			out.push(instructions.If);
+			out.push(instructions.If(types.i32));
 			out.push(instructions.Const(types.i32, 1));
-			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.Else);
 			compileExpression(expr.right, context, out);
 			out.push(instructions.Eqz(types.i32));
 			out.push(instructions.Eqz(types.i32));
-			out.push(instructions.SetLocal(resultIndex));
 			out.push(instructions.End);
-			out.push(instructions.GetLocal(resultIndex));
 			return 1;
 		case 'ModExpression':
 			compileExpression(expr.left, context, out);
@@ -504,13 +482,13 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 				end
 			end
 			*/
-			out.push(instructions.Block);
-			out.push(instructions.Loop);
-			out.push(instructions.Block);
+			out.push(instructions.Block());
+			out.push(instructions.Loop());
+			out.push(instructions.Block());
 			compileStatement(statement.body, context, out, 2, 0);
 			out.push(instructions.End);
 			compileExpression(statement.condition, context, out);
-			out.push(instructions.If);
+			out.push(instructions.If());
 			out.push(instructions.Br(1));
 			out.push(instructions.End);
 			out.push(instructions.End);
@@ -560,12 +538,12 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 			end
 			*/
 			compileStatement(statement.init, context, out, null, null);
-			out.push(instructions.Block);
-			out.push(instructions.Loop);
+			out.push(instructions.Block());
+			out.push(instructions.Loop());
 			if (statement.test) {
 				compileExpression(statement.test, context, out);
-				out.push(instructions.If);
-				out.push(instructions.Block);
+				out.push(instructions.If());
+				out.push(instructions.Block());
 				compileStatement(statement.body, context, out, 3, 0);
 				out.push(instructions.End);
 
@@ -582,7 +560,7 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 				out.push(instructions.Br(1));
 				out.push(instructions.End);
 			} else {
-				out.push(instructions.Block);
+				out.push(instructions.Block());
 				compileStatement(statement.body, context, out, 2, 0);
 				out.push(instructions.End);
 
@@ -603,7 +581,7 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 			break;
 		case 'IfStatement':
 			compileExpression(statement.test, context, out);
-			out.push(instructions.If);
+			out.push(instructions.If());
 			var innerBreakDepth = (breakDepth === null ? null : breakDepth + 1);
 			var innerContinueDepth = (continueDepth === null ? null : continueDepth + 1);
 			compileStatement(statement.thenStatement, context, out, innerBreakDepth, innerContinueDepth);
@@ -640,10 +618,10 @@ function compileStatement(statement, context, out, breakDepth, continueDepth) {
 			end
 			*/
 
-			out.push(instructions.Block);
-			out.push(instructions.Loop);
+			out.push(instructions.Block());
+			out.push(instructions.Loop());
 			compileExpression(statement.condition, context, out);
-			out.push(instructions.If);
+			out.push(instructions.If());
 			compileStatement(statement.body, context, out, 2, 1);
 			out.push(instructions.Br(1));
 			out.push(instructions.End);
