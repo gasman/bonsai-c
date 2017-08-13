@@ -1,5 +1,6 @@
 var util = require('util');
 var leb = require('leb');
+var ieee754 = require('ieee754');
 
 function SimpleInstruction(name, opcode) {
 	return {
@@ -76,22 +77,45 @@ exports.Const = function(typ, value) {
 	if (typ.category == 'i32') {
 		return {
 			'asText': function() {
-				return util.format('%s.const %d', typ.asText(), value);
+				return util.format('i32.const %d', value);
 			},
 			'asBinary': function(out) {
 				out.write(Buffer.from([0x41]));
 				out.write(leb.encodeInt32(value));
 			}
 		};
+	} else if (typ.category == 'i64') {
+		return {
+			'asText': function() {
+				return util.format('i64.const %d', value);
+			},
+			'asBinary': function(out) {
+				out.write(Buffer.from([0x42]));
+				out.write(leb.encodeInt64(value));
+			}
+		};
+	} else if (typ.category == 'f32') {
+		return {
+			'asText': function() {
+				return util.format('f32.const %d', value);
+			},
+			'asBinary': function(out) {
+				var buf = Buffer.alloc(5);
+				buf[0] = 0x43;
+				ieee754.write(buf, value, 1, true, 23, 4);
+				out.write(buf);
+			}
+		};
 	} else if (typ.category == 'f64') {
 		return {
 			'asText': function() {
-				return util.format('%s.const %d', typ.asText(), value);
+				return util.format('f64.const %d', value);
 			},
 			'asBinary': function(out) {
-				out.write(Buffer.from([0x44]));
-				throw("Binary representation of f64.const instruction not implemented yet");
-				// out.write(leb.encodeInt32(value));
+				var buf = Buffer.alloc(9);
+				buf[0] = 0x44;
+				ieee754.write(buf, value, 1, true, 52, 8);
+				out.write(buf);
 			}
 		};
 	} else {
@@ -118,7 +142,7 @@ exports.Le = TypedInstruction('le', {'f32': 0x5f, 'f64': 0x65});
 exports.LeS = TypedInstruction('le_s', {'i32': 0x4c, 'i64': 0x57});
 exports.Lt = TypedInstruction('lt', {'f32': 0x5d, 'f64': 0x63});
 exports.LtS = TypedInstruction('lt_s', {'i32': 0x48, 'i64': 0x53});
-exports.Mul = TypedInstruction('mul', {'i32': 0x63, 'i64': 0x7e, 'f32': 0x94, 'f64': 0xa2});
+exports.Mul = TypedInstruction('mul', {'i32': 0x6c, 'i64': 0x7e, 'f32': 0x94, 'f64': 0xa2});
 exports.Ne = TypedInstruction('ne', {'i32': 0x47, 'i64': 0x52, 'f32': 0x5c, 'f64': 0x62});
 exports.RemS = TypedInstruction('rem_s', {'i32': 0x6f, 'i64': 0x81});
 

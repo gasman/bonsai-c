@@ -5,6 +5,7 @@
   "dependencies": {
     "asm.js": "git+https://git@github.com/gasman/asm.js.git",
     "escodegen": "^1.6.1",
+    "ieee754": "^1.1.8",
     "leb": "^0.3.0",
     "stream-buffers": "^3.0.1",
     "tmp": "0.0.31"

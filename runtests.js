@@ -384,6 +384,28 @@ if (runAll || runWasm) {
 	testWasmCompile('tests/continue.c', 42);
 	testWasmCompile('tests/conditional.c', 42);
 	testWasmCompile('tests/logical_not.c', 0);
+	testWasmCompile('tests/double.c', 42);
+	testWasmCompile('tests/logical_and.c', 42);
+	testWasmCompile('tests/logical_and_var.c', 42);
+	testWasmCompile('tests/logical_or.c', 42);
+	testWasmCompile('tests/logical_or_var.c', 42);
+	testWasmCompile('tests/double_var.c', 42);
+	testWasmCompile('tests/double_add.c', 42);
+	testWasmCompile('tests/double_add_var.c', 42);
+	testWasmCompile('tests/empty_params.c', 42);
+	testWasmCompile('tests/void_return.c', 42);
+	testWasmCompile('tests/void_function_without_return.c', 42);
+	testWasmCompile('tests/do_while.c', 55);
+	testWasmCompile('tests/logical_shortcuts.c', 42);
+	testWasmCompile('tests/double_mul.c', 42);
+	testWasmCompile('tests/double_mul_var.c', 42);
+	testWasmCompile('tests/int_mul.c', 42);
+	testWasmCompile('tests/int_div.c', 42);
+	testWasmCompile('tests/int_div_var.c', 42);
+	testWasmCompile('tests/late_declaration.c', 52);
+	testWasmCompile('tests/nonconstant_declare.c', 42);
+	testWasmCompile('tests/int_mod.c', 42);
+	testWasmCompile('tests/int_mod_var.c', 42);
 }
 
 console.log("All tests passed");
