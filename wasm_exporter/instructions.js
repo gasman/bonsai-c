@@ -160,11 +160,18 @@ exports.Sub = TypedInstruction('sub', {'i32': 0x6b, 'i64': 0x7d, 'f32': 0x93, 'f
 exports.TeeLocal = IndexedInstruction('tee_local', 0x22);
 
 exports.TruncS = function(fromType, toType) {
-	return {
-		'asText': function() {
-			return util.format('%s.trunc_s/%s', toType.asText(), fromType.asText());
-		}
-	};
+	if (fromType.category == 'f64' && toType.category == 'i32') {
+		return {
+			'asText': function() {return 'i32.trunc_s/f64';},
+			'asBinary': function(out) {
+				out.write(Buffer.from([0xaa]));
+			}
+		};
+	} else {
+		throw util.format(
+			"Unrecognised trunc_s instruction from %s to %s", fromType.asText(), toType.asText()
+		);
+	}
 };
 
 exports.Unreachable = SimpleInstruction('unreachable', 0x00);
