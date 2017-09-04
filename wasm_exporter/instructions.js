@@ -68,6 +68,42 @@ function BlockInstruction(name, opcode) {
 	};
 }
 
+function MemoryInstruction(name, opcodesByType) {
+	return function(typ, align, offset) {
+		var opcode = opcodesByType[typ.category] || null;
+
+		var defaultAlign = typ.alignment;
+		if (align === null) {
+			align = defaultAlign;
+		}
+		if (offset === null) {
+			offset = 0;
+		}
+
+		return {
+			'asText': function() {
+				modifiers = '';
+				if (offset !== 0) {
+					modifiers += util.format(' offset=%d', offset);
+				}
+				if (align != defaultAlign) {
+					modifiers += util.format(' align=%d', align);
+				}
+				return util.format('%s.%s%s', typ.asText(), name, modifiers);
+			},
+			'asBinary': function(out) {
+				if (opcode === null) {
+					throw(util.format("Unknown opcode for %s.%s", typ.asText(), name));
+				} else {
+					out.write(Buffer.from([opcode]));
+					out.write(leb.encodeUInt32(align));
+					out.write(leb.encodeUInt32(offset));
+				}
+			}
+		};
+	};
+}
+
 exports.Add = TypedInstruction('add', {'i32': 0x6a, 'i64': 0x7c, 'f32': 0x92, 'f64': 0xa0});
 exports.Block = BlockInstruction('block', 0x02);
 exports.Br = IndexedInstruction('br', 0x0c);
@@ -137,9 +173,10 @@ exports.GeS = TypedInstruction('ge_s', {'i32': 0x4e, 'i64': 0x59});
 exports.Gt = TypedInstruction('gt', {'f32': 0x5e, 'f64': 0x64});
 exports.GtS = TypedInstruction('gt_s', {'i32': 0x4a, 'i64': 0x55});
 exports.If = BlockInstruction('if', 0x04);
-exports.Loop = BlockInstruction('loop', 0x03);
 exports.Le = TypedInstruction('le', {'f32': 0x5f, 'f64': 0x65});
 exports.LeS = TypedInstruction('le_s', {'i32': 0x4c, 'i64': 0x57});
+exports.Load = MemoryInstruction('load', {'i32': 0x28, 'i64': 0x29, 'f32': 0x2a, 'f64': 0x2b});
+exports.Loop = BlockInstruction('loop', 0x03);
 exports.Lt = TypedInstruction('lt', {'f32': 0x5d, 'f64': 0x63});
 exports.LtS = TypedInstruction('lt_s', {'i32': 0x48, 'i64': 0x53});
 exports.Mul = TypedInstruction('mul', {'i32': 0x6c, 'i64': 0x7e, 'f32': 0x94, 'f64': 0xa2});
@@ -158,6 +195,7 @@ exports.SetGlobal = IndexedInstruction('set_global', 0x24);
 exports.SetLocal = IndexedInstruction('set_local', 0x21);
 exports.Shl = TypedInstruction('shl', {'i32': 0x74, 'i64': 0x86});
 exports.ShrS = TypedInstruction('shr_s', {'i32': 0x75, 'i64': 0x87});
+exports.Store = MemoryInstruction('store', {'i32': 0x36, 'i64': 0x37, 'f32': 0x38, 'f64': 0x39});
 exports.Sub = TypedInstruction('sub', {'i32': 0x6b, 'i64': 0x7d, 'f32': 0x93, 'f64': 0xa1});
 exports.TeeLocal = IndexedInstruction('tee_local', 0x22);
 

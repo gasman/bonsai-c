@@ -65,30 +65,47 @@ function compileExpression(expr, context, out, hints) {
 			}
 			break;
 		case 'AssignmentExpression':
-			assert.equal(expr.left.expressionType, 'VariableExpression');
-			varIndex = context.getIndex(expr.left.variable.id);
-			if (varIndex === null) {
-				throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
-			}
-			compileExpression(expr.right, context, out);
-			castResult(expr.right.type, expr.left.type, out);
-			if (expr.left.variable.isGlobal) {
-				if (!expr.resultIsUsed && hints.canDiscardResult) {
-					out.push(instructions.SetGlobal(varIndex));
-					return 0;
-				} else {
-					out.push(instructions.SetGlobal(varIndex));
-					out.push(instructions.GetGlobal(varIndex));
-					return 1;
-				}
-			} else {
-				if (!expr.resultIsUsed && hints.canDiscardResult) {
-					out.push(instructions.SetLocal(varIndex));
-					return 0;
-				} else {
-					out.push(instructions.TeeLocal(varIndex));
-					return 1;
-				}
+			/* semantics of an assignment expression depend on the expression type of the lvalue */
+			switch (expr.left.expressionType) {
+				case 'VariableExpression':
+					varIndex = context.getIndex(expr.left.variable.id);
+					if (varIndex === null) {
+						throw util.format("Variable not found: %s", util.inspect(expr.left.variable));
+					}
+					compileExpression(expr.right, context, out);
+					castResult(expr.right.type, expr.left.type, out);
+					if (expr.left.variable.isGlobal) {
+						if (!expr.resultIsUsed && hints.canDiscardResult) {
+							out.push(instructions.SetGlobal(varIndex));
+							return 0;
+						} else {
+							out.push(instructions.SetGlobal(varIndex));
+							out.push(instructions.GetGlobal(varIndex));
+							return 1;
+						}
+					} else {
+						if (!expr.resultIsUsed && hints.canDiscardResult) {
+							out.push(instructions.SetLocal(varIndex));
+							return 0;
+						} else {
+							out.push(instructions.TeeLocal(varIndex));
+							return 1;
+						}
+					}
+					break;
+				case 'DereferenceExpression':
+					compileExpression(expr.left.argument, context, out);
+					compileExpression(expr.right, context, out);
+					castResult(expr.right.type, expr.left.type, out);
+					if (!expr.resultIsUsed && hints.canDiscardResult) {
+						out.push(instructions.Store(types.fromCType(expr.left.type), null, null));
+						return 0;
+					} else {
+						throw("Pointer assignment where the result is used is not currently supported");
+					}
+					break;
+				default:
+					throw("Don't know how to handle an AssignmentExpression with an lvalue of type " + expr.left.expressionType);
 			}
 			break;
 		case 'CommaExpression':
@@ -107,6 +124,10 @@ function compileExpression(expr, context, out, hints) {
 			out.push(instructions.Else);
 			compileExpression(expr.alternate, context, out);
 			out.push(instructions.End);
+			return 1;
+		case 'DereferenceExpression':
+			compileExpression(expr.argument, context, out);
+			out.push(instructions.Load(types.fromCType(expr.type), null, null));
 			return 1;
 		case 'DivideExpression':
 			compileExpression(expr.left, context, out);

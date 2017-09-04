@@ -291,6 +291,7 @@ if (runAll || runWast) {
 	testWastCompile('tests/double_subtract.c', 42);
 	testWastCompile('tests/shift_left.c', 42);
 	testWastCompile('tests/shift_right.c', 42);
+	testWastCompile('tests/global_array.c', 42);
 }
 
 
@@ -414,6 +415,7 @@ if (runAll || runWasm) {
 	testWasmCompile('tests/double_subtract.c', 42);
 	testWasmCompile('tests/shift_left.c', 42);
 	testWasmCompile('tests/shift_right.c', 42);
+	testWasmCompile('tests/global_array.c', 42);
 }
 
 console.log("All tests passed");

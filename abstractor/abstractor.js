@@ -102,6 +102,8 @@ function Module(declarationNodes) {
 				throw "Unexpected node type: " + node.type;
 		}
 	}
+
+	this.staticHeapSize = globalContext.nextHeapAddress;
 }
 Module.prototype.inspect = function() {
 	return "Module: " + util.inspect(this.declarations);

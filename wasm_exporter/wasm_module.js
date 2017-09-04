@@ -8,6 +8,8 @@ var compiler = require('./compiler');
 var instructions = require('./instructions');
 var binary = require('./wasm_binary');
 
+const PAGE_SIZE = 65536;
+
 function quoteString(str) {
 	return '"' + str.replace(/[\\"']/g, '\\$&') + '"';
 }
@@ -186,6 +188,30 @@ class FunctionExport {
 	}
 }
 
+class Memory {
+	constructor(min, max) {
+		this.min = min;
+		this.max = max;
+	}
+	asText() {
+		if (this.max === null) {
+			return util.format("  (memory %s)\n", this.min);
+		} else {
+			return util.format("  (memory %s %s)\n", this.min, this.max);
+		}
+	}
+	asBinary(out) {
+		if (this.max === null) {
+			out.write(Buffer.from([0x00]));
+			out.write(leb.encodeUInt32(this.min));
+		} else {
+			out.write(Buffer.from([0x01]));
+			out.write(leb.encodeUInt32(this.min));
+			out.write(leb.encodeUInt32(this.max));
+		}
+	}
+}
+
 class GlobalDeclaration {
 	constructor(typ, id, isMutable, initialValueInstruction) {
 		this.type = typ;
@@ -222,6 +248,7 @@ class WasmModule {
 	constructor() {
 		this.types = [];
 		this.functions = [];
+		this.memories = [];
 		this.globals = [];
 		this.exports = [];
 	}
@@ -271,6 +298,10 @@ class WasmModule {
 			output += this.functions[i].asText();
 		}
 
+		for (i = 0; i < this.memories.length; i++) {
+			output += this.memories[i].asText();
+		}
+
 		for (i = 0; i < this.globals.length; i++) {
 			output += this.globals[i].asText();
 		}
@@ -311,6 +342,11 @@ class WasmModule {
 			for (var i = 0; i < this.functions.length; i++) {
 				out.write(leb.encodeUInt32(this.functions[i].typeIndex));
 			}
+		});
+
+		// write memories section
+		writeSection(5, out, (out) => {
+			binary.writeVector(this.memories, out);
 		});
 
 		// write globals section
@@ -368,6 +404,11 @@ class WasmModule {
 			var variable = globalContext.variableDeclarations[i];
 			var initialValueInstruction = instructions.Const(variable.type, variable.initialValue || 0);
 			wasm.defineGlobal(variable.type, i, true, initialValueInstruction);
+		}
+
+		var pageCount = Math.ceil(module.staticHeapSize / PAGE_SIZE);
+		if (pageCount > 0) {
+			wasm.memories.push(new Memory(pageCount, pageCount));
 		}
 
 		return wasm;

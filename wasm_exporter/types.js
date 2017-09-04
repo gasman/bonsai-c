@@ -2,6 +2,7 @@ var binary = require('./wasm_binary');
 
 exports.i32 = {
 	'category': 'i32',
+	'alignment': 2,
 	'asText': function() {return 'i32';},
 	'asBinary': function(out) {
 		out.write(Buffer.from([0x7f]));
@@ -11,6 +12,7 @@ exports.i32 = {
 
 exports.f64 = {
 	'category': 'f64',
+	'alignment': 3,
 	'asText': function() {return 'f64';},
 	'asBinary': function(out) {
 		out.write(Buffer.from([0x7c]));
@@ -85,6 +87,11 @@ function fromCType(typ) {
 				fromCType(typ.returnType),
 				paramTypes
 			);
+		case 'pointer':
+			if (typ.targetType.category == 'function') {
+				throw("Function pointers are not currently supported");
+			}
+			return exports.i32;
 		case 'void':
 			return exports.void;
 		default:
