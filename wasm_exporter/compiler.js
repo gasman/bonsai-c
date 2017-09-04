@@ -360,6 +360,24 @@ function compileExpression(expr, context, out, hints) {
 				}
 			}
 			break;
+		case 'ShiftLeftExpression':
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			if (expr.type.category == 'int') {
+				out.push(instructions.Shl(types.i32));
+			} else {
+				throw util.format("Don't know how to handle ShiftLeftExpression of type %s", util.inspect(expr.type));
+			}
+			return 1;
+		case 'ShiftRightExpression':
+			compileExpression(expr.left, context, out);
+			compileExpression(expr.right, context, out);
+			if (expr.type.category == 'int') {
+				out.push(instructions.ShrS(types.i32));
+			} else {
+				throw util.format("Don't know how to handle ShiftRightExpression of type %s", util.inspect(expr.type));
+			}
+			return 1;
 		case 'SubtractExpression':
 			compileExpression(expr.left, context, out);
 			compileExpression(expr.right, context, out);

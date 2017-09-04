@@ -289,6 +289,8 @@ if (runAll || runWast) {
 	testWastCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 	testWastCompile('tests/global_var.c', 42);
 	testWastCompile('tests/double_subtract.c', 42);
+	testWastCompile('tests/shift_left.c', 42);
+	testWastCompile('tests/shift_right.c', 42);
 }
 
 
@@ -410,6 +412,8 @@ if (runAll || runWasm) {
 	testWasmCompile('tests/static_func.c', 42, {shouldNotExport: ['add']});
 	testWasmCompile('tests/global_var.c', 42);
 	testWasmCompile('tests/double_subtract.c', 42);
+	testWasmCompile('tests/shift_left.c', 42);
+	testWasmCompile('tests/shift_right.c', 42);
 }
 
 console.log("All tests passed");

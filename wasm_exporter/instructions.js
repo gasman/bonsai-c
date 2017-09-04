@@ -156,6 +156,8 @@ exports.Return = {
 
 exports.SetGlobal = IndexedInstruction('set_global', 0x24);
 exports.SetLocal = IndexedInstruction('set_local', 0x21);
+exports.Shl = TypedInstruction('shl', {'i32': 0x74, 'i64': 0x86});
+exports.ShrS = TypedInstruction('shr_s', {'i32': 0x75, 'i64': 0x87});
 exports.Sub = TypedInstruction('sub', {'i32': 0x6b, 'i64': 0x7d, 'f32': 0x93, 'f64': 0xa1});
 exports.TeeLocal = IndexedInstruction('tee_local', 0x22);
 
