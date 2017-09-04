@@ -187,8 +187,9 @@ class FunctionExport {
 }
 
 class GlobalDeclaration {
-	constructor(typ, isMutable, initialValueInstruction) {
+	constructor(typ, id, isMutable, initialValueInstruction) {
 		this.type = typ;
+		this.id = id;
 		this.isMutable = isMutable;
 		this.initialValueInstruction = initialValueInstruction;
 	}
@@ -202,7 +203,7 @@ class GlobalDeclaration {
 
 		return util.format(
 			"  (global (;%d;) %s %s)\n",
-			i, globalType, this.initialValueInstruction.asText()
+			this.id, globalType, this.initialValueInstruction.asText()
 		);
 	}
 	asBinary(out) {
@@ -254,8 +255,8 @@ class WasmModule {
 		return functionIndex;
 	}
 
-	defineGlobal(typ, isMutable, initialValueInstruction) {
-		this.globals.push(new GlobalDeclaration(typ, isMutable, initialValueInstruction));
+	defineGlobal(typ, id, isMutable, initialValueInstruction) {
+		this.globals.push(new GlobalDeclaration(typ, id, isMutable, initialValueInstruction));
 	}
 
 	asText() {
@@ -366,7 +367,7 @@ class WasmModule {
 		for (i = 0; i < globalContext.variableDeclarations.length; i++) {
 			var variable = globalContext.variableDeclarations[i];
 			var initialValueInstruction = instructions.Const(variable.type, variable.initialValue || 0);
-			wasm.defineGlobal(variable.type, true, initialValueInstruction);
+			wasm.defineGlobal(variable.type, i, true, initialValueInstruction);
 		}
 
 		return wasm;
